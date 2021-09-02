@@ -15,14 +15,15 @@ library(reshape2)
 library(ggplot2)
 
 
+###################################################################################################
 # Donor data generation
 # Normal distibution of log spvl from Hollingsworth Cohort (Link). Mean = 4.35, SD = 0.47 
-NPAIRS <- 100000
+NPAIRS <- 25000
 
-donor_spvl <- rnorm(NPAIRS, mean = 4.39, sd = 0.84) 
+donor_spvl <- rnorm(NPAIRS, mean = 4.39, sd = 0.84)
 
-ggplot() + geom_density(aes(x=donor_spvl), color = 'blue') + theme_bw()
 
+###################################################################################################
 # Recipient covariates required for model
 # Sex
 # 1 = male, 0 = female
@@ -51,9 +52,12 @@ colnames(recipient_chain) <- c('chain_index', 'chain_second')
 
 recipient_covar <- cbind.data.frame(recipient_sex, recipient_age, recipient_gud, recipient_subtype, recipient_chain)
 
+
+###################################################################################################
 # Null model (Hollingsworth)
 # Predict recipient SPVL from donor SPVL using GLM fitted in Hollingsworth et al. to generate
 # Null distribution of recipient SPLV
+#recip_spvl = i - 0.15*sex - 0.15*a1 - 0.32*a2 + 0.35*a3 + 0.73*a4 + 0.42*gud_n + 0.62*gud_p + 0.068*sub_a + 1.85*sub_c + 0.39*sub_D + 0.78*sub_R + 0.42*chain_index + 0.00*chain_second
 
 NullModel <- function(donor, recipient){
   
@@ -65,18 +69,50 @@ NullModel <- function(donor, recipient){
 }
 
 
+recipient_spvl <- numeric()
 
-#recip_spvl = i - 0.15*sex - 0.15*a1 - 0.32*a2 + 0.35*a3 + 0.73*a4 + 0.42*gud_n + 0.62*gud_p + 0.068*sub_a + 1.85*sub_c + 0.39*sub_D + 0.78*sub_R + 0.42*chain_index + 0.00*chain_second
+for (i in 1:length(donor_spvl)){
+  recipient_spvl[i] <- NullModel(donor_spvl[i], recipient_covar [i,])
+}
 
+
+###################################################################################################
+# Null Panel
+# A) Distribution of donor SPVL
+donor_plot <- ggplot() +
+  geom_density(aes(x=donor_spvl), color = 'blue') + 
+  theme_bw()+
+  scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
+  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
+  xlab('Log10 Donor SPVL')
+
+# B) Distribution of recipient SPVL
+recip_plot <- ggplot() + 
+  geom_density(aes(x=recipient_spvl), color = 'red') + 
+  theme_bw()+
+  scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
+  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
+  xlab('Log10 Recipient SPVL')
+
+# C) Donor-recipient paired difference in SPVL A
+diff_plot <- ggplot() +
+  geom_point(aes(x=donor_spvl, y = recipient_spvl), shape = 4)+ 
+  theme_bw()+
+  xlab('Log10 Donor SPVL') +
+  ylab('Log10 Recipient SPVL') +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(0,12), expand = c(0,0))+
+  scale_x_continuous(limits = c(0,12), expand = c(0,0))
+
+null_panel <- cowplot::plot_grid(donor_plot, recip_plot, diff_plot, ncol = 3, labels = 'AUTO')
+
+null_panel
 
 
 # Calculate difference between donor-recipient pairs
 
 
-# Null Panel
-# A) Distribution of donor SPVL
-# B) Distribution of recipient SPVL
-# C) Donor-recipient paired difference in SPVL
+
 
 
 
