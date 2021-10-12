@@ -21,8 +21,47 @@ library(ggplot2)
 NPAIRS <- 25000
 
 donor_spvl <- rnorm(NPAIRS, mean = 4.39, sd = 0.84)
+recip_spvl <-sapply(donor_spvl, GetRecipVL)
+  #sapply(donor_spvl, rnorm, n = 1, sd = 1.15)
+summary(lm(recip_spvl ~ donor_spvl))
+
+GetRecipVL <- function(vl){
+  poss_recip <- rnorm(10000, mean = vl, sd = 1.15)
+  
+  random <- sample(1:10000, 1)
+  
+  while (poss_recip[random] < 0){
+    random <- sample(1:10000, 1)}
+  
+  out <- poss_recip[random]
+  
+  return(out)
+}
 
 
+vl_df <- cbind.data.frame(donor_spvl, recip_spvl)
+
+diff <- donor_spvl - recip_spvl
+ggplot() +
+  geom_density(aes(x=diff), color = 'blue')
+
+ggplot() +
+  geom_density(aes(x=donor_spvl), color = 'blue') + 
+  geom_density(aes(x=recip_spvl), color = 'red') + 
+  geom_density(aes(x=recip_vl_mid), color = 'green') +
+  #geom_density(aes(x=recip_vl_high), color = 'black') +
+  theme_bw()+
+  scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
+  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
+  xlab('Log10  SPVL')
+
+
+fit <- lm(recip_vl_mid ~ donor_spvl, vl_df) %>% summary()
+
+ggplot()+
+  geom_point(aes(x = donor_spvl,y = recip_spvl), data = vl_df) 
+  
+  
 ###################################################################################################
 # Recipient covariates required for model
 # Sex
@@ -81,14 +120,15 @@ for (i in 1:length(donor_spvl)){
 # A) Distribution of donor SPVL
 donor_plot <- ggplot() +
   geom_density(aes(x=donor_spvl), color = 'blue') + 
+  geom_density(aes(x=recip_vl), color = 'red') + 
   theme_bw()+
   scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
   scale_x_continuous(limits = c(0,12), expand = c(0,0))+
-  xlab('Log10 Donor SPVL')
+  xlab('Log10  SPVL')
 
 # B) Distribution of recipient SPVL
 recip_plot <- ggplot() + 
-  geom_density(aes(x=recipient_spvl), color = 'red') + 
+  geom_density(aes(x=recip_vl), color = 'red') + 
   theme_bw()+
   scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
   scale_x_continuous(limits = c(0,12), expand = c(0,0))+
@@ -96,7 +136,7 @@ recip_plot <- ggplot() +
 
 # C) Donor-recipient paired difference in SPVL A
 diff_plot <- ggplot() +
-  geom_point(aes(x=donor_spvl, y = recipient_spvl), shape = 4)+ 
+  geom_point(aes(x=donor_spvl, y = recip_vl), shape = 4)+ 
   theme_bw()+
   xlab('Log10 Donor SPVL') +
   ylab('Log10 Recipient SPVL') +
@@ -111,6 +151,8 @@ null_panel
 
 # Calculate difference between donor-recipient pairs
 
+
+# for a given 
 
 
 
