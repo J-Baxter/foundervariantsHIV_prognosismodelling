@@ -17,6 +17,8 @@
 library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(scales)
+library(ggpmisc)
 
 source("./scripts/populationdata_models.R")
 
@@ -57,11 +59,29 @@ spvl_df <- cbind.data.frame(donor_spvl, recip_spvl)
 
 prob_recip_multiple <- sapply(donor_spvl[1:5], populationmodel_fixedVL_Environment) # Check 0.01 > p > 0.0001
 
-
+combined_data <- 
 ###################################################################################################
 # Visualise probability that recipient infection is intitiated by multiple founders
 
+# Fig 1a
+fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
+  geom_point() +
+  scale_x_log10(name = 'Donor SPVL (log10)',
+                breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_log10(name = 'Recipient SPVL (log10)',
+                breaks = trans_breaks("log10", function(x) 10^x),
+                     labels = trans_format("log10", math_format(10^.x))) +
+  theme_bw() +
+  geom_smooth(method = lm) + 
+  stat_poly_eq(formula = y ~ x)
+  
+  
+  
+# Fig 1b
 
+
+# Fig 1c
 
 ggplot() +
   geom_density(aes(x=diff), color = 'blue')
