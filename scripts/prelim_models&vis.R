@@ -22,7 +22,36 @@ NPAIRS <- 25000
 
 donor_spvl <- rnorm(NPAIRS, mean = 4.39, sd = 0.84)
 
+diff <-  rnorm(NPAIRS, mean = 0.84, sd = 1.28)
 
+
+paired_spvl <- cbind.data.frame(donor = donor_spvl, recipient= donor_spvl+diff)
+
+library(ggsci)
+test_1 <-  ggplot(tidyr::gather(paired_spvl)) +
+  stat_density(aes(x= value, colour = key), geom = 'line', position="identity") + 
+  scale_colour_npg()+
+  theme_bw()+scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
+  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
+  xlab('Log10 SPVL') + theme(legend.position = c(0.8, 0.8), legend.background = element_blank())
+
+
+test_2 <- ggscatter(paired_spvl, x='donor', y = 'recipient', add = "reg.line", shape = 4) +
+  theme_bw()+
+  xlab('Log10 Donor SPVL') +
+  ylab('Log10 Recipient SPVL') +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(0,12), expand = c(0,0))+
+  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
+  stat_cor(aes(label = paste(..rr.label..)), label.x = 8, label.y = 11, digits = 3)
+
+test_3 <- ggplot() +
+  stat_density(aes(x=diff), geom = 'line', position="identity",  color = 'darkgreen') + 
+  theme_bw()+scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
+  xlab('difference')
+
+test_panel <- cowplot::plot_grid(test_1, test_3, test_2, ncol = 3, labels = 'AUTO')
+test_panel
 ###################################################################################################
 # Recipient covariates required for model
 # Sex
@@ -95,24 +124,25 @@ recip_plot <- ggplot() +
   xlab('Log10 Recipient SPVL')
 
 # C) Donor-recipient paired difference in SPVL A
-diff_plot <- ggplot() +
-  geom_point(aes(x=donor_spvl, y = recipient_spvl), shape = 4)+ 
+paired_spvl <- cbind.data.frame(donor = donor_spvl, recipient= recipient_spvl)
+
+diff_plot <- ggscatter(paired_spvl, x='donor', y = 'recipient', add = "reg.line", shape = 4) +
   theme_bw()+
   xlab('Log10 Donor SPVL') +
   ylab('Log10 Recipient SPVL') +
   theme(legend.position = "none") + 
   scale_y_continuous(limits = c(0,12), expand = c(0,0))+
-  scale_x_continuous(limits = c(0,12), expand = c(0,0))
+  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
+  stat_cor(aes(label = paste(..rr.label..)), label.x = 8, label.y = 11, digits = 3)
+  
+library(ggpubr)
+
 
 null_panel <- cowplot::plot_grid(donor_plot, recip_plot, diff_plot, ncol = 3, labels = 'AUTO')
 
 null_panel
 
 
-# Calculate difference between donor-recipient pairs
 
-
-
-
-
-
+###################################################################################################
+###################################################################################################
