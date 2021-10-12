@@ -35,10 +35,10 @@ GetRecipVL <- function(donor_loads, h2){
 
 ###################################################################################################
 # Data generation
-# Normal distibution of log spvl from Hollingsworth Cohort (Link). mean = 4.39, sd = 0.84
+# Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 NPAIRS <- 100000
-donor_spvl <- rnorm(NPAIRS, mean = 10^4.39, sd = 0.84)
+donor_spvl <- rnorm(NPAIRS, mean = 10^5, sd = 10^0.6) 
 
 # Heritability estimate
 R2 <- 0.35
@@ -50,16 +50,18 @@ recip_spvl <- GetRecipVL(donor_spvl, 0.35)
 #summary(lm(recip_spvl ~ donor_spvl))$r.squared
 
 # Data frame of paired viral loads
-spvl_df <- cbind.data.frame(donor_spvl, recip_spvl)
+spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, recip_spvl = recip_spvl) 
+
 
 
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
 
-prob_recip_multiple <- sapply(donor_spvl[1:5], populationmodel_fixedVL_Environment) # Check 0.01 > p > 0.0001
+prob_recip_multiple <- sapply(10^(donor_spvl[1:5]), populationmodel_fixedVL_Environment)  # Check 0.01 > p > 0.0001
 
-combined_data <- 
+#combined_data <- 
+test_combined <- cbind.data.frame(spvl_df[1:5,], prob_recip_multiple = unlist(t(prob_recip_multiple)[,2]))
 ###################################################################################################
 # Visualise probability that recipient infection is intitiated by multiple founders
 
@@ -71,18 +73,24 @@ fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_log10(name = 'Recipient SPVL (log10)',
                 breaks = trans_breaks("log10", function(x) 10^x),
-                     labels = trans_format("log10", math_format(10^.x))) +
+                labels = trans_format("log10", math_format(10^.x))) +
   theme_bw() +
   geom_smooth(method = lm) + 
   stat_poly_eq(formula = y ~ x)
   
   
-  
 # Fig 1b
-
+fig_1b <- ggplot(test_combined, aes(x = donor_spvl, prob_recip_multiple))+
+  geom_point()+
+  scale_x_log10(name = 'Donor SPVL (log10)',
+                breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  theme_bw() +
+  geom_smooth(method = lm)
+  
 
 # Fig 1c
-
+logspvl <- 1:6
 ggplot() +
   geom_density(aes(x=diff), color = 'blue')
 
