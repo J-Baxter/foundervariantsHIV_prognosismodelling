@@ -15,13 +15,10 @@
 ###################################################################################################
 # Dependencies
 library(tidyr)
-library(lme4)
 library(dplyr)
-library(metafor)
 library(ggplot2)
-library(reshape2)
-library(ggplot2)
-source("populationdata_models.R")
+
+source("./scripts/populationdata_models.R")
 
 GetRecipVL <- function(donor_loads, h2){
   n = length(donor_loads)
@@ -38,11 +35,11 @@ GetRecipVL <- function(donor_loads, h2){
 # Data generation
 # Normal distibution of log spvl from Hollingsworth Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
-donor_spvl <- rnorm(NPAIRS, mean = 4.39, sd = 0.84)
+NPAIRS <- 100000
+donor_spvl <- rnorm(NPAIRS, mean = 10^4.39, sd = 0.84)
 
 # Heritability estimate
 R2 <- 0.35
-NPAIRS <- 1000
 
 # Generate recipient data
 recip_spvl <- GetRecipVL(donor_spvl, 0.35)
@@ -56,7 +53,14 @@ spvl_df <- cbind.data.frame(donor_spvl, recip_spvl)
 
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
-# applies function written by Katie Atkins
+# applies populationmodel_fixedVL_Environment function written by Katie Atkins
+
+prob_recip_multiple <- sapply(donor_spvl[1:5], populationmodel_fixedVL_Environment) # Check 0.01 > p > 0.0001
+
+
+###################################################################################################
+# Visualise probability that recipient infection is intitiated by multiple founders
+
 
 
 ggplot() +
