@@ -22,6 +22,7 @@ library(ggpmisc)
 library(parallel)
 
 source("./scripts/populationdata_models.R")
+source("./scripts/misc_functions.R")
 
 GetRecipVL <- function(donor_loads, h2){
   n = length(donor_loads)
