@@ -24,16 +24,30 @@ library(parallel)
 source("./scripts/populationdata_models.R")
 source("./scripts/misc_functions.R")
 
-GetRecipVL <- function(donor_loads, h2){
-  n = length(donor_loads)
-  ssr = sum((donor_loads-mean(donor_loads))^2) # sum of squared residuals
+# Calculate recipient set point viral loads from a given population of donor set point viral loads.
+# Back calculation from a set correlation coefficient (r2) and sum of squared residuals
+# 'Parent ~ Offspring' regression R2 analogous to heritability of viral load. 
+GetRecipVL <- function(donorload, h2 = 0.33){
+  n <- length(donorload)
+  ssr <- sum((donorloads-mean(donorload))^2) # sum of squared residuals
   e <- rnorm(n)
-  e <- resid(lm(e ~ donor_loads))
+  e <- resid(lm(e ~ donorload))
   e <- e*sqrt((1-h2)/h2*ssr/(sum(e^2)))
-  recip_loads <- donor_loads + e
+  recipload <- donorload + e
   
-  return(recip_loads)
+  return(recipload)
 }
+
+
+# Infer weighting for a given viral load 
+WeightPDF <- function(viralload){
+  alpha = -3.55
+  sigma <- 0.78/(sqrt(1 - ((2*alpha^2)/(pi*(1 + alpha^2)))))
+  mu <-  4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha^2)))
+  weight <-  (2/sigma)*dnorm((log10(viralload) - mu)/sigma)*pnorm(alpha*(log10(viralload) - mu)/sigma)
+  return(weight)
+} 
+
 
 ###################################################################################################
 #Set seed
@@ -59,7 +73,8 @@ donor_spvl <- 10^donor_logspvl
 recip_spvl <- 10^recip_logspvl
 
 # Data frame of paired viral loads
-spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, recip_spvl = recip_spvl) 
+spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, 
+                            recip_spvl = recip_spvl) 
 
 
 ###################################################################################################
@@ -74,9 +89,19 @@ combined_data <- cbind.data.frame(spvl_df[1:50,], prob_recip_multiple)
 head(combined_data)
 
 ###################################################################################################
-# Probability that recipient infection is multiple founder, given a certain vrial load
-set_spvl <- 10^(1:9)
+# Probability that recipient infection is multiple founder, given a certain viral load
 
+
+test_prob <- sapply(recip_spvl, function(x) WeightPDF(x)/sum(WeightPDF(recip_spvl)))
+  
+  
+#sample args:
+# x = either a vector of one or more elements from which to choose
+# n = a positive number, the number of items to choose from
+# size = a non-negative integer giving the number of items to choose
+# prob = a vector of probability weights for obtaining the elements of the vector being sampled.
+set_spvl <- 10^(1:9)
+sample(set_spvl, size = 100, prob = test_prob, replace = T)
 
 
 
@@ -86,10 +111,14 @@ set_spvl <- 10^(1:9)
 # Fig 1a
 fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
   geom_point() +
-  scale_x_log10(name = 'Donor SPVL (log10)',
+  scale_x_log10(limits = c(1, 10^10),
+                expand = c(0,0),
+                name = 'Donor SPVL (log10)',
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_log10(name = 'Recipient SPVL (log10)',
+                limits = c(1, 10^10),
+                expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
   theme_bw() +
@@ -101,6 +130,8 @@ fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
 fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion))+
   geom_point()+
   scale_x_log10(name = 'Donor SPVL (log10)',
+                limits = c(1, 10^10),
+                expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(expand = c(0,0),
