@@ -43,27 +43,30 @@ set.seed(4472)
 # Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 NPAIRS <- 1000
-donor_spvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
+donor_logspvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
 
 # Heritability estimate
 R2 <- 0.33
 
 # Generate recipient data
-recip_spvl <- GetRecipVL(donor_spvl, R2)
-stopifnot(min(recip_spvl)>0)
+recip_logspvl <- GetRecipVL(donor_logspvl, R2)
+stopifnot(min(recip_logspvl)>0)
 
 # Check calcualted R2  == input (to run in test script)
 #summary(lm(recip_spvl ~ donor_spvl))$r.squared
 
+donor_spvl <- 10^donor_logspvl
+recip_spvl <- 10^recip_logspvl
+
 # Data frame of paired viral loads
-spvl_df <- cbind.data.frame(donor_spvl = 10^donor_spvl, recip_spvl = 10^recip_spvl) 
+spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, recip_spvl = recip_spvl) 
 
 
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
 
-prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, (10^donor_spvl[1:50])) %>%
+prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, (donor_spvl[1:50])) %>%
   do.call(rbind.data.frame, .)
   
 
@@ -72,6 +75,9 @@ head(combined_data)
 
 ###################################################################################################
 # Probability that recipient infection is multiple founder, given a certain vrial load
+set_spvl <- 10^(1:9)
+
+
 
 
 ###################################################################################################
@@ -105,4 +111,4 @@ fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion)
   
 
 # Fig 1c
-logspvl <- 1:6
+
