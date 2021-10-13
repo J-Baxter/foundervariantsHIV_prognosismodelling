@@ -19,6 +19,7 @@ library(dplyr)
 library(ggplot2)
 library(scales)
 library(ggpmisc)
+library(parallel)
 
 source("./scripts/populationdata_models.R")
 
@@ -34,34 +35,44 @@ GetRecipVL <- function(donor_loads, h2){
 }
 
 ###################################################################################################
+#Set seed
+set.seed(4472)
+
 # Data generation
 # Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
-NPAIRS <- 100000
-donor_spvl <- rnorm(NPAIRS, mean = 10^5, sd = 10^0.6) 
+NPAIRS <- 1000
+donor_spvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
 
 # Heritability estimate
-R2 <- 0.35
+R2 <- 0.33
 
 # Generate recipient data
-recip_spvl <- GetRecipVL(donor_spvl, 0.35)
+recip_spvl <- GetRecipVL(donor_spvl, R2)
+stopifnot(min(recip_spvl)>0)
 
 # Check calcualted R2  == input (to run in test script)
 #summary(lm(recip_spvl ~ donor_spvl))$r.squared
 
 # Data frame of paired viral loads
-spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, recip_spvl = recip_spvl) 
-
+spvl_df <- cbind.data.frame(donor_spvl = 10^donor_spvl, recip_spvl = 10^recip_spvl) 
 
 
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
 
-prob_recip_multiple <- sapply(10^(donor_spvl[1:5]), populationmodel_fixedVL_Environment)  # Check 0.01 > p > 0.0001
+prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, (10^donor_spvl[1:50])) %>%
+  do.call(rbind.data.frame, .)
+  
 
-#combined_data <- 
-test_combined <- cbind.data.frame(spvl_df[1:5,], prob_recip_multiple = unlist(t(prob_recip_multiple)[,2]))
+combined_data <- cbind.data.frame(spvl_df[1:50,], prob_recip_multiple)
+head(combined_data)
+
+###################################################################################################
+# Probability that recipient infection is multiple founder, given a certain vrial load
+
+
 ###################################################################################################
 # Visualise probability that recipient infection is intitiated by multiple founders
 
@@ -80,65 +91,17 @@ fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
   
   
 # Fig 1b
-fig_1b <- ggplot(test_combined, aes(x = donor_spvl, prob_recip_multiple))+
+fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion))+
   geom_point()+
   scale_x_log10(name = 'Donor SPVL (log10)',
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,0.6),
+                     breaks = seq(0, 0.6, by = 0.2)) +
   theme_bw() +
   geom_smooth(method = lm)
   
 
 # Fig 1c
 logspvl <- 1:6
-ggplot() +
-  geom_density(aes(x=diff), color = 'blue')
-
-ggplot() +
-  geom_density(aes(x=donor_spvl), color = 'blue') + 
-  geom_density(aes(x=recip_spvl), color = 'red') + 
-  geom_density(aes(x=recip_vl_mid), color = 'green') +
-  #geom_density(aes(x=recip_vl_high), color = 'black') +
-  theme_bw()+
-  scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
-  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
-  xlab('Log10  SPVL')
-
-diff <-  rnorm(NPAIRS, mean = 0.84, sd = 1.28)
-
-
-paired_spvl <- cbind.data.frame(donor = donor_spvl, recipient= donor_spvl+diff)
-
-library(ggsci)
-test_1 <-  ggplot(tidyr::gather(paired_spvl)) +
-  stat_density(aes(x= value, colour = key), geom = 'line', position="identity") + 
-  scale_colour_npg()+
-  theme_bw()+scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
-  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
-  xlab('Log10 SPVL') + theme(legend.position = c(0.8, 0.8), legend.background = element_blank())
-
-
-test_2 <- ggscatter(paired_spvl, x='donor', y = 'recipient', add = "reg.line", shape = 4) +
-  theme_bw()+
-  xlab('Log10 Donor SPVL') +
-  ylab('Log10 Recipient SPVL') +
-  theme(legend.position = "none") + 
-  scale_y_continuous(limits = c(0,12), expand = c(0,0))+
-  scale_x_continuous(limits = c(0,12), expand = c(0,0))+
-  stat_cor(aes(label = paste(..rr.label..)), label.x = 8, label.y = 11, digits = 3)
-
-test_3 <- ggplot() +
-  stat_density(aes(x=diff), geom = 'line', position="identity",  color = 'darkgreen') + 
-  theme_bw()+scale_y_continuous(limits = c(0,0.5), expand = c(0,0))+
-  xlab('difference')
-
-test_panel <- cowplot::plot_grid(test_1, test_3, test_2, ncol = 3, labels = 'AUTO')
-test_panel
-
-
-fit <- lm(recip_vl_mid ~ donor_spvl, vl_df) %>% summary()
-
-ggplot()+
-  geom_point(aes(x = donor_spvl,y = recip_spvl), data = vl_df) 
-  
- 
