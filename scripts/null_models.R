@@ -4,13 +4,6 @@
 # Script utilises methodology from Thompson et al 2019, https://github.com/robin-thompson/MultiplicityOfInfection
 # implemented in R by Katie Atkins https://github.com/katiito/HIV_eclipse_models
 
-# N Scenarios are presented:
-#1. Null hypothesis
-#2.
-#3.
-#4.
-
-
 ###################################################################################################
 ###################################################################################################
 # Dependencies
