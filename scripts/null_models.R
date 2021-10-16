@@ -13,6 +13,7 @@ library(ggplot2)
 library(scales)
 library(ggpmisc)
 library(parallel)
+library(cowplot)
 
 source("./scripts/populationdata_models.R")
 source("./scripts/misc_functions.R")
@@ -49,7 +50,8 @@ set.seed(4472)
 # Data generation
 # Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
-NPAIRS <- 1000
+
+NPAIRS <- 1000 
 donor_logspvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
 
 # Heritability estimate
@@ -60,7 +62,7 @@ recip_logspvl <- GetRecipVL(donor_logspvl, R2)
 stopifnot(min(recip_logspvl)>0)
 
 # Check calcualted R2  == input (to run in test script)
-#summary(lm(recip_spvl ~ donor_spvl))$r.squared
+# summary(lm(recip_spvl ~ donor_spvl))$r.squared
 
 donor_spvl <- 10^donor_logspvl
 recip_spvl <- 10^recip_logspvl
@@ -74,16 +76,14 @@ spvl_df <- cbind.data.frame(donor_spvl = donor_spvl,
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
 
-prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, (donor_spvl[1:50])) %>%
-  do.call(rbind.data.frame, .)
-  
+prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, donor_spvl) %>%
+  do.call(rbind.data.frame, .) # Time difference of 44.60442 mins
 
-combined_data <- cbind.data.frame(spvl_df[1:50,], prob_recip_multiple)
+combined_data <- cbind.data.frame(spvl_df, prob_recip_multiple)
 head(combined_data)
 
 ###################################################################################################
 # Probability that recipient infection is multiple founder, given a certain viral load
-
 
 test_prob <- sapply(recip_spvl, function(x) WeightPDF(x)/sum(WeightPDF(recip_spvl)))
   
@@ -128,11 +128,16 @@ fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion)
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(expand = c(0,0),
-                     limits = c(0,0.6),
+                     limits = c(0,0.5),
                      breaks = seq(0, 0.6, by = 0.2)) +
-  theme_bw() +
-  geom_smooth(method = lm)
-  
+  theme_bw() 
 
 # Fig 1c
+
+# Panel 1
+panel1 <- plot_grid(fig_1a, fig_1b, labels = 'AUTO', align = 'hv')
+
+
+###################################################################################################
+# Probability distributions of number of variants
 
