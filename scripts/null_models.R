@@ -86,20 +86,18 @@ head(combined_data)
 
 ###################################################################################################
 # Probability that recipient infection is multiple founder, given a certain viral load
-
-test_prob <- sapply(recip_spvl, function(x) WeightPDF(x)/sum(WeightPDF(recip_spvl)))
-  
-test_preproc <- preProcess()
+set_spvl <- 10^(1:9)
+test_prob <- sapply(set_spvl , function(x) WeightPDF(x)/sum(WeightPDF(set_spvl)))
 
 #sample args:
 # x = either a vector of one or more elements from which to choose
 # n = a positive number, the number of items to choose from
 # size = a non-negative integer giving the number of items to choose
 # prob = a vector of probability weights for obtaining the elements of the vector being sampled.
-set_spvl <- 10^(1:9)
-sample(set_spvl, size = 100, prob = test_prob, replace = T)
 
+sampled_spvl <- sample(set_spvl, size = 1000, prob = test_prob, replace = T)
 
+recip_data <- cbind.data.frame(given_spvl = sampled_spvl, multiple_founder_proportion = prob_recip_multiple$multiple_founder_proportion)
 ###################################################################################################
 # Visualise probability that recipient infection is intitiated by multiple founders
 
@@ -146,16 +144,16 @@ fig_1c <- ggplot(recip_data, aes(x = given_spvl, y = multiple_founder_proportion
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
-                     limits = c(0,0.5),
+                     limits = c(0,1),
                      breaks = seq(0, 0.6, by = 0.2)) +
   theme_bw() 
 
 
 
 # Panel 1
-panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv')
+panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol = 3)
 
-
+panel1 
 ###################################################################################################
 # Probability distributions of number of variants
 
