@@ -14,6 +14,7 @@ library(scales)
 library(ggpmisc)
 library(parallel)
 library(cowplot)
+library(caret)
 
 source("./scripts/populationdata_models.R")
 source("./scripts/misc_functions.R")
@@ -23,7 +24,7 @@ source("./scripts/misc_functions.R")
 # 'Parent ~ Offspring' regression R2 analogous to heritability of viral load. 
 GetRecipVL <- function(donorload, h2 = 0.33){
   n <- length(donorload)
-  ssr <- sum((donorloads-mean(donorload))^2) # sum of squared residuals
+  ssr <- sum((donorload-mean(donorload))^2) # sum of squared residuals
   e <- rnorm(n)
   e <- resid(lm(e ~ donorload))
   e <- e*sqrt((1-h2)/h2*ssr/(sum(e^2)))
@@ -34,6 +35,7 @@ GetRecipVL <- function(donorload, h2 = 0.33){
 
 
 # Infer weighting for a given viral load 
+# Weighting 'g' from Thompson et al 2019
 WeightPDF <- function(viralload){
   alpha = -3.55
   sigma <- 0.78/(sqrt(1 - ((2*alpha^2)/(pi*(1 + alpha^2)))))
@@ -87,7 +89,8 @@ head(combined_data)
 
 test_prob <- sapply(recip_spvl, function(x) WeightPDF(x)/sum(WeightPDF(recip_spvl)))
   
-  
+test_preproc <- preProcess()
+
 #sample args:
 # x = either a vector of one or more elements from which to choose
 # n = a positive number, the number of items to choose from
@@ -95,7 +98,6 @@ test_prob <- sapply(recip_spvl, function(x) WeightPDF(x)/sum(WeightPDF(recip_spv
 # prob = a vector of probability weights for obtaining the elements of the vector being sampled.
 set_spvl <- 10^(1:9)
 sample(set_spvl, size = 100, prob = test_prob, replace = T)
-
 
 
 ###################################################################################################
@@ -127,15 +129,31 @@ fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion)
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
-  scale_y_continuous(expand = c(0,0),
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0,0),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.6, by = 0.2)) +
   theme_bw() 
 
+
 # Fig 1c
+fig_1c <- ggplot(recip_data, aes(x = given_spvl, y = multiple_founder_proportion))+
+  geom_point()+
+  scale_x_log10(name = 'Recipient SPVL (log10)',
+                limits = c(1, 10^10),
+                expand = c(0,0),
+                breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0,0),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.6, by = 0.2)) +
+  theme_bw() 
+
+
 
 # Panel 1
-panel1 <- plot_grid(fig_1a, fig_1b, labels = 'AUTO', align = 'hv')
+panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv')
 
 
 ###################################################################################################
