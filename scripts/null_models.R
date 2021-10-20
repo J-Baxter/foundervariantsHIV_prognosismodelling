@@ -78,7 +78,7 @@ spvl_df <- cbind.data.frame(donor_spvl = donor_spvl,
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
 
 prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, donor_spvl) %>%
-  do.call(rbind.data.frame, .) # Time difference of 44.60442 mins
+  do.call(rbind.data.frame, .) # Time difference of 44.60442 mins on Macbook
 
 combined_data <- cbind.data.frame(spvl_df, prob_recip_multiple)
 head(combined_data)
@@ -97,6 +97,8 @@ test_prob <- sapply(set_spvl , function(x) WeightPDF(x)/sum(WeightPDF(set_spvl))
 sampled_spvl <- sample(set_spvl, size = 1000, prob = test_prob, replace = T)
 
 recip_data <- cbind.data.frame(given_spvl = sampled_spvl, multiple_founder_proportion = prob_recip_multiple$multiple_founder_proportion)
+
+
 ###################################################################################################
 # Visualise probability that recipient infection is intitiated by multiple founders
 
@@ -153,6 +155,32 @@ fig_1c <- ggplot(recip_data, aes(x = given_spvl, y = multiple_founder_proportion
 panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol = 3)
 
 panel1 
+
+
 ###################################################################################################
 # Probability distributions of number of variants
+# Probability that recipient infection is initiated by n founder variants ~ donor log spvl
+# applies populationmodel_fixedVL_Environment function written by Katie Atkins
+dbinom(3, size = 13, prob = 1/6)
+probabilities = dbinom(x = c(0:10), size = 10, prob = 1/6)
+plot(probabilities)
 
+
+###################################################################################################
+# Probability that recipient infection is initiated by n founder variants ~ recipient log spvl
+
+
+
+###################################################################################################
+# Visualise probability distributions of the number of variants that initiate recipient infection ~
+# recipient set point viral load 
+# AKA panel 2
+
+panel_2 <- ggplot()
+
+
+###################################################################################################
+#                                                                                                 #
+#                                               END                                               #
+#                                                                                                 #
+###################################################################################################
