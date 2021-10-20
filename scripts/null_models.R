@@ -14,7 +14,6 @@ library(scales)
 library(ggpmisc)
 library(parallel)
 library(cowplot)
-library(caret)
 
 source("./scripts/populationdata_models.R")
 source("./scripts/misc_functions.R")
