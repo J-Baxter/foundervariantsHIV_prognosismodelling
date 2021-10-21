@@ -52,7 +52,7 @@ set.seed(4472)
 # Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 50 #1000 - lower for test runs on low cpu machines
+NPAIRS <- 1000 #1000 - lower for test runs on low cpu machines
 donor_logspvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
 
 # Heritability estimate
@@ -64,7 +64,6 @@ stopifnot(min(recip_logspvl)>0)
 
 # Check calcualted R2  == input (to run in test script)
 # summary(lm(recip_spvl ~ donor_spvl))$r.squared
-h2_model <- lm(recip_spvl ~ donor_spvl)
                     
 donor_spvl <- 10^donor_logspvl
 recip_spvl <- 10^recip_logspvl
@@ -98,7 +97,8 @@ sim_donor_range <- 10^(seq(0.01, 10, by = sim_steps))
 sim_donor_spvl <- sample(sim_donor_range, size = NPAIRS, prob = test_prob, replace = T) 
 
 # Infer recipient viral loads of from simulated population
-sim_recip_spvl <- predict(h2_model, newdata = cbind.data.frame(sim_donor_spvl))
+sim_recip_spvl <- GetRecipVL(sim_donor_spvl, R2)
+summary(lm(sim_recip_spvl ~ sim_donor_spvl))$r.squared
 
 # Calculate probability of mulitple founder infection in recipient
 sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_donor_spvl) %>%
@@ -154,8 +154,8 @@ fig_1c <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = multiple_founder
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
+                     limits = c(0,0.75),
+                     breaks = seq(0, 0.75, by = 0.25)) +
   theme_bw() 
 
 
