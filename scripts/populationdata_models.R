@@ -194,10 +194,8 @@ populationmodel_fixedVL_Environment <- function(sp_ViralLoad = 10^5, PerVirionPr
         
           
           # output the prob of transmission across all infectious period and the chance of multiple lineages
-          output <- list(probTransmissionPerSexAct = probTransmissionPerSexAct,
-                        multiple_founder_proportion = multiple_founder_proportion,
-                        variant_distribution = variant_distribution)
-        
+          output <-  c(probTransmissionPerSexAct = probTransmissionPerSexAct, variant_distribution = variant_distribution)
+                   
           return(output)
         
 
