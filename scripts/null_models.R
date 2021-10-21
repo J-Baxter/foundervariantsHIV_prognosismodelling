@@ -52,7 +52,7 @@ set.seed(4472)
 # Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 1000 
+NPAIRS <- 50 #1000 - lower for test runs on low cpu machines
 donor_logspvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
 
 # Heritability estimate
@@ -64,7 +64,8 @@ stopifnot(min(recip_logspvl)>0)
 
 # Check calcualted R2  == input (to run in test script)
 # summary(lm(recip_spvl ~ donor_spvl))$r.squared
-
+h2_model <- lm(recip_spvl ~ donor_spvl)
+                    
 donor_spvl <- 10^donor_logspvl
 recip_spvl <- 10^recip_logspvl
 
@@ -85,18 +86,25 @@ head(combined_data)
 
 ###################################################################################################
 # Probability that recipient infection is multiple founder, given a certain viral load
-set_spvl <- 10^(1:9)
-test_prob <- sapply(set_spvl , function(x) WeightPDF(x)/sum(WeightPDF(set_spvl)))
 
-#sample args:
-# x = either a vector of one or more elements from which to choose
-# n = a positive number, the number of items to choose from
-# size = a non-negative integer giving the number of items to choose
-# prob = a vector of probability weights for obtaining the elements of the vector being sampled.
+# Generate weightings using function g from Thompson et al
+# Function generates a probability distribution (lognormal) which is used to sample from our range
+# of simulated donor viral loads to generalise over a population
+test_prob <- sapply(donor_spvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_spvl)))
+hist(test_prob)
 
-sampled_spvl <- sample(set_spvl, size = 1000, prob = test_prob, replace = T)
+sim_donor_range <- 10^(seq(0.01, 10, by = 0.01))
+sim_donor_spvl <- sample(sim_donor_range, size = 1000, prob = test_prob, replace = T)
 
-recip_data <- cbind.data.frame(given_spvl = sampled_spvl, multiple_founder_proportion = prob_recip_multiple$multiple_founder_proportion)
+# Infer recipient viral loads of from simulated population
+sim_recip_spvl <- predict(h2_model, newdata = sim_donor_spvl)
+
+# Calculate probability of mulitple founder infection in recipient
+sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_donor_spvl) %>%
+  do.call(rbind.data.frame, .) 
+
+sim_combined_data <- cbind.data.frame(sim_donor_spvl,sim_recip_spvl,sim_prob_multiple)
+head(sim_combined_data)
 
 
 ###################################################################################################
@@ -136,7 +144,7 @@ fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion)
 
 
 # Fig 1c
-fig_1c <- ggplot(recip_data, aes(x = given_spvl, y = multiple_founder_proportion))+
+fig_1c <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = multiple_founder_proportion))+
   geom_point()+
   scale_x_log10(name = 'Recipient SPVL (log10)',
                 limits = c(1, 10^10),
@@ -145,8 +153,8 @@ fig_1c <- ggplot(recip_data, aes(x = given_spvl, y = multiple_founder_proportion
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
-                     limits = c(0,1),
-                     breaks = seq(0, 0.6, by = 0.2)) +
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
   theme_bw() 
 
 
@@ -155,20 +163,6 @@ fig_1c <- ggplot(recip_data, aes(x = given_spvl, y = multiple_founder_proportion
 panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol = 3)
 
 panel1 
-
-
-###################################################################################################
-# Probability distributions of number of variants
-# Probability that recipient infection is initiated by n founder variants ~ donor log spvl
-# applies populationmodel_fixedVL_Environment function written by Katie Atkins
-dbinom(3, size = 13, prob = 1/6)
-probabilities = dbinom(x = c(0:10), size = 10, prob = 1/6)
-plot(probabilities)
-
-
-###################################################################################################
-# Probability that recipient infection is initiated by n founder variants ~ recipient log spvl
-
 
 
 ###################################################################################################
