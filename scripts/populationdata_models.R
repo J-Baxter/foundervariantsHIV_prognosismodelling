@@ -1,6 +1,6 @@
 # for fixed spVL, per virion prob of infection and proportion of exposure with potential for infection
 # this function calculates i) the probability of infection, ii) the probability of multiple founder variants
-
+# JB edit 21/10/21 - returns probability distribution instead of P(multiple)
 populationmodel_fixedVL_Environment <- function(sp_ViralLoad = 10^5, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029){
 
   # this is to speed up the code, but can be updated based on phylogenetic results
@@ -195,7 +195,8 @@ populationmodel_fixedVL_Environment <- function(sp_ViralLoad = 10^5, PerVirionPr
           
           # output the prob of transmission across all infectious period and the chance of multiple lineages
           output <- list(probTransmissionPerSexAct = probTransmissionPerSexAct,
-                        multiple_founder_proportion = multiple_founder_proportion)
+                        multiple_founder_proportion = multiple_founder_proportion,
+                        variant_distribution = variant_distribution)
         
           return(output)
         
