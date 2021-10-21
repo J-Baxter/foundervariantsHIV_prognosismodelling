@@ -52,7 +52,7 @@ set.seed(4472)
 # Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 1000 #1000 - lower for test runs on low cpu machines
+NPAIRS <- 1000 # lower for test runs on low cpu machines
 donor_logspvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
 
 # Heritability estimate
@@ -63,8 +63,7 @@ recip_logspvl <- GetRecipVL(donor_logspvl, R2)
 stopifnot(min(recip_logspvl)>0)
 
 # Check calcualted R2  == input (to run in test script)
-# summary(lm(recip_spvl ~ donor_spvl))$r.squared
-                    
+# summary(lm(recip_logspvl ~ donor_logspvl))$r.squared
 donor_spvl <- 10^donor_logspvl
 recip_spvl <- 10^recip_logspvl
 
@@ -90,16 +89,21 @@ head(combined_data)
 # Generate weightings using function g from Thompson et al
 # Function generates a probability distribution (lognormal) which is used to sample from our range
 # of simulated donor viral loads to generalise over a population
-test_prob <- sapply(donor_spvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_spvl)))
+test_prob <- sapply(donor_logspvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_logspvl)))
 hist(test_prob)
 
-sim_steps <- 10/NPAIRS
-sim_donor_range <- seq(0.01, 10, by = sim_steps)
+sim_donor_range <- seq(0, 9, length.out = NPAIRS)
 sim_donor_logspvl <- sample(sim_donor_range, size = NPAIRS, prob = test_prob, replace = T) 
 
 # Infer recipient viral loads of from simulated population
+#predict.lm(h2_model, cbind.data.frame(donor_logspvl = sim_donor_logspvl)) (identical to donor)
+#GetRecipVL(sim_donor_logspvl, R2) (too varied)
 sim_recip_logspvl <- GetRecipVL(sim_donor_logspvl, R2)
-summary(lm(sim_recip_spvl ~ sim_donor_spvl))$r.squared
+summary(sim_donor_logspvl)
+summary(donor_logspvl)
+summary(sim_recip_logspvl)
+
+hist(sim_recip_logspvl)
 
 sim_donor_spvl <- 10^sim_donor_logspvl
 sim_recip_spvl <- 10^sim_recip_logspvl
@@ -132,10 +136,10 @@ fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
   geom_smooth(method = lm) + 
   stat_poly_eq(formula = y ~ x)
   
-  
 # Fig 1b
-fig_1b <- ggplot(combined_data, aes(x = donor_spvl, 
-                                    y = 1 - variant_distribution.V1))+
+fig_1b <- ggplot(combined_data, 
+                 aes(x = donor_spvl, 
+                     y = 1 - variant_distribution.V1))+
   geom_point()+
   scale_x_log10(name = 'Donor SPVL (log10)',
                 limits = c(1, 10^10),
@@ -148,9 +152,10 @@ fig_1b <- ggplot(combined_data, aes(x = donor_spvl,
                      breaks = seq(0, 0.6, by = 0.2)) +
   theme_bw() 
 
-
 # Fig 1c
-fig_1c <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = 1 - variant_distribution.V1))+
+fig_1c <- ggplot(sim_combined_data, 
+                 aes(x = sim_recip_spvl,
+                     y = 1 - variant_distribution.V1))+
   geom_point()+
   scale_x_log10(name = 'Recipient SPVL (log10)',
                 limits = c(1, 10^10),
@@ -163,8 +168,6 @@ fig_1c <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = 1 - variant_dist
                      breaks = seq(0, 0.75, by = 0.25)) +
   theme_bw() 
 
-
-
 # Panel 1
 panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol = 3)
 
@@ -176,7 +179,12 @@ panel1
 # recipient set point viral load 
 # AKA panel 2
 
-panel_2 <- ggplot(sim_combined_data)
+#store data long form
+sim_combined_data_long <- gather(sim_combined_data)
+#group VLs
+
+#facet by VL range
+panel_2 <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = variant_distribution.))
 
 
 ###################################################################################################
