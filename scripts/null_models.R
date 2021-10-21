@@ -93,17 +93,18 @@ head(combined_data)
 test_prob <- sapply(donor_spvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_spvl)))
 hist(test_prob)
 
-sim_donor_range <- 10^(seq(0.01, 10, by = 0.01))
-sim_donor_spvl <- sample(sim_donor_range, size = 1000, prob = test_prob, replace = T)
+sim_steps <- 10/NPAIRS
+sim_donor_range <- 10^(seq(0.01, 10, by = sim_steps))
+sim_donor_spvl <- sample(sim_donor_range, size = NPAIRS, prob = test_prob, replace = T) 
 
 # Infer recipient viral loads of from simulated population
-sim_recip_spvl <- predict(h2_model, newdata = sim_donor_spvl)
+sim_recip_spvl <- predict(h2_model, newdata = cbind.data.frame(sim_donor_spvl))
 
 # Calculate probability of mulitple founder infection in recipient
 sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_donor_spvl) %>%
   do.call(rbind.data.frame, .) 
 
-sim_combined_data <- cbind.data.frame(sim_donor_spvl,sim_recip_spvl,sim_prob_multiple)
+sim_combined_data <- cbind.data.frame(sim_donor_spvl, sim_recip_spvl, sim_prob_multiple)
 head(sim_combined_data)
 
 
