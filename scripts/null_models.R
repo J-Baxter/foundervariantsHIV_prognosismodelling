@@ -45,7 +45,7 @@ WeightPDF <- function(viralload){
 
 
 ###################################################################################################
-#Set seed
+# Set seed
 set.seed(4472)
 
 # Data generation
@@ -78,10 +78,11 @@ spvl_df <- cbind.data.frame(donor_spvl = donor_spvl,
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
 
 prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, donor_spvl) %>%
-  do.call(rbind.data.frame, .) # Time difference of 44.60442 mins on Macbook
+  do.call(cbind.data.frame, .) %>% t() # Time difference of 44.60442 mins on Macbook
 
 combined_data <- cbind.data.frame(spvl_df, prob_recip_multiple)
 head(combined_data)
+
 
 ###################################################################################################
 # Probability that recipient infection is multiple founder, given a certain viral load
@@ -93,16 +94,19 @@ test_prob <- sapply(donor_spvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_spv
 hist(test_prob)
 
 sim_steps <- 10/NPAIRS
-sim_donor_range <- 10^(seq(0.01, 10, by = sim_steps))
-sim_donor_spvl <- sample(sim_donor_range, size = NPAIRS, prob = test_prob, replace = T) 
+sim_donor_range <- seq(0.01, 10, by = sim_steps)
+sim_donor_logspvl <- sample(sim_donor_range, size = NPAIRS, prob = test_prob, replace = T) 
 
 # Infer recipient viral loads of from simulated population
-sim_recip_spvl <- GetRecipVL(sim_donor_spvl, R2)
+sim_recip_logspvl <- GetRecipVL(sim_donor_logspvl, R2)
 summary(lm(sim_recip_spvl ~ sim_donor_spvl))$r.squared
 
+sim_donor_spvl <- 10^sim_donor_logspvl
+sim_recip_spvl <- 10^sim_recip_logspvl
+
 # Calculate probability of mulitple founder infection in recipient
-sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_donor_spvl) %>%
-  do.call(rbind.data.frame, .) 
+sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_donor_spvl)  %>%
+  do.call(cbind.data.frame, .) %>% t()
 
 sim_combined_data <- cbind.data.frame(sim_donor_spvl, sim_recip_spvl, sim_prob_multiple)
 head(sim_combined_data)
@@ -130,7 +134,8 @@ fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
   
   
 # Fig 1b
-fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion))+
+fig_1b <- ggplot(combined_data, aes(x = donor_spvl, 
+                                    y = 1 - variant_distribution.V1))+
   geom_point()+
   scale_x_log10(name = 'Donor SPVL (log10)',
                 limits = c(1, 10^10),
@@ -145,7 +150,7 @@ fig_1b <- ggplot(combined_data, aes(x = donor_spvl, multiple_founder_proportion)
 
 
 # Fig 1c
-fig_1c <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = multiple_founder_proportion))+
+fig_1c <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = 1 - variant_distribution.V1))+
   geom_point()+
   scale_x_log10(name = 'Recipient SPVL (log10)',
                 limits = c(1, 10^10),
@@ -171,7 +176,7 @@ panel1
 # recipient set point viral load 
 # AKA panel 2
 
-panel_2 <- ggplot()
+panel_2 <- ggplot(sim_combined_data)
 
 
 ###################################################################################################
