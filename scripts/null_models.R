@@ -64,6 +64,8 @@ stopifnot(min(recip_logspvl)>0)
 
 # Check calcualted R2  == input (to run in test script)
 # summary(lm(recip_logspvl ~ donor_logspvl))$r.squared
+h2_model <- lm(recip_logspvl ~ donor_logspvl)
+
 donor_spvl <- 10^donor_logspvl
 recip_spvl <- 10^recip_logspvl
 
@@ -90,20 +92,19 @@ head(combined_data)
 # Function generates a probability distribution (lognormal) which is used to sample from our range
 # of simulated donor viral loads to generalise over a population
 test_prob <- sapply(donor_logspvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_logspvl)))
-hist(test_prob)
+hist(test_prob) #visual check - should look normalish as already log
 
-sim_donor_range <- seq(0, 9, length.out = NPAIRS)
+sim_donor_range <- seq(0.5, 8, length.out = NPAIRS)
 sim_donor_logspvl <- sample(sim_donor_range, size = NPAIRS, prob = test_prob, replace = T) 
+hist(sim_donor_logspvl)
 
 # Infer recipient viral loads of from simulated population
-#predict.lm(h2_model, cbind.data.frame(donor_logspvl = sim_donor_logspvl)) (identical to donor)
-#GetRecipVL(sim_donor_logspvl, R2) (too varied)
-sim_recip_logspvl <- GetRecipVL(sim_donor_logspvl, R2)
-summary(sim_donor_logspvl)
-summary(donor_logspvl)
-summary(sim_recip_logspvl)
-
-hist(sim_recip_logspvl)
+# predict.lm(h2_model, cbind.data.frame(donor_logspvl = sim_donor_logspvl)) (identical to donor)
+# GetRecipVL(sim_donor_logspvl, R2) (too varied) suspect problem is attempting to pace a normal dist over uniform?
+# Implementation below uses coefficients from donor ~ recipient model and normal dist error term
+sim_recip_logspvl <- h2_model$coefficients[1] + h2_model$coefficients[2] * sim_donor_logspvl + rnorm(1.218)
+hist(sim_recip_logspvl )
+stopifnot(min(sim_recip_logspvl)<0)
 
 sim_donor_spvl <- 10^sim_donor_logspvl
 sim_recip_spvl <- 10^sim_recip_logspvl
