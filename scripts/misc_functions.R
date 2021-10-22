@@ -12,7 +12,7 @@
 RunParallel <- function(func, v1, ...){
   options(warn = 1)
   require(parallel)
-  
+ 
   # Set up cluster (fork)
   cl <- detectCores() %>% `-` (2) 
  
