@@ -109,7 +109,7 @@ recip_spvl <- 10^model_population$recip
 spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, 
                             recip_spvl = recip_spvl) 
 
-
+h2_model <- lm(recip ~ donor, data = model_population)
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
@@ -217,11 +217,9 @@ panel1
 
 #store data long form
 sim_combined_data_long <- sim_combined_data %>% 
-  gather() %>% 
-  mutate(category = cut(, breaks = c(), labels = c()))
-#group VLs
+  gather() %>% # donor | recipient | infection prob | variant # | variant prob | 
+  mutate(category = cut(, breaks = c(), labels = c())) # group VLs by 10^x
 
-#facet by VL range
 panel_2 <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = variant_distribution.))
 
 
