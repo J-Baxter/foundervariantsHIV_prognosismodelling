@@ -103,7 +103,6 @@ hist(sim_donor_logspvl)
 # GetRecipVL(sim_donor_logspvl, R2) (too varied) suspect problem is attempting to pace a normal dist over uniform?
 # Implementation below uses coefficients from donor ~ recipient model and normal dist error term
 sim_recip_logspvl <- h2_model$coefficients[1] + h2_model$coefficients[2] * sim_donor_logspvl + rnorm(1.218)
-hist(sim_recip_logspvl )
 stopifnot(min(sim_recip_logspvl)<0)
 
 sim_donor_spvl <- 10^sim_donor_logspvl
