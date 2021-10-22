@@ -33,6 +33,8 @@ GetRecipVL <- function(donorload, h2 = 0.33){
 }
 
 
+# Initialise donor~recipient pairs from a given distribution of donor logspvls and 
+# regression coefficient corresponding to the heritability of viral load
 InitPop <- function(popsize, donor_mean, donor_sd, herit = 0.33){
   init_donor <- rnorm(popsize,  mean = donor_mean, sd = donor_sd)
   init_recip <- -1
@@ -55,6 +57,8 @@ WeightPDF <- function(viralload){
 } 
 
 
+# Initialise simulation donor population from a specified min and max log spvl, generalised with
+# a sampling distribution from WeightPDF (function 'g' from Thompson 2019 et al)
 InitSimDonor <- function(pop_size, donor_min, donor_max, sample_prob){
   sim_range <- seq(donor_min, donor_max, length.out = pop_size)
   sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
@@ -63,6 +67,9 @@ InitSimDonor <- function(pop_size, donor_min, donor_max, sample_prob){
 }
 
 
+# Infer simulation recipient population using donor~recipient regresssion model eqn from 
+# initial donor~recipient pairs. takes coefficients, intercept and error term (sampled from
+# normal dist with mean of residual standard error of model) for y = a + bx + e eqation.
 InitSimRecip <- function(model, donor){
   out <- -1
   while (min(out) < 0) {
