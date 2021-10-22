@@ -184,7 +184,7 @@ fig_1b <- ggplot(combined_data,
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
-                     limits = c(0,0.5),
+                     limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.2)) +
   theme_bw() 
 
@@ -200,14 +200,12 @@ fig_1c <- ggplot(sim_combined_data,
                 labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
-                     limits = c(0,0.75),
-                     breaks = seq(0, 0.75, by = 0.25)) +
+                     limits = c(0,0.6),
+                     breaks = seq(0, 0.6, by = 0.2)) +
   theme_bw() 
 
 # Panel 1
 panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol = 3)
-
-panel1 
 
 
 ###################################################################################################
@@ -224,7 +222,7 @@ sim_combined_data_long <- sim_combined_data %>%
 # replace categories of number of variants with integers
 sim_combined_data_long$variant_no <- rep(1:33, each = 1000)
 
-panel_2 <- ggplot(sim_combined_data_long, 
+panel2 <- ggplot(sim_combined_data_long, 
                   aes(x = variant_no, 
                       y =variant_prob/100)) + 
   geom_bar(stat = 'identity') + 
@@ -241,7 +239,22 @@ panel_2 <- ggplot(sim_combined_data_long,
   theme(panel.spacing = unit(1, "lines")) +
   coord_cartesian(xlim = c(1,8))
 
+# Output to file
+if (!dir.exists('./figures')){
+  dir.create('./figures')
+}else{
+    Sys.sleep(0.2)
+}
 
+#pdf(file = './figures/panel1.pdf', width = 9, height = 3.5)
+jpeg(filename = './figures/panel1.jpeg', width = 23, height = 9, unit = 'cm', res = 350)
+panel1 
+dev.off()
+
+#pdf(file = './figures/panel2.pdf')
+jpeg(filename = './figures/panel2.jpeg', width = 18, height = 18, unit = 'cm', res = 350 )
+panel2 
+dev.off()
 ###################################################################################################
 #                                                                                                 #
 #                                               END                                               #
