@@ -89,13 +89,18 @@ InitSimRecip <- function(model, donor){
 set.seed(4472)
 
 # Data generation
-# Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
+# Normal distibution of log spvl from Rakkai Cohort, Hollingsworth et al. mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
 NPAIRS <- 100 # lower for test runs on low cpu machines
 R2 <- 0.33 # Heritability estimate
+RAKKAI_MEAN <- 4.39
+RAKKAI_SD <- 0.84
 
-model_population <- InitPop(NPAIRS, donor_mean = 4.39, donor_sd = 0.84, herit = 0.33)
+model_population <- InitPop(NPAIRS, 
+                            donor_mean = RAKKAI_MEAN, 
+                            donor_sd = RAKKAI_SD, 
+                            herit = R2)
 
 donor_spvl <- 10^model_population$donor
 recip_spvl <- 10^model_population$recip
