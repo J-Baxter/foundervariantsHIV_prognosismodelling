@@ -138,7 +138,7 @@ hist(sim_donor_logspvl)
 # Infer recipient viral loads of from simulated population
 # predict.lm(h2_model, cbind.data.frame(donor_logspvl = sim_donor_logspvl)) (identical to donor)
 # GetRecipVL(sim_donor_logspvl, R2) (too varied) suspect problem is attempting to pace a normal dist over uniform?
-# Implementation below uses coefficients from donor ~ recipient model and normal dist error term
+# Implementation below uses coefficients from recipient ~ donor model and normal dist error term
 sim_recip_logspvl <- InitSimRecip(h2_model, sim_donor_logspvl) 
 
 sim_donor_spvl <- 10^sim_donor_logspvl
@@ -215,12 +215,31 @@ panel1
 # recipient set point viral load 
 # AKA panel 2
 
-#store data long form
-sim_combined_data_long <- sim_combined_data %>% 
-  gather() %>% # donor | recipient | infection prob | variant # | variant prob | 
-  mutate(category = cut(, breaks = c(), labels = c())) # group VLs by 10^x
+#store data long form & categorise recipient viral loads
+sim_combined_data_long <- sim_combined_data %>%
+  cbind(., ref = 1:nrow(sim_combined_data)) %>%
+  gather(key = "variant_no",value = 'variant_prob',variant_distribution.V1:variant_distribution.V33) %>%
+  mutate(spvl_cat = cut(sim_recip_spvl, breaks = 10^(0:9), labels = sapply(scientific(10^(1:9)), paste0, ' copies/ML')))
 
-panel_2 <- ggplot(sim_combined_data, aes(x = sim_recip_spvl, y = variant_distribution.))
+# replace categories of number of variants with integers
+sim_combined_data_long$variant_no <- rep(1:33, each = 1000)
+
+panel_2 <- ggplot(sim_combined_data_long, 
+                  aes(x = variant_no, 
+                      y =variant_prob/100)) + 
+  geom_bar(stat = 'identity') + 
+  scale_y_continuous(name = 'Probability', 
+                     expand = c(0,0),
+                     limits = c(0,1),
+                     breaks = seq(0,1,0.2))+
+  scale_x_continuous(name = 'Number of Variants', 
+                     expand = c(0,0.6),
+                     #limits = c(1,12),
+                     breaks = seq(0,12,1))+
+  facet_wrap(~spvl_cat) +
+  theme_bw() +
+  theme(panel.spacing = unit(1, "lines")) +
+  coord_cartesian(xlim = c(1,8))
 
 
 ###################################################################################################
