@@ -39,7 +39,7 @@ InitPop <- function(popsize, donor_mean, donor_sd, herit = 0.33){
   init_donor <- rnorm(popsize,  mean = donor_mean, sd = donor_sd)
   init_recip <- -1
   while(min(init_recip)<0){
-    init_recip <- GetRecipVL(donor_logspvl, herit) 
+    init_recip <- GetRecipVL(init_donor, herit) 
   }
   out <- list(donor = init_donor, recip = init_recip)
   return(out)
@@ -126,7 +126,7 @@ head(combined_data)
 # Generate weightings using function g from Thompson et al
 # Function generates a probability distribution (lognormal) which is used to sample from our range
 # of simulated donor viral loads to generalise over a population
-donor_prob <- sapply(donor_logspvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_logspvl)))
+donor_prob <- sapply(log10(donor_spvl), function(x) WeightPDF(x)/sum(WeightPDF(log10(donor_spvl))))
 hist(donor_prob) #visual check - should look normalish as already log
 
 sim_donor_logspvl <- InitSimDonor(pop_size = NPAIRS,
