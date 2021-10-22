@@ -92,7 +92,7 @@ set.seed(4472)
 # Normal distibution of log spvl from Rakkai Cohort, Hollingsworth et al. mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 100 # lower for test runs on low cpu machines
+NPAIRS <- 1000 # lower for test runs on low cpu machines
 R2 <- 0.33 # Heritability estimate
 RAKKAI_MEAN <- 4.39
 RAKKAI_SD <- 0.84
