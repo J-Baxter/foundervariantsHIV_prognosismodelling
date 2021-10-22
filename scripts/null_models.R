@@ -33,6 +33,17 @@ GetRecipVL <- function(donorload, h2 = 0.33){
 }
 
 
+InitPop <- function(popsize, donor_mean, donor_sd, herit = 0.33){
+  init_donor <- rnorm(popsize,  mean = donor_mean, sd = donor_sd)
+  init_recip <- -1
+  while(min(init_recip)<0){
+    init_recip <- GetRecipVL(donor_logspvl, herit) 
+  }
+  out <- list(donor = init_donor, recip = init_recip)
+  return(out)
+}
+
+
 # Infer weighting for a given viral load 
 # Weighting 'g' from Thompson et al 2019
 WeightPDF <- function(viralload){
@@ -44,6 +55,28 @@ WeightPDF <- function(viralload){
 } 
 
 
+InitSimDonor <- function(pop_size, donor_min, donor_max, sample_prob){
+  sim_range <- seq(donor_min, donor_max, length.out = pop_size)
+  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
+  return(sim_logspvl)
+  
+}
+
+
+InitSimRecip <- function(model, donor){
+  out <- -1
+  while (min(out) < 0) {
+    if(class(model)=='lm'){
+      out <- model$coefficients[1] + model$coefficients[2] * donor + rnorm(summary(model)$sigma)
+    }else{
+      stop("Function requires linear model as input.")
+    }
+  }
+  
+  return(out)
+}
+
+
 ###################################################################################################
 # Set seed
 set.seed(4472)
@@ -52,22 +85,13 @@ set.seed(4472)
 # Normal distibution of log spvl from Amsterdam Cohort (Link). mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 1000 # lower for test runs on low cpu machines
-donor_logspvl <- rnorm(NPAIRS,  mean = 4.39, sd = 0.84)
+NPAIRS <- 100 # lower for test runs on low cpu machines
+R2 <- 0.33 # Heritability estimate
 
-# Heritability estimate
-R2 <- 0.33
+model_population <- InitPop(NPAIRS, donor_mean = 4.39, donor_sd = 0.84, herit = 0.33)
 
-# Generate recipient data
-recip_logspvl <- GetRecipVL(donor_logspvl, R2)
-stopifnot(min(recip_logspvl)>0)
-
-# Check calcualted R2  == input (to run in test script)
-# summary(lm(recip_logspvl ~ donor_logspvl))$r.squared
-h2_model <- lm(recip_logspvl ~ donor_logspvl)
-
-donor_spvl <- 10^donor_logspvl
-recip_spvl <- 10^recip_logspvl
+donor_spvl <- 10^model_population$donor
+recip_spvl <- 10^model_population$recip
 
 # Data frame of paired viral loads
 spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, 
@@ -77,7 +101,6 @@ spvl_df <- cbind.data.frame(donor_spvl = donor_spvl,
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
-
 prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, donor_spvl) %>%
   do.call(cbind.data.frame, .) %>% t() # Time difference of 44.60442 mins on Macbook
 
@@ -91,19 +114,20 @@ head(combined_data)
 # Generate weightings using function g from Thompson et al
 # Function generates a probability distribution (lognormal) which is used to sample from our range
 # of simulated donor viral loads to generalise over a population
-test_prob <- sapply(donor_logspvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_logspvl)))
-hist(test_prob) #visual check - should look normalish as already log
+donor_prob <- sapply(donor_logspvl, function(x) WeightPDF(x)/sum(WeightPDF(donor_logspvl)))
+hist(donor_prob) #visual check - should look normalish as already log
 
-sim_donor_range <- seq(0.5, 8, length.out = NPAIRS)
-sim_donor_logspvl <- sample(sim_donor_range, size = NPAIRS, prob = test_prob, replace = T) 
+sim_donor_logspvl <- InitSimDonor(pop_size = NPAIRS,
+                                  donor_min = 0.5, 
+                                  donor_max = 8, 
+                                  sample_prob = donor_prob)
 hist(sim_donor_logspvl)
 
 # Infer recipient viral loads of from simulated population
 # predict.lm(h2_model, cbind.data.frame(donor_logspvl = sim_donor_logspvl)) (identical to donor)
 # GetRecipVL(sim_donor_logspvl, R2) (too varied) suspect problem is attempting to pace a normal dist over uniform?
 # Implementation below uses coefficients from donor ~ recipient model and normal dist error term
-sim_recip_logspvl <- h2_model$coefficients[1] + h2_model$coefficients[2] * sim_donor_logspvl + rnorm(1.218)
-stopifnot(min(sim_recip_logspvl)<0)
+sim_recip_logspvl <- InitSimRecip(h2_model, sim_donor_logspvl) 
 
 sim_donor_spvl <- 10^sim_donor_logspvl
 sim_recip_spvl <- 10^sim_recip_logspvl
@@ -180,7 +204,9 @@ panel1
 # AKA panel 2
 
 #store data long form
-sim_combined_data_long <- gather(sim_combined_data)
+sim_combined_data_long <- sim_combined_data %>% 
+  gather() %>% 
+  mutate(category = cut(, breaks = c(), labels = c()))
 #group VLs
 
 #facet by VL range
