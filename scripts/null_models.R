@@ -160,10 +160,10 @@ fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
   geom_point() +
   scale_x_log10(limits = c(1, 10^10),
                 expand = c(0,0),
-                name = 'Donor SPVL (log10)',
+                name = 'Donor SPVL (copies/ml)',
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(10^.x))) +
-  scale_y_log10(name = 'Recipient SPVL (log10)',
+  scale_y_log10(name = 'Recipient SPVL (copies/ml)',
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
@@ -177,7 +177,7 @@ fig_1b <- ggplot(combined_data,
                  aes(x = donor_spvl, 
                      y = 1 - variant_distribution.V1))+
   geom_point()+
-  scale_x_log10(name = 'Donor SPVL (log10)',
+  scale_x_log10(name = 'Donor SPVL (copies/ml)',
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
@@ -193,7 +193,7 @@ fig_1c <- ggplot(sim_combined_data,
                  aes(x = sim_recip_spvl,
                      y = 1 - variant_distribution.V1))+
   geom_point()+
-  scale_x_log10(name = 'Recipient SPVL (log10)',
+  scale_x_log10(name = 'Recipient SPVL (copies/ml)',
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
@@ -217,7 +217,7 @@ panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol 
 sim_combined_data_long <- sim_combined_data %>%
   cbind(., ref = 1:nrow(sim_combined_data)) %>%
   gather(key = "variant_no",value = 'variant_prob',variant_distribution.V1:variant_distribution.V33) %>%
-  mutate(spvl_cat = cut(sim_recip_spvl, breaks = 10^(0:9), labels = sapply(scientific(10^(1:9)), paste0, ' copies/ML')))
+  mutate(spvl_cat = cut(sim_recip_spvl, breaks = 10^(0:9), labels = sapply(scientific(10^(1:9)), paste0, ' copies/ml')))
 
 # replace categories of number of variants with integers
 sim_combined_data_long$variant_no <- rep(1:33, each = 1000)
