@@ -157,52 +157,55 @@ head(sim_combined_data)
 
 # Fig 1a
 fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
-  geom_point() +
+  geom_point(colour = '#CB6015',  #usher colours?
+             alpha = 0.5) +
   scale_x_log10(limits = c(1, 10^10),
                 expand = c(0,0),
-                name = 'Donor SPVL (copies/ml)',
+                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10^x),
-                labels = trans_format("log10", math_format(10^.x))) +
-  scale_y_log10(name = 'Recipient SPVL (copies/ml)',
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
-                labels = trans_format("log10", math_format(10^.x))) +
-  theme_bw() +
-  geom_smooth(method = lm) + 
+                labels = trans_format("log10", math_format(.x))) +
+  theme_classic() +
+  geom_smooth(method = lm, colour = 'black', se = F) + 
   stat_poly_eq(formula = y ~ x)
   
 # Fig 1b
 fig_1b <- ggplot(combined_data, 
                  aes(x = donor_spvl, 
                      y = 1 - variant_distribution.V1))+
-  geom_point()+
-  scale_x_log10(name = 'Donor SPVL (copies/ml)',
+  geom_point(colour = '#CB6015',  #usher colours?
+             alpha = 0.5)+
+  scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
-                labels = trans_format("log10", math_format(10^.x))) +
+                labels = trans_format("log10", math_format(.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.2)) +
-  theme_bw() 
+  theme_classic() 
 
 # Fig 1c
 fig_1c <- ggplot(sim_combined_data, 
                  aes(x = sim_recip_spvl,
                      y = 1 - variant_distribution.V1))+
-  geom_point()+
-  scale_x_log10(name = 'Recipient SPVL (copies/ml)',
+  geom_point(colour = '#CB6015',  #usher colours?
+             alpha = 0.5)+
+  scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
-                labels = trans_format("log10", math_format(10^.x))) +
+                labels = trans_format("log10", math_format(.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.2)) +
-  theme_bw() 
+  theme_classic() 
 
 # Panel 1
 panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol = 3)
@@ -212,15 +215,20 @@ panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol 
 # Visualise probability distributions of the number of variants that initiate recipient infection ~
 # recipient set point viral load 
 # AKA panel 2
-
+lab <- expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')'))
 #store data long form & categorise recipient viral loads
 sim_combined_data_long <- sim_combined_data %>%
   cbind(., ref = 1:nrow(sim_combined_data)) %>%
   gather(key = "variant_no",value = 'variant_prob',variant_distribution.V1:variant_distribution.V33) %>%
-  mutate(spvl_cat = cut(sim_recip_spvl, breaks = 10^(0:9), labels = sapply(scientific(10^(1:9)), paste0, ' copies/ml')))
+  mutate(spvl_cat = cut(sim_recip_spvl, 
+                        breaks = 10^(0:9),
+                        labels = 1:9))
 
 # replace categories of number of variants with integers
 sim_combined_data_long$variant_no <- rep(1:33, each = 1000)
+
+panel2_labeller <- as_labeller(sapply(1:9, function(x) paste(x, "~log[10]~copies~ml^-1")) %>% `names<-` (1:9),
+                               default = label_parsed)
 
 panel2 <- ggplot(sim_combined_data_long, 
                   aes(x = variant_no, 
@@ -234,8 +242,9 @@ panel2 <- ggplot(sim_combined_data_long,
                      expand = c(0,0.6),
                      #limits = c(1,12),
                      breaks = seq(0,12,1))+
-  facet_wrap(~spvl_cat) +
-  theme_bw() +
+  facet_wrap(~spvl_cat,
+             labeller = panel2_labeller) +
+  theme_classic() +
   theme(panel.spacing = unit(1, "lines")) +
   coord_cartesian(xlim = c(1,8))
 
