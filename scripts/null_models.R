@@ -196,7 +196,7 @@ fig_1c <- ggplot(sim_combined_data,
                      y = 1 - variant_distribution.V1))+
   geom_point(colour = '#CB6015',  #usher colours?
              alpha = 0.5)+
-  scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
+  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
@@ -227,16 +227,37 @@ sim_combined_data_long <- sim_combined_data %>%
 # replace categories of number of variants with integers
 sim_combined_data_long$variant_no <- rep(1:33, each = 1000)
 
+
+# alt panel 2 taking probability distributions from single specified donor spvls
+panel2_donors <- 1:9
+panel2_recips <- InitSimRecip(h2_model, panel2_donors)
+panel2_donors <- 10 ** panel2_donors
+panel2_recips <- 10 ** panel2_recips
+
+panel2_probs <- RunParallel(populationmodel_fixedVL_Environment, panel2_donors)  %>%
+  do.call(cbind.data.frame, .) %>% t()
+panel2_data <- cbind.data.frame(panel2_donors, panel2_recips, panel2_probs)
+
+panel2_data_long <- panel2_data %>%
+  cbind(., ref = 1:nrow(panel2_data)) %>%
+  gather(key = "variant_no",value = 'variant_prob',variant_distribution.V1:variant_distribution.V33) %>%
+  mutate(spvl_cat = cut(panel2_donors, 
+                        breaks = 10^(0:9),
+                        labels = 1:9))
+
+# replace categories of number of variants with integers
+panel2_data_long $variant_no <- rep(1:33, each = 9)
+
 panel2_labeller <- as_labeller(sapply(1:9, function(x) paste(x, "~log[10]~copies~ml^-1")) %>% `names<-` (1:9),
                                default = label_parsed)
 
-panel2 <- ggplot(sim_combined_data_long, 
+panel2 <- ggplot(panel2_data_long, 
                   aes(x = variant_no, 
-                      y =variant_prob/100)) + 
+                      y =variant_prob)) + 
   geom_bar(stat = 'identity') + 
   scale_y_continuous(name = 'Probability', 
                      expand = c(0,0),
-                     limits = c(0,1),
+                     limits = c(0,0.8),
                      breaks = seq(0,1,0.2))+
   scale_x_continuous(name = 'Number of Variants', 
                      expand = c(0,0.6),
@@ -255,12 +276,14 @@ if (!dir.exists('./figures')){
     Sys.sleep(0.2)
 }
 
-#pdf(file = './figures/panel1.pdf', width = 9, height = 3.5)
+#setEPS()
+#postscript("./figures/panel1.eps",width = 23, height = 9, unit = 'cm')
 jpeg(filename = './figures/panel1.jpeg', width = 23, height = 9, unit = 'cm', res = 350)
 panel1 
 dev.off()
 
-#pdf(file = './figures/panel2.pdf')
+#setEPS()
+#postscript("./figures/panel2.eps", width = 18, height = 18, unit = 'cm')
 jpeg(filename = './figures/panel2.jpeg', width = 18, height = 18, unit = 'cm', res = 350 )
 panel2 
 dev.off()
