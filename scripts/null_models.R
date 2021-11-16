@@ -23,10 +23,10 @@ source("./scripts/misc_functions.R")
 # 'Parent ~ Offspring' regression R2 analogous to heritability of viral load. 
 GetRecipVL <- function(donorload, h2 = 0.33){
   n <- length(donorload)
-  ssr <- sum((donorload-mean(donorload))^2) # sum of squared residuals
+  ssr <- sum((donorload-mean(donorload))**2) # sum of squared residuals
   e <- rnorm(n)
   e <- resid(lm(e ~ donorload))
-  e <- e*sqrt((1-h2)/h2*ssr/(sum(e^2)))
+  e <- e*sqrt((1-h2)/h2*ssr/(sum(e**2)))
   recipload <- donorload + e
   
   return(recipload)
@@ -50,8 +50,8 @@ InitPop <- function(popsize, donor_mean, donor_sd, herit = 0.33){
 # Weighting 'g' from Thompson et al 2019
 WeightPDF <- function(viralload){
   alpha = -3.55
-  sigma <- 0.78/(sqrt(1 - ((2*alpha^2)/(pi*(1 + alpha^2)))))
-  mu <-  4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha^2)))
+  sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
+  mu <-  4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)))
   weight <-  (2/sigma)*dnorm((log10(viralload) - mu)/sigma)*pnorm(alpha*(log10(viralload) - mu)/sigma)
   return(weight)
 } 
@@ -102,8 +102,8 @@ model_population <- InitPop(NPAIRS,
                             donor_sd = RAKKAI_SD, 
                             herit = R2)
 
-donor_spvl <- 10^model_population$donor
-recip_spvl <- 10^model_population$recip
+donor_spvl <- 10**model_population$donor
+recip_spvl <- 10**model_population$recip
 
 # Data frame of paired viral loads
 spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, 
@@ -141,8 +141,8 @@ hist(sim_donor_logspvl)
 # Implementation below uses coefficients from recipient ~ donor model and normal dist error term
 sim_recip_logspvl <- InitSimRecip(h2_model, sim_donor_logspvl) 
 
-sim_donor_spvl <- 10^sim_donor_logspvl
-sim_recip_spvl <- 10^sim_recip_logspvl
+sim_donor_spvl <- 10**sim_donor_logspvl
+sim_recip_spvl <- 10**sim_recip_logspvl
 
 # Calculate probability of mulitple founder infection in recipient
 sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_donor_spvl)  %>%
@@ -159,15 +159,15 @@ head(sim_combined_data)
 fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
   geom_point(colour = '#CB6015',  #usher colours?
              alpha = 0.5) +
-  scale_x_log10(limits = c(1, 10^10),
+  scale_x_log10(limits = c(1, 10**10),
                 expand = c(0,0),
-                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10^x),
+                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
-                limits = c(1, 10^10),
+  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**10),
                 expand = c(0,0),
-                breaks = trans_breaks("log10", function(x) 10^x),
+                breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   theme_classic() +
   geom_smooth(method = lm, colour = 'black', se = F) + 
@@ -179,10 +179,10 @@ fig_1b <- ggplot(combined_data,
                      y = 1 - variant_distribution.V1))+
   geom_point(colour = '#CB6015',  #usher colours?
              alpha = 0.5)+
-  scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
-                limits = c(1, 10^10),
+  scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**10),
                 expand = c(0,0),
-                breaks = trans_breaks("log10", function(x) 10^x),
+                breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
@@ -196,10 +196,10 @@ fig_1c <- ggplot(sim_combined_data,
                      y = 1 - variant_distribution.V1))+
   geom_point(colour = '#CB6015',  #usher colours?
              alpha = 0.5)+
-  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
-                limits = c(1, 10^10),
+  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**10),
                 expand = c(0,0),
-                breaks = trans_breaks("log10", function(x) 10^x),
+                breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0,0),
@@ -215,18 +215,27 @@ panel1 <- plot_grid(fig_1a, fig_1b, fig_1c, labels = 'AUTO', align = 'hv', ncol 
 # Visualise probability distributions of the number of variants that initiate recipient infection ~
 # recipient set point viral load 
 # AKA panel 2
-lab <- expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')'))
+lab <- expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')'))
+
 #store data long form & categorise recipient viral loads
 sim_combined_data_long <- sim_combined_data %>%
   cbind(., ref = 1:nrow(sim_combined_data)) %>%
   gather(key = "variant_no",value = 'variant_prob',variant_distribution.V1:variant_distribution.V33) %>%
   mutate(spvl_cat = cut(sim_recip_spvl, 
-                        breaks = 10^(0:9),
+                        breaks = 10**(0:9),
                         labels = 1:9))
 
 # replace categories of number of variants with integers
 sim_combined_data_long$variant_no <- rep(1:33, each = 1000)
 
+# within each spvl cat. calculate median probability for number of variants
+median_probs <- sim_combined_data_long %>%
+  split.data.frame(sim_combined_data_long$spvl_cat) %>%
+  lapply(., function(x) {group_by(x, variant_no) %>%
+      summarise(variant_prob = median(variant_prob))}) %>%
+  bind_rows(.,.id = 'source')
+
+colnames(median_probs)[1] <- 'spvl_cat'
 
 # alt panel 2 taking probability distributions from single specified donor spvls
 panel2_donors <- 1:9
@@ -242,19 +251,19 @@ panel2_data_long <- panel2_data %>%
   cbind(., ref = 1:nrow(panel2_data)) %>%
   gather(key = "variant_no",value = 'variant_prob',variant_distribution.V1:variant_distribution.V33) %>%
   mutate(spvl_cat = cut(panel2_donors, 
-                        breaks = 10^(0:9),
+                        breaks = 10**(0:9),
                         labels = 1:9))
 
 # replace categories of number of variants with integers
-panel2_data_long $variant_no <- rep(1:33, each = 9)
+panel2_data_long$variant_no <- rep(1:33, each = 9)
 
-panel2_labeller <- as_labeller(sapply(1:9, function(x) paste(x, "~log[10]~copies~ml^-1")) %>% `names<-` (1:9),
+panel2_labeller <- as_labeller(sapply(1:9, function(x) paste(x, "~log[10]~copies~ml**-1")) %>% `names<-` (1:9),
                                default = label_parsed)
 
-panel2 <- ggplot(panel2_data_long, 
+panel2 <- ggplot(median_probs, 
                   aes(x = variant_no, 
                       y =variant_prob)) + 
-  geom_bar(stat = 'identity') + 
+  geom_bar(stat = 'identity', fill = '#CB6015') + 
   scale_y_continuous(name = 'Probability', 
                      expand = c(0,0),
                      limits = c(0,0.8),
@@ -265,7 +274,7 @@ panel2 <- ggplot(panel2_data_long,
                      breaks = seq(0,12,1))+
   facet_wrap(~spvl_cat,
              labeller = panel2_labeller) +
-  theme_classic() +
+  theme_minimal() +
   theme(panel.spacing = unit(1, "lines")) +
   coord_cartesian(xlim = c(1,8))
 
