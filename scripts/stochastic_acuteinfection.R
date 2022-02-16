@@ -141,7 +141,7 @@ Perelson_gillespie <- function(init_state, params, tf){
     else {
       time <- tf
     }
-    results_df <- rbind(results_df, c(time = time, T=T. I=I, L=L, M=M, V=V))
+    results_df <- rbind(results_df, c(time = time, T=T, I=I, L=L, M=M, V=V))
   }
   return(results_df)
 }
