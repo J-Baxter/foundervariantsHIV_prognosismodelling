@@ -34,12 +34,12 @@ set.seed(4472)
 # Normal distibution of log spvl from Rakkai Cohort, Hollingsworth et al. mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 1000 # lower for test runs on low cpu machines
+NPAIRS <- 100 # lower for test runs on low cpu machines
 RAKKAI_MEAN <- 4.39
 RAKKAI_SD <- 0.84
 
 # H1
-InitDonor <- function(popsize, donor_mean, donor_sd, n_particles = 100){
+InitDonor <- function(popsize, donor_mean, donor_sd, n_particles = 10000){
   init_donor <- rnorm(popsize,  mean = donor_mean, sd = donor_sd)
   
   donor_particles <-  sapply(init_donor, rnorm, n = n_particles, sd = 0.1, simplify = FALSE)
@@ -50,7 +50,12 @@ InitDonor <- function(popsize, donor_mean, donor_sd, n_particles = 100){
 }
 
 
-H1Recipient <- function(number_of_founders, donor){
+# A given number of founders are sampled from donor particles
+# The founder particle with the highest assigned vl determines the new vl in the host
+
+# PPP <- per particle probability
+# 
+H1Recipient <- function(number_of_founders, donor, ppp){
   recip_particles <- sapply(donor, sample, size = number_of_founders, simplify = FALSE)
   recip_vl <- sapply(recip_particles, max, simplify = FALSE) %>% 
     unlist() %>% 
@@ -60,7 +65,7 @@ H1Recipient <- function(number_of_founders, donor){
 }
   
 
-donor_particles <- InitDonor(NPAIRS,  RAKKAI_MEAN, RAKKAI_SD, n_particles = 100)
+donor_particles <- InitDonor(NPAIRS,  RAKKAI_MEAN, RAKKAI_SD)
 
 single_recip_vl <- H1Recipient(1, donor_particles) 
 double_recip_vl <- H1Recipient(2, donor_particles) 
@@ -77,7 +82,11 @@ paired_df_long$multiplicity <- factor(paired_df_long$multiplicity, levels = c('s
 plot_a <- ggplot() +
   geom_point(data = paired_df_long , aes(x = 10^donor, y = 10^recipient, colour = multiplicity), shape = 4) +
   theme_classic() + 
-  scale_colour_manual(values = c('#e5f5f9','#99d8c9','#2ca25f')) +
+  scale_colour_manual(values = c('#66c2a4','#2ca25f','#006d2c'), 
+                      labels = c('single' = 'Single Variant',
+                                 'double'= 'Two Variants',
+                                 'triple'='Three Variants'),
+                      name = 'Founder Multiplicity') +
   scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
                 limits = c(1, 10^10),
                 expand = c(0,0),
@@ -87,7 +96,8 @@ plot_a <- ggplot() +
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
-                labels = trans_format("log10", math_format(.x)))
+                labels = trans_format("log10", math_format(.x))) +
+  annotation_logticks()
 
 
 stat_anova <- aov(recipient ~ multiplicity, data = paired_df_long)
@@ -117,17 +127,24 @@ my_comparisons <- list(c('single', 'double'), c('single', 'triple'))
 plot_b <- ggplot(data = paired_df_long, aes(x = multiplicity, y = 10^recipient, colour = multiplicity)) +
   geom_boxplot() +
   theme_classic() + 
-  scale_colour_manual(values = c('#e5f5f9','#99d8c9','#2ca25f')) +
+  scale_colour_manual(values = c('#66c2a4','#2ca25f','#006d2c')) +
   scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml^-1, ')')),
                 limits = c(1, 10^10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(.x))) + 
+  scale_x_discrete(labels = c('single' = 'Single Variant',
+                              'double'= 'Two Variants',
+                              'triple'='Three Variants'),
+                   name = 'Founder Multiplicity') +
   stat_compare_means(method = 'anova', label.x = 0.7, label.y = 9) +
-  stat_compare_means(comparisons = my_comparisons, method = 't.test')
+  stat_compare_means(comparisons = my_comparisons, method = 't.test')+
+  annotation_logticks(sides = 'l')
 
 library(cowplot)
-plot <- plot_grid(plot_a, plot_b, labels = 'AUTO', align = 'hv')
+plot <- plot_grid(plot_a + theme(legend.position= c(0.85,0.835)), 
+                  plot_b + theme(legend.position = 'none'), 
+                  labels = 'AUTO', align = 'hv')
 
 setEPS()
 postscript("./figures/allelseequal_primitive.eps", width = 16, height = 10)
