@@ -137,7 +137,7 @@ T_0 <- unname(parms['gamma']/parms['d_t']) # target cells at equilibrium at t0.
 I_0 <- 0
 L_0 <- 0
 M_0 <- 0
-V_0 <- 100
+V_0 <- 100 # initial virus load
 
 
 init <- c(T = T_0,
