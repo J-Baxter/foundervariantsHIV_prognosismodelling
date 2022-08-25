@@ -20,13 +20,7 @@
 #   transmitted particles (ie one transmitted particle is very high, one low, and the recipient vl
 #   is moderately high).
 
-
-#Dependencies
-library(tidyverse)
-library(ggpmisc)
-library(ggpubr)
-library(ggprism)
-library(cowplot)
+source('./scripts/depedencies.R')
 
 
 # Simulate population of donor infections from a known distribution of donor SPVLs
