@@ -163,7 +163,8 @@ sim_donor_logspvl <- InitSimDonor(pop_size = NPAIRS,
                                   donor_min = 0.5, 
                                   donor_max = 8, 
                                   sample_prob = donor_prob)
-hist(sim_donor_logspvl)
+
+hist(sim_donor_logspvl$donor)
 
 # Infer recipient viral loads of from simulated population
 # predict.lm(h2_model, cbind.data.frame(donor_logspvl = sim_donor_logspvl)) (identical to donor)
@@ -208,7 +209,7 @@ fig_1a <-
   
 # Fig 1b
 fig_1b <- ggplot(combined_data, 
-                 aes(x = donor_spvl, 
+                 aes(x = donor, 
                      y = 1 - variant_distribution.V1))+
   geom_point(colour = '#2ca25f',  #usher colours?
              alpha = 0.5)+
@@ -225,7 +226,7 @@ fig_1b <- ggplot(combined_data,
 
 # Fig 1c
 fig_1c <- ggplot(sim_combined_data, 
-                 aes(x = sim_recip_spvl,
+                 aes(x = recipient,
                      y = 1 - variant_distribution.V1))+
   geom_point(colour = '#2ca25f',  #usher colours?
              alpha = 0.5)+
@@ -254,7 +255,7 @@ lab <- expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')'))
 sim_combined_data_long <- sim_combined_data %>%
   cbind(., ref = 1:nrow(sim_combined_data)) %>%
   gather(key = "variant_no",value = 'variant_prob',variant_distribution.V1:variant_distribution.V33) %>%
-  mutate(spvl_cat = cut(sim_recip_spvl, 
+  mutate(spvl_cat = cut(recipient, 
                         breaks = 10**(0:9),
                         labels = 1:9))
 
@@ -271,12 +272,12 @@ median_probs <- sim_combined_data_long %>%
 colnames(median_probs)[1] <- 'spvl_cat'
 
 # alt panel 2 taking probability distributions from single specified donor spvls
-panel2_donors <- 1:9
-panel2_recips <- InitSimRecip(h2_model, panel2_donors)
+panel2 <- cbind.data.frame(donor = 1:9, recipient = predict(h2_model, cbind.data.frame(donor = 1:9))) %>% # this isn't really working
+  mutate(across(.cols = everything()), )
 panel2_donors <- 10 ** panel2_donors
 panel2_recips <- 10 ** panel2_recips
 
-panel2_probs <- RunParallel(populationmodel_fixedVL_Environment, panel2_donors)  %>%
+panel2_probs <- RunParallel(populationmodel_fixedVL_Environment, panel2$donor)  %>%
   do.call(cbind.data.frame, .) %>% t()
 panel2_data <- cbind.data.frame(panel2_donors, panel2_recips, panel2_probs)
 
@@ -319,7 +320,7 @@ panel1
 dev.off()
 
 setEPS()
-postscript(paste(figs_dir, 'panel1.eps', sep = '/'), width = 23, height = 9, unit = 'cm')
+ggsave(paste(figs_dir, 'panel1.eps', sep = '/'), width = 23, height = 9, device = cairo_ps)
 panel1 
 dev.off()
 
