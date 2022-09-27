@@ -7,16 +7,8 @@
 ###################################################################################################
 ###################################################################################################
 # Dependencies
-library(tidyr)
-library(dplyr)
-library(ggplot2)
-library(scales)
-library(ggpmisc)
-library(parallel)
-library(cowplot)
-
 source("./scripts/populationdata_models.R")
-source("./scripts/misc_functions.R")
+source("./scripts/dependencies.R")
 
 # Calculate recipient set point viral loads from a given population of donor set point viral loads.
 # Back calculation from a set correlation coefficient (r2) and sum of squared residuals
@@ -92,7 +84,7 @@ set.seed(4472)
 # Normal distibution of log spvl from Rakkai Cohort, Hollingsworth et al. mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 1000 # lower for test runs on low cpu machines
+NPAIRS <- 100 # lower for test runs on low cpu machines
 R2 <- 0.33 # Heritability estimate
 RAKKAI_MEAN <- 4.39
 RAKKAI_SD <- 0.84
