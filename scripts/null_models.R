@@ -7,14 +7,6 @@
 ###################################################################################################
 ###################################################################################################
 # Dependencies
-library(tidyr)
-library(dplyr)
-library(ggplot2)
-library(scales)
-library(ggpmisc)
-library(parallel)
-library(cowplot)
-
 source("./scripts/populationdata_models.R")
 source("./scripts/dependencies.R")
 
@@ -121,7 +113,7 @@ set.seed(4472)
 # Normal distibution of log spvl from Rakkai Cohort, Hollingsworth et al. mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 300 # lower for test runs on low cpu machines
+NPAIRS <- 1000 # lower for test runs on low cpu machines
 
 # Initial distributions describe carrier population
 zambia_carrier <- c(vl_mean = 4.74, vl_sd = 0.61, h2 = NA)
