@@ -82,27 +82,13 @@ WeightPDF <- function(viralload){
 # a sampling distribution from WeightPDF (function 'g' from Thompson 2019 et al)
 InitSimDonor <- function(pop_size, donor_min, donor_max, sample_prob){
   sim_range <- seq(donor_min, donor_max, length.out = pop_size)
-  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
+  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T) %>%
+    cbind.data.frame() %>%
+    `colnames<-`('donor')
   return(sim_logspvl)
   
 }
 
-
-# Infer simulation recipient population using donor~recipient regresssion model eqn from 
-# initial donor~recipient pairs. takes coefficients, intercept and error term (sampled from
-# normal dist with mean of residual standard error of model) for y = a + bx + e eqation.
-InitSimRecip <- function(model, donor){
-  out <- -1
-  while (min(out) < 0) {
-    if(class(model)=='lm'){
-      out <- model$coefficients[1] + model$coefficients[2] * donor + rnorm(summary(model)$sigma)
-    }else{
-      stop("Function requires linear model as input.")
-    }
-  }
-  
-  return(out)
-}
 
 
 ###################################################################################################
@@ -183,16 +169,17 @@ hist(sim_donor_logspvl)
 # predict.lm(h2_model, cbind.data.frame(donor_logspvl = sim_donor_logspvl)) (identical to donor)
 # GetRecipVL(sim_donor_logspvl, R2) (too varied) suspect problem is attempting to pace a normal dist over uniform?
 # Implementation below uses coefficients from recipient ~ donor model and normal dist error term
-sim_recip_logspvl <- InitSimRecip(h2_model, sim_donor_logspvl) 
-
-sim_donor_spvl <- 10**sim_donor_logspvl
-sim_recip_spvl <- 10**sim_recip_logspvl
+h2_model <- lm(recipient ~ donor, data = log10(rakkai_pairs))
+sim_spvl <- predict(h2_model, newdata=sim_donor_logspvl) %>% 
+  cbind.data.frame(recipient = ., donor = sim_donor_logspvl) %>%
+  mutate(across(.cols = everything()), 10 **. )
+  
 
 # Calculate probability of mulitple founder infection in recipient
-sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_donor_spvl)  %>%
+sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_spvl$donor)  %>%
   do.call(cbind.data.frame, .) %>% t()
 
-sim_combined_data <- cbind.data.frame(sim_donor_spvl, sim_recip_spvl, sim_prob_multiple)
+sim_combined_data <- cbind.data.frame(sim_spvl, sim_prob_multiple)
 head(sim_combined_data)
 
 
@@ -223,7 +210,7 @@ fig_1a <-
 fig_1b <- ggplot(combined_data, 
                  aes(x = donor_spvl, 
                      y = 1 - variant_distribution.V1))+
-  geom_point(colour = '#CB6015',  #usher colours?
+  geom_point(colour = '#2ca25f',  #usher colours?
              alpha = 0.5)+
   scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**10),
@@ -240,7 +227,7 @@ fig_1b <- ggplot(combined_data,
 fig_1c <- ggplot(sim_combined_data, 
                  aes(x = sim_recip_spvl,
                      y = 1 - variant_distribution.V1))+
-  geom_point(colour = '#CB6015',  #usher colours?
+  geom_point(colour = '#2ca25f',  #usher colours?
              alpha = 0.5)+
   scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**10),
@@ -309,7 +296,7 @@ panel2_labeller <- as_labeller(sapply(1:9, function(x) paste(x, "~log[10]~copies
 panel2 <- ggplot(median_probs, 
                   aes(x = variant_no, 
                       y =variant_prob)) + 
-  geom_bar(stat = 'identity', fill = '#CB6015') + 
+  geom_bar(stat = 'identity', fill = '#2ca25f') + 
   scale_y_continuous(name = 'Probability', 
                      expand = c(0,0),
                      limits = c(0,0.8),
@@ -325,21 +312,24 @@ panel2 <- ggplot(median_probs,
   coord_cartesian(xlim = c(1,8))
 
 # Output to file
-if (!dir.exists('./figures')){
-  dir.create('./figures')
-}else{
-    Sys.sleep(0.2)
-}
+paste(figs_dir, 'panel1.jpeg', sep = '/')
 
-#setEPS()
-#postscript("./figures/panel1.eps",width = 23, height = 9, unit = 'cm')
-jpeg(filename = './figures/panel1.jpeg', width = 23, height = 9, unit = 'cm', res = 350)
+jpeg(filename = paste(figs_dir, 'panel1.jpeg', sep = '/'), width = 23, height = 9, unit = 'cm', res = 350)
 panel1 
 dev.off()
 
-#setEPS()
-#postscript("./figures/panel2.eps", width = 18, height = 18, unit = 'cm')
-jpeg(filename = './figures/panel2.jpeg', width = 18, height = 18, unit = 'cm', res = 350 )
+setEPS()
+postscript(paste(figs_dir, 'panel1.eps', sep = '/'), width = 23, height = 9, unit = 'cm')
+panel1 
+dev.off()
+
+
+jpeg(filename = paste(figs_dir, 'panel2.jpeg', sep = '/'), width = 18, height = 18, unit = 'cm', res = 350 )
+panel2 
+dev.off()
+
+setEPS()
+postscript(paste(figs_dir, 'panel2.eps', sep = '/'), width = 18, height = 18, unit = 'cm')
 panel2 
 dev.off()
 ###################################################################################################
