@@ -31,7 +31,7 @@
 ###################################################################################################
 # Dependencies
 library(deSolve)
-library(tidyverse)
+library(tidyverse) #aim to remove dependencies(with exception of ggplot2)
 
 
 ###################################################################################################
@@ -119,9 +119,9 @@ parms <- c(gamma = 10**5,
            beta = 2*10**(-7),
            k_i = 100, 
            
-           p_m = ,
-           d_m = ,
-           k_m = ,
+          # p_m = ,
+          # d_m = ,
+          # k_m = ,
            
            p_q = 0.1,
            a_q = 3.6*10**(-2),
@@ -137,13 +137,13 @@ T_0 <- unname(parms['gamma']/parms['d_t']) # target cells at equilibrium at t0.
 I_0 <- 0
 L_0 <- 0
 M_0 <- 0
-V_0 <- 100 # initial virus load
+V_0 <- 1 # initial virus load
 
 
 init <- c(T = T_0,
           I = I_0,
-          L = L_0,
-          M = M_0,
+          #L = L_0,
+          #M = M_0,
           V = V_0)
 
 
@@ -155,17 +155,17 @@ stopifnot(R0(parameters)>1)
 
 ###################################################################################################
 # Run simulation
-output <- ode(y = init, time = times, func = Basic_Model, parms = parms, method = "lsoda") %>% as.data.frame()
+output <- ode(y = init, time = times, func = Basic_Model, parms = parms, method = "lsoda") |> as.data.frame()
 
 
 ###################################################################################################
 # Basic plot, faceted by compartment
-
+?
 PlotODE <- function(results){
   require(ggplot2)
   
   results_wide <- results
-  results_long <- gather(results, key = "state" , value = "value", 2:4) 
+  results_long <- gather(results, key = "state" , value = "value", 2:4) #change to base r
   plt <- ggplot(results_long) +
     geom_line(aes(x = time, y = value, colour = state)) +
     theme_classic()+

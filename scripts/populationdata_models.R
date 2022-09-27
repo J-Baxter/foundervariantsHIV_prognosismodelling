@@ -9,7 +9,7 @@ populationmodel_fixedVL_Environment <- function(sp_ViralLoad = 10^5, PerVirionPr
   
   # rename for reducing code length
   f <- PropExposuresInfective # fraction of exposure that can lead to infection
-  
+
   ##################################################
   # parameters from the Thomson paper for ....
   ##################################################

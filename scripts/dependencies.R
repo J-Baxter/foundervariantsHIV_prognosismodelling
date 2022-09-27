@@ -5,7 +5,7 @@
 # increase in viral load.
 ###################################################################################################
 ############################# Check necessary packages are available and install; import if not.
-pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'brms') 
+pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'brms', 'scales') 
 
 for (pkg in pkgs){
   
@@ -31,7 +31,7 @@ dirs <- list.dirs()
 for (check_dir in check_dirs){
   
   if (!(check_dir %in% dirs)){
-    dir.create(check_dir)
+    dir.create(check_dir, recursive = T)
   }
   
 }
