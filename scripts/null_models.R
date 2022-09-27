@@ -16,11 +16,30 @@ library(parallel)
 library(cowplot)
 
 source("./scripts/populationdata_models.R")
-source("./scripts/misc_functions.R")
+source("./scripts/dependencies.R")
 
 # Calculate recipient set point viral loads from a given population of donor set point viral loads.
 # Back calculation from a set correlation coefficient (r2) and sum of squared residuals
 # 'Parent ~ Offspring' regression R2 analogous to heritability of viral load. 
+InitDonor <- function(carrier, TP){
+  #stopifnot() #stop if TP does not contain mean and variance
+  
+  carrier_mean <- carrier[['vl_mean']]
+  carrier_var <- carrier[['vl_sd']] ** 2
+  carrier_h2 <- carrier[['h2']]
+  TP_mean <- TP[['tp_mean']]
+  TP_var <- TP[['tp_sd']] ** 2
+  
+  # Calculate donor population summary statistics from B8 (Eq 7) Bonhoeffer
+  donor_mean <- (carrier_mean*TP_var + TP_mean*carrier_var) / (carrier_var + TP_var)
+  donor_sd <- ((carrier_var*TP_var) / (carrier_var + TP_var)) %>% sqrt()
+  
+  return(c(vl_mean = donor_mean, vl_sd = donor_sd, h2 = carrier_h2))
+  
+  
+}
+
+
 GetRecipVL <- function(donorload, h2 = 0.33){
   n <- length(donorload)
   ssr <- sum((donorload-mean(donorload))**2) # sum of squared residuals
@@ -33,17 +52,27 @@ GetRecipVL <- function(donorload, h2 = 0.33){
 }
 
 
+
 # Initialise donor~recipient pairs from a given distribution of donor logspvls and 
 # regression coefficient corresponding to the heritability of viral load
-InitPop <- function(popsize, donor_mean, donor_sd, herit = 0.33){
+InitDonorRecip <- function(popsize, donor_population){
+  #must contain xyz
+  
+  donor_mean <- donor_population[['vl_mean']]
+  donor_sd <- donor_population[['vl_sd']]
+  donor_h2 <- donor_population[['h2']]
+  
   init_donor <- rnorm(popsize,  mean = donor_mean, sd = donor_sd)
   init_recip <- -1
+  
   while(min(init_recip)<0){
-    init_recip <- GetRecipVL(init_donor, herit) 
+    init_recip <- GetRecipVL(init_donor, donor_h2) 
   }
-  out <- list(donor = init_donor, recip = init_recip)
+  
+  out <- list('donor' = cbind.data.frame(vl=init_donor) , 'recipient' = cbind.data.frame(vl = init_recip))
   return(out)
 }
+
 
 
 # Infer weighting for a given viral load 
@@ -92,31 +121,54 @@ set.seed(4472)
 # Normal distibution of log spvl from Rakkai Cohort, Hollingsworth et al. mean = 4.39, sd = 0.84
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-NPAIRS <- 1000 # lower for test runs on low cpu machines
-R2 <- 0.33 # Heritability estimate
-RAKKAI_MEAN <- 4.39
-RAKKAI_SD <- 0.84
+NPAIRS <- 300 # lower for test runs on low cpu machines
 
-model_population <- InitPop(NPAIRS, 
-                            donor_mean = RAKKAI_MEAN, 
-                            donor_sd = RAKKAI_SD, 
-                            herit = R2)
+# Initial distributions describe carrier population
+zambia_carrier <- c(vl_mean = 4.74, vl_sd = 0.61, h2 = NA)
+amsterdam_carrier <- c(vl_mean = 4.35, vl_sd = 0.68, h2 = NA)
+rakkai_carrier <- c(vl_mean = 4.39, vl_sd = 0.84, h2 = 0.33)
+TP <- c(tp_mean = 4.64, tp_sd = 0.96)
 
-donor_spvl <- 10**model_population$donor
-recip_spvl <- 10**model_population$recip
+zambia_donor <- InitDonor(zambia_carrier, TP)
+amsterdam_donor <- InitDonor(amsterdam_carrier, TP)
+rakkai_donor <- InitDonor(rakkai_carrier, TP) #Must check whether TP can be generally applicable or requires recalculation
 
-# Data frame of paired viral loads
-spvl_df <- cbind.data.frame(donor_spvl = donor_spvl, 
-                            recip_spvl = recip_spvl) 
 
-h2_model <- lm(recip ~ donor, data = model_population)
+rakkai_donorrecip <- InitDonorRecip(NPAIRS, rakkai_donor)
+
+
+rakkai_cohort <- c(list('carrier' = cbind.data.frame(vl = rnorm(NPAIRS, rakkai_carrier[['vl_mean']], rakkai_carrier[['vl_sd']]))), 
+                   rakkai_donorrecip) %>% 
+  bind_rows(.id = 'population') %>%
+  mutate(vl = 10**vl)
+
+ggplot(rakkai_cohort, aes(x = vl, fill = population)) +
+  geom_density(
+    alpha = 0.5) +
+  scale_x_log10(limits = c(1, 10**10),
+                expand = c(0,0),
+                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_continuous(expand = c(0,0))+
+  theme_classic() 
+
+
+rakkai_pairs <- rakkai_cohort %>% filter(population %in% c('donor', 'recipient')) %>%  
+  group_by(population) %>%
+  mutate(row = row_number()) %>% 
+  pivot_wider(names_from = population, values_from = vl) %>%
+  select(-row)
+
+
+
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_fixedVL_Environment function written by Katie Atkins
-prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, donor_spvl) %>%
+prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, rakkai_pairs$donor) %>%
   do.call(cbind.data.frame, .) %>% t() # Time difference of 44.60442 mins on Macbook
 
-combined_data <- cbind.data.frame(spvl_df, prob_recip_multiple)
+combined_data <- cbind.data.frame(rakkai_pairs, prob_recip_multiple)
 head(combined_data)
 
 
@@ -126,7 +178,7 @@ head(combined_data)
 # Generate weightings using function g from Thompson et al
 # Function generates a probability distribution (lognormal) which is used to sample from our range
 # of simulated donor viral loads to generalise over a population
-donor_prob <- sapply(log10(donor_spvl), function(x) WeightPDF(x)/sum(WeightPDF(log10(donor_spvl))))
+donor_prob <- sapply(log10(rakkai_pairs$donor), function(x) WeightPDF(x)/sum(WeightPDF(log10(rakkai_pairs$donor))))
 hist(donor_prob) #visual check - should look normalish as already log
 
 sim_donor_logspvl <- InitSimDonor(pop_size = NPAIRS,
@@ -156,8 +208,9 @@ head(sim_combined_data)
 # Visualise probability that recipient infection is intitiated by multiple founders
 
 # Fig 1a
-fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
-  geom_point(colour = '#CB6015',  #usher colours?
+fig_1a <- 
+  ggplot(rakkai_pairs, aes(x = donor, recipient)) +
+  geom_point(colour = '#2ca25f', #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
              alpha = 0.5) +
   scale_x_log10(limits = c(1, 10**10),
                 expand = c(0,0),
@@ -172,6 +225,7 @@ fig_1a <- ggplot(spvl_df, aes(x = donor_spvl, recip_spvl)) +
   theme_classic() +
   geom_smooth(method = lm, colour = 'black', se = F) + 
   stat_poly_eq(formula = y ~ x)
+
   
 # Fig 1b
 fig_1b <- ggplot(combined_data, 
