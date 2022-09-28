@@ -162,8 +162,8 @@ donor_prob <- sapply(log10(rakkai_pairs$donor), function(x) WeightPDF(x)/sum(Wei
 hist(donor_prob) #visual check - should look normalish as already log
 
 sim_donor_logspvl <- InitSimDonor(pop_size = NPAIRS,
-                                  donor_min = 0.5, 
-                                  donor_max = 8, 
+                                  donor_min = 1, 
+                                  donor_max = 7, 
                                   sample_prob = donor_prob)
 
 hist(sim_donor_logspvl$donor)
