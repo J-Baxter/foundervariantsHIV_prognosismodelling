@@ -45,9 +45,9 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10^5,
   double s = np*PerVirionProbability*(1-PerVirionProbability);
   double iter = 1;
   
+
   primary_prob_fulldist = R::dbinom(0:ceiling(m+iter*s), np, PerVirionProbability);
-  
-    
+
     
     
   List output =list(probTransmissionPerSexAct = probTransmissionPerSexAct, variant_distribution = variant_distribution);
