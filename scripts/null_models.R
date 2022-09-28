@@ -216,7 +216,7 @@ fig_1b <- ggplot(combined_data,
   geom_point(colour = '#2ca25f',  #usher colours?
              alpha = 0.5)+
   scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**10),
+                limits = c(1, 10**8),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
@@ -233,7 +233,7 @@ fig_1c <- ggplot(sim_combined_data,
   geom_point(colour = '#2ca25f',  #usher colours?
              alpha = 0.5)+
   scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**10),
+                limits = c(1, 10**8),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
