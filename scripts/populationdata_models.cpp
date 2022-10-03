@@ -119,13 +119,13 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   
   //Now, the probability of transmitting N variants vs N
   
-  nparticlesConsidered = length(probTransmitnparticles);
-  maximumTime = max(taup + tauc + taua);
-  nTimeSteps = 1000;
+  double nparticlesConsidered = length(probTransmitnparticles);
+  double maximumTime = max(taup + tauc + taua);
+  double nTimeSteps = 1000;
   timeWindowEdges = [0:maximumTime/nTimeSteps:maximumTime];
-  timeVals = zeros(nTimeSteps,1);
-  probTransmitNvariantsGivenTimeTAndTransmitNparticles = zeros(nparticlesConsidered, nTimeSteps, nparticlesConsidered);
-  timeSinceInfectionBeingCalculated = 0;
+  timeVals = zeros(nTimeSteps,1); //
+  probTransmitNvariantsGivenTimeTAndTransmitNparticles = zeros(nparticlesConsidered, nTimeSteps, nparticlesConsidered); //
+  double timeSinceInfectionBeingCalculated = 0;
   
   for (timeV = 1:nTimeSteps){
     timeVals(timeV) = (timeWindowEdges(timeV) + timeWindowEdges(timeV + 1))/2;
