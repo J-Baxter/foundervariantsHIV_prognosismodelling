@@ -21,10 +21,8 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   p = PerVirionProbability;
     
 
-  //parameters from the Thomson paper for ....
+  //parameters from the Thomson paper 
   double alpha = -3.55;
-  double sigma = 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))));
-  double mu = 4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)));
   double Vp = 87173000;
   double Va = 24004000;
   double kappa = 1;
@@ -36,27 +34,48 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   double nc = round(sp_ViralLoad);
   double taup = 0.24;
   double taua = 0.75;
+  
+  
+  // Set model vars & parms
+  double sigma = 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))));
+  double mu = 4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)));
   double tauc = Dmax*(Dfifty**Dk)/(nc**Dk + (Dfifty**Dk));
   double maximumTime = taup + taua + tauc;
-  
   double totalOfTimeVals = taup + tauc + taua;
-  
-  //NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
   double m = np*p;
   double s = np*p*(1-p);
-  double iter = 1;
-
   
+  
+  // Set Init Vals
   double probNoTransmissionPerSexAct = 0;
   double probTransmissionPerSexAct = 0;
   double logBitToAddOn = 0;
+  double probTransmitnparticles[10**7] = { 0 };
+  double threshold = 10**(-6);
+  double n = 1;
+  double integralPrimary = 0;
+  double integralChronic = 0;
+  double integralPreAids = 0;
+  
+  
+  
+  double nparticlesConsidered = length(probTransmitnparticles);
+  double maximumTime = max(taup + tauc + taua);
+  double nTimeSteps = 1000;
+  timeWindowEdges = [0:maximumTime/nTimeSteps:maximumTime];
+  timeVals = zeros(nTimeSteps,1); //
+  probTransmitNvariantsGivenTimeTAndTransmitNparticles = zeros(nparticlesConsidered, nTimeSteps, nparticlesConsidered); //
+  double timeSinceInfectionBeingCalculated = 0;
+  //NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
+
+
+  
+
 
   probNoTransmissionPerSexAct = probNoTransmissionPerSexAct + ((1 - f) + f*((taup/(taup + tauc + taua))*(1 - p)**np + (tauc/(taup + tauc + taua))*(1 - p)**nc + (taua/(taup + tauc + taua))*(1 - p)**na));
   probTransmissionPerSexAct = 1 - probNoTransmissionPerSexAct;
   
-  double probTransmitnparticles[10**7] = { 0 };
-  double threshold = 10**(-6);
-  double n = 1;
+
 
   
   while (sum((probTransmitnparticles)/(probTransmissionPerSexAct)) < (1 - threshold)){
@@ -119,13 +138,7 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   
   //Now, the probability of transmitting N variants vs N
   
-  double nparticlesConsidered = length(probTransmitnparticles);
-  double maximumTime = max(taup + tauc + taua);
-  double nTimeSteps = 1000;
-  timeWindowEdges = [0:maximumTime/nTimeSteps:maximumTime];
-  timeVals = zeros(nTimeSteps,1); //
-  probTransmitNvariantsGivenTimeTAndTransmitNparticles = zeros(nparticlesConsidered, nTimeSteps, nparticlesConsidered); //
-  double timeSinceInfectionBeingCalculated = 0;
+  
   
   for (timeV = 1:nTimeSteps){
     timeVals(timeV) = (timeWindowEdges(timeV) + timeWindowEdges(timeV + 1))/2;
@@ -170,10 +183,7 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   probTransmitNvariantsGivenTimeTAndTransmitNparticles = probTransmitNvariantsGivenTimeTAndTransmitNparticles./nSims;
   probTransmitMvariants = zeros(min(maxnvariants, nparticlesConsidered),1); // double probTransmitnparticles[10**7] = { 0 };
   
-  double integralPrimary = 0;
-  double integralChronic = 0;
-  double integralPreAids = 0;
-  
+
   for (M = 1:min(maxnvariants, nparticlesConsidered)){
     
     for (j = 1:nTimesteps){
@@ -208,7 +218,7 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
       if((timeVals(j) > taup) && (timeVals(j) <= (taup + tauc))){
         
         for (nVal = M:min(nc, ncarticlesConsidered)){
-          binomialBit = 1;
+          double binomialBit = 1;
           
           if(nc > nVal){
             logBinBit = nVal*log(p) + (nc - nVal)*log(1-p);
