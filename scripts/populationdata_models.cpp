@@ -1,4 +1,6 @@
 #include <Rcpp.h>
+#include<cmath>
+#include<std.h>
 
 using namespace Rcpp;
 
@@ -8,7 +10,7 @@ using namespace Rcpp;
 
 // [[Rcpp::export]]
 
-List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5, 
+List populationmodel_fixedVL_cpp(double sp_ViralLoad = 1e5, 
                                  double PerVirionProbability = 4.715*1e-8, 
                                  double PropExposuresInfective = 0.029){
   
@@ -17,8 +19,8 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   int nSims = 10000;
   
   //rename for reducing code length
-  f = PropExposuresInfective; //fraction of exposure that can lead to infection
-  p = PerVirionProbability;
+  double f = PropExposuresInfective; //fraction of exposure that can lead to infection
+  double p = PerVirionProbability;
     
 
   //parameters from the Thomson paper 
@@ -34,12 +36,13 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   double nc = round(sp_ViralLoad);
   double taup = 0.24;
   double taua = 0.75;
+  int nTimeSteps = 1000;
   
   
   // Set model vars & parms
-  double sigma = 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))));
-  double mu = 4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)));
-  double tauc = Dmax*(Dfifty**Dk)/(nc**Dk + (Dfifty**Dk));
+  double sigma = 0.78/(sqrt(1 - ((2*pow(alpha, 2))/(M_PI*(1 + pow(alpha, 2))))));
+  double mu = 4.74 - (2*sigma*alpha)/(sqrt(2*M_PI*(1 + pow(alpha, 2))));
+  double tauc = Dmax*pow(Dfifty, Dk)/(pow(nc, Dk) + pow(Dfifty, Dk));
   double maximumTime = taup + taua + tauc;
   double totalOfTimeVals = taup + tauc + taua;
   double m = np*p;
@@ -50,35 +53,30 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
   double probNoTransmissionPerSexAct = 0;
   double probTransmissionPerSexAct = 0;
   double logBitToAddOn = 0;
-  double probTransmitnparticles[10**7] = { 0 };
-  double threshold = 10**(-6);
-  double n = 1;
+  double probTransmitnparticles[10000000] = { 0 };
+  double threshold = pow(10, -6);
+  int n = 1;
   double integralPrimary = 0;
   double integralChronic = 0;
   double integralPreAids = 0;
   
+  int nparticlesConsidered =  sizeof(probTransmitnparticles) / sizeof(double);
   
-  
-  double nparticlesConsidered = length(probTransmitnparticles);
-  double maximumTime = max(taup + tauc + taua);
-  double nTimeSteps = 1000;
-  timeWindowEdges = [0:maximumTime/nTimeSteps:maximumTime];
-  timeVals = zeros(nTimeSteps,1); //
-  probTransmitNvariantsGivenTimeTAndTransmitNparticles = zeros(nparticlesConsidered, nTimeSteps, nparticlesConsidered); //
+  double timeWindowEdges = [0:maximumTime/nTimeSteps:maximumTime]; //THIS NEEDS WORK - run in matlab to understand what this does
+  double timeVals[1000] = { 0 };
+  double probTransmitNvariantsGivenTimeTAndTransmitNparticles [10000000][1000][10000000] = { 0 }; //Check dimensions are correct [nparticlesConsidered][nTimeSteps][nparticlesConsidered]
   double timeSinceInfectionBeingCalculated = 0;
-  //NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
-
-
   
-
-
-  probNoTransmissionPerSexAct = probNoTransmissionPerSexAct + ((1 - f) + f*((taup/(taup + tauc + taua))*(1 - p)**np + (tauc/(taup + tauc + taua))*(1 - p)**nc + (taua/(taup + tauc + taua))*(1 - p)**na));
+  
+  //NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
+  probNoTransmissionPerSexAct = probNoTransmissionPerSexAct + ((1 - f) + f*((taup/(taup + tauc + taua))*pow((1 - p), np) + (tauc/(taup + tauc + taua))*pow((1 - p),nc) + (taua/(taup + tauc + taua))*pow((1 - p),na)));
   probTransmissionPerSexAct = 1 - probNoTransmissionPerSexAct;
   
-
-
+  std::for_each(probTransmitnparticles.begin(), probTransmitnparticles.end(), [&] (int y) {
+    sum_of_elems += y;
+  }); //Calculating sum is non trivial - create function becuase this is done repeatedly throughout?
   
-  while (sum((probTransmitnparticles)/(probTransmissionPerSexAct)) < (1 - threshold)){
+  while (sum(probTransmitnparticles)/(probTransmissionPerSexAct)) < (1 - threshold)){
     
     double p0 = 0;
     
@@ -151,7 +149,7 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
     probDist = zeros(maxnvariants,1); //
     
     for (i = 1:maxnvariants){
-      probDist(i) = gampdf(i, 0.417, timeVals(timeV)/0.563);//vector []
+      probDist(i) = gampdf(i, 0.417, timeVals(timeV)/0.563);//vector [] std::gamma_distribution<> d(1,2)
       
     }
     
@@ -160,28 +158,28 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 10**5,
     nSims = 100000;
     
     for (simNo = 1:nSims){
-      variantIIndicator = zeros(maxnvariants,1);
+      variantIIndicator = zeros(maxnvariants,1); //zeros array
       
       for(nparticles= 1:nparticlesConsidered){
         variantPicked = 1;
         variantPickedCount = 0;
-        r = rand();
+        r = rand(); // random number
         
         while (r>variantPickedCount){
-          variantPickedCount = variantPickedCount + probDist(variantPicked);//
+          variantPickedCount = variantPickedCount + probDist(variantPicked);//vector
           variantPicked = variantPicked + 1;
         }
         
         variantIIndicator(variantPicked -1) = 1;
         
         nvariantsTransferred = sum(variantIIndicator);
-        probTransmitNvariantsGivenTimeTAndTransmitNparticles(nvariantsTransferred, timeV, nparticles) = probTransmitNvariantsGivenTimeTAndTransmitNparticles(nvariantsTransferred, timeV, nparticles) + 1;
+        probTransmitNvariantsGivenTimeTAndTransmitNparticles(nvariantsTransferred, timeV, nparticles) = probTransmitNvariantsGivenTimeTAndTransmitNparticles(nvariantsTransferred, timeV, nparticles) + 1; //vector
       }
     }
   }
   
   probTransmitNvariantsGivenTimeTAndTransmitNparticles = probTransmitNvariantsGivenTimeTAndTransmitNparticles./nSims;
-  probTransmitMvariants = zeros(min(maxnvariants, nparticlesConsidered),1); // double probTransmitnparticles[10**7] = { 0 };
+  probTransmitMvariants = zeros(min(maxnvariants, nparticlesConsidered),1); // double probTransmitnparticles[10^7] = { 0 };
   
 
   for (M = 1:min(maxnvariants, nparticlesConsidered)){
