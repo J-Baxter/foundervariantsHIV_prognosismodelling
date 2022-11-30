@@ -53,18 +53,22 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 1e5,
   double probNoTransmissionPerSexAct = 0;
   double probTransmissionPerSexAct = 0;
   double logBitToAddOn = 0;
-  double probTransmitnparticles[10000000] = { 0 };
+  double probTransmitnparticles[10000000] = { 0 }; //ends up being length 16
+  
   double threshold = pow(10, -6);
   int n = 1;
   double integralPrimary = 0;
   double integralChronic = 0;
   double integralPreAids = 0;
   
+  
+  probTransmitnparticles = probTransmitnparticles(1:(n-1));
+  probTransmitnparticles = probTransmitnparticles./sum(probTransmitnparticles);
   int nparticlesConsidered =  sizeof(probTransmitnparticles) / sizeof(double);
   
   double timeWindowEdges = [0:maximumTime/nTimeSteps:maximumTime]; //THIS NEEDS WORK - run in matlab to understand what this does
   double timeVals[1000] = { 0 };
-  double probTransmitNvariantsGivenTimeTAndTransmitNparticles [10000000][1000][10000000] = { 0 }; //Check dimensions are correct [nparticlesConsidered][nTimeSteps][nparticlesConsidered]
+  double probTransmitNvariantsGivenTimeTAndTransmitNparticles [16][1000][16] = { 0 }; 
   double timeSinceInfectionBeingCalculated = 0;
   
   
@@ -72,9 +76,7 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 1e5,
   probNoTransmissionPerSexAct = probNoTransmissionPerSexAct + ((1 - f) + f*((taup/(taup + tauc + taua))*pow((1 - p), np) + (tauc/(taup + tauc + taua))*pow((1 - p),nc) + (taua/(taup + tauc + taua))*pow((1 - p),na)));
   probTransmissionPerSexAct = 1 - probNoTransmissionPerSexAct;
   
-  std::for_each(probTransmitnparticles.begin(), probTransmitnparticles.end(), [&] (int y) {
-    sum_of_elems += y;
-  }); //Calculating sum is non trivial - create function becuase this is done repeatedly throughout?
+ // Sum using RCPP sum
   
   while (sum(probTransmitnparticles)/(probTransmissionPerSexAct)) < (1 - threshold)){
     
