@@ -100,19 +100,19 @@ set.seed(4472)
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
 
-NPAIRS <- 1000 # lower for test runs on low cpu machines
+NPAIRS <- 500 # lower for test runs on low cpu machines
 
 
 # Initial distributions describe carrier population
 zambia_carrier <- c(vl_mean = 4.74, vl_sd = 0.61, h2 = NA)
 amsterdam_carrier <- c(vl_mean = 4.35, vl_sd = 0.68, h2 = NA)
-rakkai_carrier <- c(vl_mean = 4.39, vl_sd = 0.84, h2 = 0.33)
+rakkai_carrier <- c(vl_mean = 4.51, vl_sd = 0.79, h2 = 0.33)
 TP <- c(tp_mean = 4.64, tp_sd = 0.96)
 
 zambia_donor <- InitDonor(zambia_carrier, TP)
 amsterdam_donor <- InitDonor(amsterdam_carrier, TP)
 rakkai_donor <- InitDonor(rakkai_carrier, TP) #Must check whether TP can be generally applicable or requires recalculation
-
+rakkai_donor <- rakkai_carrier
 
 rakkai_donorrecip <- InitDonorRecip(NPAIRS, rakkai_donor)
 
@@ -176,7 +176,7 @@ h2_model <- lm(recipient ~ donor, data = log10(rakkai_pairs))
 sim_spvl <- predict(h2_model, newdata=sim_donor_logspvl) %>% 
   cbind.data.frame(recipient = ., donor = sim_donor_logspvl) %>%
   mutate(across(.cols = everything()), 10 **. )
-  
+
 
 # Calculate probability of mulitple founder infection in recipient
 sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_spvl$donor)  %>%
@@ -190,9 +190,13 @@ head(sim_combined_data)
 # Visualise probability that recipient infection is intitiated by multiple founders
 
 # Fig 1a
+
+font_add_google("Questrial", "Questrial")
+showtext_auto()
+
 fig_1a <- 
   ggplot(rakkai_pairs, aes(x = donor, recipient)) +
-  geom_point(colour = '#2ca25f', #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
+  geom_point(colour = '#ef6548', #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
              alpha = 0.5) +
   scale_x_log10(limits = c(1, 10**10),
                 expand = c(0,0),
@@ -204,11 +208,22 @@ fig_1a <-
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  theme_classic() +
+  theme_classic(base_family = "Questrial")+
+  theme(
+    text = element_text(size=20),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
+  )+
+  annotation_logticks() + 
   geom_smooth(method = lm, colour = 'black', se = F) + 
   stat_poly_eq(formula = y ~ x)
 
-  
+setEPS()
+#postscript("donor-recipient.eps", width = 10, height = 10)
+ggsave(plot = fig_1a, 'donorrecip.eps', width = 12, height = 12, device = cairo_ps)
+fig_1a
+dev.off()
+
 # Fig 1b
 fig_1b <- ggplot(combined_data, 
                  aes(x = donor, 
@@ -297,8 +312,8 @@ panel2_labeller <- as_labeller(sapply(1:9, function(x) paste(x, "~log[10]~copies
                                default = label_parsed)
 
 panel2 <- ggplot(median_probs, 
-                  aes(x = variant_no, 
-                      y =variant_prob)) + 
+                 aes(x = variant_no, 
+                     y =variant_prob)) + 
   geom_bar(stat = 'identity', fill = '#2ca25f') + 
   scale_y_continuous(name = 'Probability', 
                      expand = c(0,0),

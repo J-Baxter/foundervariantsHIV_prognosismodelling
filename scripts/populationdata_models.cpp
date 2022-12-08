@@ -73,7 +73,7 @@ List populationmodel_fixedVL_cpp(double sp_ViralLoad = 1e5,
   
   
   //NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
-  probNoTransmissionPerSexAct = probNoTransmissionPerSexAct + ((1 - f) + f*((taup/(taup + tauc + taua))*pow((1 - p), np) + (tauc/(taup + tauc + taua))*pow((1 - p),nc) + (taua/(taup + tauc + taua))*pow((1 - p),na)));
+  probNoTransmissionPerSexAct = probNoTransmissionPerSexAct + ((1 - f) + f*((taup/(taup + tauc + taua))*pow((1 - p), np) + (tauc/(taup + tauc + taua))*pow((1 - p), nc) + (taua/(taup + tauc + taua))*pow((1 - p), na)));
   probTransmissionPerSexAct = 1 - probNoTransmissionPerSexAct;
   
  // Sum using RCPP sum
