@@ -190,7 +190,8 @@ populationmodel_fixedVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionPr
                 select(starts_with("V")) %>%
                 colSums(.)
           variant_distribution <- variant_distribution / sum(variant_distribution)
-          multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
+          
+         # multiple_founder_proportion <- (1 - as.numeric(variant_distribution[1])/
         
           
           # output the prob of transmission across all infectious period and the chance of multiple lineages

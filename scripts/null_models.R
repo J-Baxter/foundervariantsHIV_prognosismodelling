@@ -176,7 +176,7 @@ h2_model <- lm(recipient ~ donor, data = log10(rakkai_pairs))
 sim_spvl <- predict(h2_model, newdata=sim_donor_logspvl) %>% 
   cbind.data.frame(recipient = ., donor = sim_donor_logspvl) %>%
   mutate(across(.cols = everything()), 10 **. )
-  
+
 
 # Calculate probability of mulitple founder infection in recipient
 sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_spvl$donor)  %>%
@@ -219,10 +219,18 @@ fig_1a <-
   stat_poly_eq(formula = y ~ x)
 
 setEPS()
+<<<<<<< HEAD
+#postscript("donor-recipient.eps", width = 10, height = 10)
+ggsave(plot = fig_1a, 'donorrecip.eps', width = 12, height = 12, device = cairo_ps)
+fig_1a
+dev.off()
+
+=======
 postscript("donor-recipient.eps", width = 10, height = 10)
 fig_1a
 dev.off()
   
+>>>>>>> 5045211448c88d1384ee7f31d06b6a88b1ff2c86
 # Fig 1b
 fig_1b <- ggplot(combined_data, 
                  aes(x = donor, 
@@ -311,8 +319,8 @@ panel2_labeller <- as_labeller(sapply(1:9, function(x) paste(x, "~log[10]~copies
                                default = label_parsed)
 
 panel2 <- ggplot(median_probs, 
-                  aes(x = variant_no, 
-                      y =variant_prob)) + 
+                 aes(x = variant_no, 
+                     y =variant_prob)) + 
   geom_bar(stat = 'identity', fill = '#2ca25f') + 
   scale_y_continuous(name = 'Probability', 
                      expand = c(0,0),
