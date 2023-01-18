@@ -7,7 +7,7 @@
 
 # 1. Initialisation of study population
 # 2. Null hypothesis
-# 3. Ecological hypothes
+# 3. Ecological hypotheses
 
 
 # Dependencies
