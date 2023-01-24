@@ -2,7 +2,7 @@
 # SPVL distributions from Hollingsworth et al., PLoS 2010 https://doi.org/10.1371/journal.ppat.1000876
 
 # Dependencies
-source('./scripts/depedencies.R')
+source('./scripts/dependencies.R')
 
 
 # Set Seed
@@ -21,7 +21,7 @@ InitPop <- function(N, H2, donor_vl, recipient_vl){
   
   S <- d * matrix * d
   
-  paired_spvl <- MASS::mvrnorm(n = sample_size, 
+  paired_spvl <- MASS::mvrnorm(n = N, 
                                mu = c('transmitter' = donor_vl[["mean"]],
                                       'recipient' = recipient_vl[["mean"]]), 
                                Sigma = S) %>% 
@@ -38,14 +38,14 @@ secondary <- c('mean' = 4.60 , 'sd' = 0.85)
 
 
 # Run Initialisation
-InitPop(N = 500, 
-        H2 = 0.33, 
-        donor_vl = index, 
-        recipient_vl = secondary)
+pop <- InitPop(N = 500, 
+               H2 = 0.33, 
+               donor_vl = index, 
+               recipient_vl = secondary)
 
 
 # Plot 
-ggplot(dist, aes(x = transmitter_log10SPVL, recipient_log10SPVL)) +
+ggplot(pop, aes(x = transmitter_log10SPVL, recipient_log10SPVL)) +
   geom_point(colour = '#ef6548', #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
              alpha = 0.5) +
   scale_x_log10(limits = c(1, 10**10),
