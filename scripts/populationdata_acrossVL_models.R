@@ -1,11 +1,11 @@
 # for fixed spVL, per virion prob of infection and proportion of exposure with potential for infection
 # this function calculates i) the probability of infection, ii) the probability of multiple founder variants
 
-populationmodel_acrossVL_Environment <- function(PerVirionProbability, PropExposuresInfective){
+populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029){
   
   
   # The different SPVLs of donors
-  ncVals <- c(10^2, 10^2.5, 10^3, 10^3.5, 10^4, 10^4.5, 10^5, 10^5.5, 10^6, 10^6.5, 10^7) 
+  #ncVals <- c(10^2, 10^2.5, 10^3, 10^3.5, 10^4, 10^4.5, 10^5, 10^5.5, 10^6, 10^6.5, 10^7) 
   nSims <- 100
   
   # rename for reducing code length
@@ -22,7 +22,7 @@ populationmodel_acrossVL_Environment <- function(PerVirionProbability, PropExpos
   kappa = 1
   np = round(kappa*Vp)
   na = round(kappa*Va)
-  ncVals = round(kappa*ncVals)
+  ncVals = round(kappa*sp_ViralLoad)
   Dmax = 25.4
   Dfifty = 3058
   Dk = 0.41
