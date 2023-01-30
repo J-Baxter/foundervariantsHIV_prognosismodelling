@@ -13,10 +13,24 @@ prob_dists_plot <- cbind.data.frame(prob_dists) %>%
 
 my_breaks = c(-1, -2, -4, -6, -8, -10, -12)
 
-ggplot(prob_dists_plot) +
+ggplot(prob_dists_plot[prob_dists_plot$variants<13,]) +
   geom_tile(aes(x = spvl, y = variants, fill = p))+
-  scale_fill_gradient(low = '#990000' , high = '#fff7ec', trans = "log",  na.value = '#7f0000',
-                      breaks = my_breaks, labels = my_breaks)+
+  scale_fill_viridis_c()+
+  #scale_fill_gradient2(high= '#990000' , mid = '#e34a33',low = '#FFFFFF', trans = "log",  na.value = '#FFFFFF',
+                      #breaks = my_breaks, labels = my_breaks)+
+  theme_classic()+
+  theme(
+    text = element_text(size=20),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
+  )
+
+ggplot(prob_dists_plot[prob_dists_plot$variants<13,]) +
+  geom_point(aes(x = spvl, y = variants, size = p))+
+  scale_x_discrete(name = 'Log10 SPVL')+
+  scale_y_continuous(name = 'Variants', breaks = 1:12)+
+  #scale_fill_gradient2(high= '#990000' , mid = '#e34a33',low = '#FFFFFF', trans = "log",  na.value = '#FFFFFF',
+  #breaks = my_breaks, labels = my_breaks)+
   theme_classic()+
   theme(
     text = element_text(size=20),
