@@ -18,7 +18,8 @@ source('./scripts/populationdata_acrossVL_models.R')
 
 
 # Null
-
+prob_recip_multiple <- RunParallel(populationmodel_fixedVL_Environment, pop$transmitter) %>%
+  do.call(cbind.data.frame, .) %>% t()
 
 # Alternative
 
