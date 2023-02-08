@@ -3,7 +3,7 @@
 # PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029
 
 spvl <- seq(2,7,by=0.5)
-prob_dists <- lapply(spvl, populationmodel_fixedVL_Environment) %>% sapply(., function(x) x[2:length(x)])
+prob_dists <- lapply(spvl, populationmodel_acrossVL_Environment) %>% sapply(., function(x) x[2:length(x)])
 colnames(prob_dists) <- spvl
 rownames(prob_dists) <- 1:33
 
@@ -38,25 +38,4 @@ ggplot(prob_dists_plot[prob_dists_plot$variants<13,]) +
     axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
   )
 
-FoundingVars <- function(spvl, sd, p_dists){
-  
-  #Round Log10 SPVL to nearest .5
-  spvl_disc <- round(spvl/0.5)*0.5
-  
-  #Identify appropriate probability distribution
-  lookup <- which(spvl_disc == seq(2,7,by=0.5))
-  prob_var <- p_dists[,lookup]
-  
-  n_var <- sample(x = 1:33, 1, replace = T, prob = prob_var)
-  
-  within_host_genotypes <- rnorm(n = n_var, mean = spvl, sd = sd)
-  
-  m <- matrix(NA, nrow = 1, ncol = 33)
-  
-  m[1:length(within_host_genotypes)] <- within_host_genotypes
-  
-  
-  return(m)
-  
-}
 

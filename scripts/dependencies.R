@@ -5,7 +5,7 @@
 # increase in viral load.
 ###################################################################################################
 ############################# Check necessary packages are available and install; import if not.
-pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'brms', 'scales') 
+pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'scales', 'sysfonts') 
 
 for (pkg in pkgs){
   
