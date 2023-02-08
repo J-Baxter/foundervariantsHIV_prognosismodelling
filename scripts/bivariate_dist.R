@@ -1,3 +1,7 @@
+library(tidyverse)
+library(MASS)
+library(scales)
+
 sample_size <- 100
 
 sample_meanvector <- c('transmitter'= 4.61, 'recipient' = 4.60)
@@ -6,7 +10,7 @@ sample_sdvector <- c('transmitter' = 0.63 , 'recipient' = 0.85)
 
 test <- 1-(1/0.33)
 
-sample_correlation_matrix <- matrix(c(1,test,test,1), ncol = 2)
+sample_correlation_matrix <- matrix(c(1,0.33,0.33,1), ncol = 2)
 
 d <-diag(sample_sdvector)
 
@@ -64,3 +68,6 @@ fig_1b <- ggplot(
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.2)) +
   theme_classic() 
+
+
+
