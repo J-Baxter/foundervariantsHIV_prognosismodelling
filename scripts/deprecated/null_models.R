@@ -233,7 +233,7 @@ dev.off()
 >>>>>>> 5045211448c88d1384ee7f31d06b6a88b1ff2c86
 # Fig 1b
 fig_1b <- ggplot(combined_data, 
-                 aes(x = donor, 
+                 aes(x = transmitter, 
                      y = 1 - variant_distribution.V1))+
   geom_point(colour = '#2ca25f',  #usher colours?
              alpha = 0.5)+
