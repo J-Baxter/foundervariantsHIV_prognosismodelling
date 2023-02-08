@@ -1,4 +1,7 @@
-## Functions outlining high-level ecological interactions between variants
+## Functions outlining high-level ecological interactions between
+
+test_transmitter = 3.99929
+test_variants = c(3.402199,3.851453,4.062112)
 
 
 exclusion <- function(transmitter, variants){
@@ -42,4 +45,3 @@ interaction <- function(transmitter, variants, scale = 0.7){
   return(recip)
   
 }
-3.99929, c(3.402199,3.851453,4.062112)
