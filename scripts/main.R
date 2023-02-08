@@ -18,6 +18,7 @@ source('./scripts/ecologicalhypos.R')
 
 # Set Seed
 set.seed(4472)
+options(scipen = 100) #options(scipen = 100, digits = 4)
 
 
 ###################################################################################################
@@ -26,12 +27,16 @@ set.seed(4472)
 
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
+NPAIRS <- 500 #500
 
-pop <- InitPop(N = 100, 
-               H2 = 0.33, #0.33
+pop <- InitPop(N = NPAIRS, 
+               H2 = 0.67, #0.33
                donor_vl = index, 
                recipient_vl = secondary)
 
+
+# Fit mixed model to simulated data to re-estimate/confirm heritability estimate
+h2_model <- lm(recipient ~ transmitter, data = select(pop, c('transmitter', 'recipient')))
 
 ###################################################################################################
 # Probability that recipient infection is initiated by multiple founder variants
@@ -73,43 +78,65 @@ InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sampl
 }
 
 
-sim_transmitter_logspvl <- InitSimTransmitter(pop_size = NPAIRS,
+sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
                                               transmitter_min = 1, 
                                               transmitter_max = 7, 
                                               sample_prob = transmitter_prob)
+hist(sim_transmitter_log10SPVL$transmitter) #visual check - should look uniform
 
-hist(sim_transmitter_logspvl$transmitter) #visual check - should look uniform
 
-# Infer recipient viral loads of from simulated population
-# GetRecipVL(sim_donor_logspvl, R2) (too varied) suspect problem is attempting to pace a normal dist over uniform?
-# Implementation below uses coefficients from recipient ~ donor model and normal dist error term
-h2_model <- lm(recipient ~ donor, data = log10(rakkai_pairs))
-sim_spvl <- predict(h2_model, newdata=sim_donor_logspvl) %>% 
-  cbind.data.frame(recipient = ., donor = sim_donor_logspvl) %>%
-  mutate(across(.cols = everything()), 10 **. )
+# Leverage heritability model to estimate recipient SPVL
+sim_spvl <- predict(h2_model, newdata=sim_transmitter_log10SPVL) %>% 
+  cbind.data.frame(recipientlog10SPVL = ., donor = sim_transmitter_log10SPVL) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}"))
 
 
 # Calculate probability of mulitple founder infection in recipient
-sim_prob_multiple <- RunParallel(populationmodel_fixedVL_Environment, sim_spvl$donor)  %>%
+sim_prob_multiple <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl$transmitter)  %>%
   do.call(cbind.data.frame, .) %>% t()
 
-sim_combined_data <- cbind.data.frame(sim_spvl, sim_prob_multiple)
-head(sim_combined_data)
+sim_recipientspvl_variantdist <- cbind.data.frame(sim_spvl$recipient, sim_prob_multiple)
 
 
 ###################################################################################################
 # Write to file
- #pop only
+# population only
+write_csv(pop, file = paste(results_dir, 'base_population.csv', sep = '/'))
 
-# transmitter vl & p(mv)
+# transmitter SPVL & variant distribution
+write_csv(transmitterspvl_variantdist, file = paste(results_dir, 'transmitterspvl_variantdist', sep = '/'))
 
-# recipient vl & p(mv)
+# recipient SPVL & variant distribution
+write_csv(sim_recipientspvl_variantdist, file = paste(results_dir, 'recipientspvl_variantdist.csv', sep = '/'))
 
 
 ###################################################################################################
 # Alternative
 
 # Generate a matrix of transmitter/founding particles and associated viral loads
+FoundingVars <- function(spvl, sd, p_dists){
+  
+  #Round Log10 SPVL to nearest .5
+  spvl_disc <- round(spvl/0.5)*0.5
+  
+  #Identify appropriate probability distribution
+  lookup <- which(spvl_disc == seq(2,7,by=0.5))
+  prob_var <- p_dists[,lookup]
+  
+  n_var <- sample(x = 1:33, 1, replace = T, prob = prob_var)
+  
+  within_host_genotypes <- rnorm(n = n_var, mean = spvl, sd = sd)
+  
+  m <- matrix(NA, nrow = 1, ncol = 33)
+  
+  m[1:length(within_host_genotypes)] <- within_host_genotypes
+  
+  
+  return(m)
+  
+}
+
+
 test <- sapply(pop$transmitter_log10SPVL, FoundingVars, sd = 0.5, p_dists = prob_dists) %>% t()
 variants <- apply(test, 1, function(x) sum(!is.na(x)))
 
@@ -127,26 +154,7 @@ pop3 <- cbind.data.frame(recipient_log10SPVL = 10**recip_mean, transmitter_log10
 
 pops_com <- rbind.data.frame(pop1, pop2, pop3)
 
-ggplot(pops_com, aes(x = transmitter_log10SPVL, recipient_log10SPVL, colour = hypothesis)) +
-  geom_point(alpha = 0.5) +
-  scale_x_log10(limits = c(1, 10**10),
-                expand = c(0,0),
-                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**10),
-                expand = c(0,0),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  facet_wrap(.~v)+
-  theme_classic()+
-  theme(
-    text = element_text(size=20),
-    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
-  )+
-  annotation_logticks() 
+
 
 # CD4 Extension
 
