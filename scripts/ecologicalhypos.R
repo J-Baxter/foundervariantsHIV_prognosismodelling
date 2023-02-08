@@ -4,7 +4,7 @@ test_transmitter = 3.99929
 test_variants = c(3.402199,3.851453,4.062112)
 
 
-exclusion <- function(transmitter, variants){
+Exclusion <- function(transmitter, variants){
   
   recip <- max(variants) 
   
@@ -13,7 +13,7 @@ exclusion <- function(transmitter, variants){
 }
 
 
-additive <- function(transmitter, variants, scale = 0.7 ){
+Additive <- function(transmitter, variants, scale = 0.7 ){
   
   delta <- sapply(variants, function(x) x - transmitter) 
   
@@ -24,19 +24,19 @@ additive <- function(transmitter, variants, scale = 0.7 ){
 }
 
 
-interaction <- function(transmitter, variants, scale = 0.7){
+#Interaction <- function(transmitter, variants, scale = 0.7){
   
-  delta <- sapply(variants, function(x) x - transmitter) 
-  print(delta)
+ # delta <- sapply(variants, function(x) x - transmitter) 
+ # print(delta)
   
-  recip <- prod(delta)**(1/length(delta))+ transmitter
+ # recip <- prod(delta)**(1/length(delta))+ transmitter
   
   
-  return(recip)
+ # return(recip)
   
-}
+#}
 
-interaction <- function(transmitter, variants, scale = 0.7){
+Interaction <- function(transmitter, variants, scale = 0.7){
   
   
   recip <- prod(variants)**(1/length(variants))

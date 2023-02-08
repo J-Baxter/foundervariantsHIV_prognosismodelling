@@ -23,4 +23,6 @@ InitPop <- function(N, H2, donor_vl, recipient_vl){
   return(paired_spvl)
 }
 
+
+
 ## END ##
