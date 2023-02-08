@@ -131,6 +131,8 @@ FoundingVars <- function(spvl, sd, p_dists){
   
 }
 
+spvl <- seq(2,7,by=0.5)
+prob_dists <- lapply(spvl, populationmodel_acrossVL_Environment) %>% sapply(., function(x) x[2:length(x)])
 
 variant_matrix <- sapply(pop$transmitter_log10SPVL, FoundingVars, sd = 0.5, p_dists = prob_dists) %>% t()
 
