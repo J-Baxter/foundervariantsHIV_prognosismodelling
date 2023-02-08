@@ -10,7 +10,7 @@
 # 3. Ecological hypotheses
 
 
-# Dependencies
+################################### Dependencies ###################################
 source('./scripts/dependencies.R')
 source('./scripts/populationdata_acrossVL_models.R')
 source('./scripts/init_population.R')
@@ -21,9 +21,8 @@ set.seed(4472)
 options(scipen = 100) #options(scipen = 100, digits = 4)
 
 
-###################################################################################################
-# Initialise Population
-#Distributions of SPVL for couples with strong support for transmission Hollingsworth et al, 2010
+################################### Initialise Population ###################################
+# Distributions of SPVL for couples with strong support for transmission Hollingsworth et al, 2010
 
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
@@ -35,21 +34,21 @@ pop <- InitPop(N = NPAIRS,
                recipient_vl = secondary)
 
 
-# Fit mixed model to simulated data to re-estimate/confirm heritability estimate
-h2_model <- lm(recipient ~ transmitter, data = select(pop, c('transmitter', 'recipient')))
+################################### Estimate Heritability ###################################
+h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL , data = pop) # Pop init is a key focus area
 
-###################################################################################################
+
+################################### P(Multiple Variants) | Transmitter SPVL (H0) ###################################
 # Probability that recipient infection is initiated by multiple founder variants
-# applies populationmodel_fixedVL_Environment function written by Katie Atkins
+# applies populationmodel_acrossVL_Environment function written by Katie Atkins
 
 prob_recip_multiple <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter) %>%
   do.call(cbind.data.frame, .) %>% t()
 
-transmitterspvl_variantdist <- cbind.data.frame(pop$transmitter, prob_recip_multiple)
+transmitterspvl_variantdist <- cbind.data.frame(transmitter = pop$transmitter, prob_recip_multiple)
 
 
-###################################################################################################
-# Probability that recipient infection is multiple founder, given a certain viral load
+################################### P(Multiple Variants) | Recipient SPVL (H0) ###################################
 # Generate weightings using function g from Thompson et al
 # This function generates a probability distribution (lognormal) which is used to sample from our range
 # of simulated transmitter viral loads to generalise over a population
@@ -70,9 +69,7 @@ hist(transmitter_prob) #visual check - should look normal(ish) as already log
 # Initialise simulation donor population from a specified min and max log spvl
 InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sample_prob){
   sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
-  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T) %>%
-    cbind.data.frame() %>%
-    `colnames<-`('transmitter')
+  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
   
   return(sim_logspvl)
 }
@@ -82,36 +79,34 @@ sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
                                               transmitter_min = 1, 
                                               transmitter_max = 7, 
                                               sample_prob = transmitter_prob)
-hist(sim_transmitter_log10SPVL$transmitter) #visual check - should look uniform
+hist(sim_transmitter_log10SPVL) #visual check - should look uniform
 
 
 # Leverage heritability model to estimate recipient SPVL
-sim_spvl <- predict(h2_model, newdata=sim_transmitter_log10SPVL) %>% 
-  cbind.data.frame(recipientlog10SPVL = ., donor = sim_transmitter_log10SPVL) %>%
-  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}"))
+sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
+  cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) 
 
 
 # Calculate probability of mulitple founder infection in recipient
 sim_prob_multiple <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl$transmitter)  %>%
   do.call(cbind.data.frame, .) %>% t()
 
-sim_recipientspvl_variantdist <- cbind.data.frame(sim_spvl$recipient, sim_prob_multiple)
+sim_recipientspvl_variantdist <- cbind.data.frame(recipient = sim_spvl$recipient, sim_prob_multiple)
 
 
-###################################################################################################
-# Write to file
+################################### Write to file ###################################
 # population only
 write_csv(pop, file = paste(results_dir, 'base_population.csv', sep = '/'))
 
 # transmitter SPVL & variant distribution
-write_csv(transmitterspvl_variantdist, file = paste(results_dir, 'transmitterspvl_variantdist', sep = '/'))
+write_csv(transmitterspvl_variantdist, file = paste(results_dir, 'transmitterspvl_variantdist.csv', sep = '/'))
 
 # recipient SPVL & variant distribution
 write_csv(sim_recipientspvl_variantdist, file = paste(results_dir, 'recipientspvl_variantdist.csv', sep = '/'))
 
 
-###################################################################################################
-# Alternative
+################################### Alternative Hypotheses ###################################
 
 # Generate a matrix of transmitter/founding particles and associated viral loads
 FoundingVars <- function(spvl, sd, p_dists){
@@ -137,15 +132,26 @@ FoundingVars <- function(spvl, sd, p_dists){
 }
 
 
-test <- sapply(pop$transmitter_log10SPVL, FoundingVars, sd = 0.5, p_dists = prob_dists) %>% t()
-variants <- apply(test, 1, function(x) sum(!is.na(x)))
+variant_matrix <- sapply(pop$transmitter_log10SPVL, FoundingVars, sd = 0.5, p_dists = prob_dists) %>% t()
 
-recip_max <- apply(test, 1, max, na.rm = TRUE)
+# Sanity check
+stopifnot(all(variant_matrix, 1, function(x) sum(!is.na(x))))
 
-recip_mean <-  apply(test, 1, mean, na.rm = TRUE)
 
+################################### Exclusion ###################################
+recip_log10SPVL_exclusion <- apply(variant_matrix, 1, Exclusion, na.rm = TRUE)
+
+
+################################### Additive ###################################
+recip_log10SPVL_exclusion <- apply(variant_matrix, 1, Additive, na.rm = TRUE)
+
+
+################################### Interaction ###################################
+recip_log10SPVL_exclusion <- apply(variant_matrix, 1, Interaction, na.rm = TRUE)
+
+
+################################### Post-Processing ###################################
 v1 <- cbind.data.frame(transmitter_log10SPVL = pop$transmitter_log10SPVL, test)
-
 
 
 pop1 <- cbind.data.frame(recipient_log10SPVL = pop$recipient_log10SPVL, transmitter_log10SPVL = pop$transmitter_log10SPVL, hypothesis = 'null', v = variants)
@@ -156,7 +162,7 @@ pops_com <- rbind.data.frame(pop1, pop2, pop3)
 
 
 
-# CD4 Extension
+################################### CD4 decline ###################################
 
 pops_decline <- pops_com %>% 
   mutate(CD4_decline = (0.0111*log10(recipient_log10SPVL))**2) 
