@@ -58,8 +58,8 @@ List Fraser_cpp_model(NumericVector times,NumericVector state,
   double a_cd4 = a_0*k_cd4*(cd4/(cd4+x_s));
   double a_cd8 = a_0*k_cd8*(cd8/(cd8+x_s));
   
-  double pk_CD4 = theta_cd4*(k_cd4+1)*(pk_cd4+1) - (e_cd4 + theta_cd4 * k_cd4)*pk_cd4 + e_cd4*(pk_cd4-1); //Ask Katie
-  double pk_CD8 = theta_cd8*(k_cd8+1)*(pk_cd8+1) - (e_cd8 + theta_cd8 * k_cd8)*pk_cd8 + e_cd8*(pk_cd8-1);
+  double dpk_cd4 = theta_cd4*(k_cd4+1)*(pk_cd4+1) - (e_cd4 + theta_cd4 * k_cd4)*pk_cd4 + e_cd4*(pk_cd4-1); //Ask Katie
+  double dpk_cd8 = theta_cd8*(k_cd8+1)*(pk_cd8+1) - (e_cd8 + theta_cd8 * k_cd8)*pk_cd8 + e_cd8*(pk_cd8-1);
   double epsilon = infectious_active/(infectious_active+ infectious_0);
   double homeostasis = lambda_cd4 + lambda_cd8 + mu + 2*a_0*(2*p_a + 1);
 
@@ -75,7 +75,7 @@ List Fraser_cpp_model(NumericVector times,NumericVector state,
   double dz = d*(z_0 - z) + p*epsilon*z;
   double dv = infectious_active*bc_ratio;
   
-  NumericVector res_vec = NumericVector::create(dcd4, dcd8, dcd4_activated, dcd8_activated, dinfectious_active, dinfectious_latent, dz, dv, k_cd4, k_cd8, pk_cd4, pk_cd8);
+  NumericVector res_vec = NumericVector::create(dcd4, dcd8, dcd4_activated, dcd8_activated, dinfectious_active, dinfectious_latent, dz, dv, k_cd4, k_cd8, dpk_cd4, dpk_cd8);
   
   List res = List::create(res_vec);
   
