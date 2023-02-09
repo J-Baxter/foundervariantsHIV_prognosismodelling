@@ -85,7 +85,8 @@ hist(sim_transmitter_log10SPVL) #visual check - should look uniform
 # Leverage heritability model to estimate recipient SPVL
 sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
   cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
-  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) 
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
+  `colnames<-` (str_remove(colnames(.), 'sim_'))
 
 
 # Calculate probability of mulitple founder infection in recipient
@@ -137,7 +138,9 @@ prob_dists <- lapply(spvl, populationmodel_acrossVL_Environment) %>% sapply(., f
 variant_matrix <- sapply(pop$transmitter_log10SPVL, FoundingVars, sd = 0.5, p_dists = prob_dists) %>% t()
 
 # Sanity check
-stopifnot(all(variant_matrix, 1, function(x) sum(!is.na(x))))
+apply(variant_matrix, 1, function(x) sum(!is.na(x))) %>%
+  all() %>%
+  stopifnot()
 
 
 ################################### Exclusion ###################################
@@ -145,11 +148,11 @@ recip_log10SPVL_exclusion <- apply(variant_matrix, 1, Exclusion, na.rm = TRUE)
 
 
 ################################### Additive ###################################
-recip_log10SPVL_exclusion <- apply(variant_matrix, 1, Additive, na.rm = TRUE)
+recip_log10SPVL_additive <- apply(variant_matrix, 1, Additive, na.rm = TRUE)
 
 
 ################################### Interaction ###################################
-recip_log10SPVL_exclusion <- apply(variant_matrix, 1, Interaction, na.rm = TRUE)
+recip_log10SPVL_interaction <- apply(variant_matrix, 1, Interaction, na.rm = TRUE)
 
 
 ################################### Post-Processing ###################################
