@@ -14,6 +14,32 @@ prob_dists_plot <- cbind.data.frame(prob_dists) %>%
 
 my_breaks = c(-1, -2, -4, -6, -8, -10, -12)
 
+ggplot(aes(x = variants, y = spvl, height = p, group = spvl, scale = 1), data = prob_dists_plot[prob_dists_plot$variants<8,]) + 
+  geom_density_ridges(stat = "identity") +
+  scale_y_log10(limits = c(2, 10**8),
+                expand = c(0,0),
+                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  coord_flip()
+
+
+
+toy_models <- ggplot(prob_dists_plot[prob_dists_plot$variants<8,]) +
+  geom_raster(aes(x = spvl, y = variants, fill = p))+
+  scale_fill_distiller(palette = 'OrRd') +
+  theme_classic(base_family = "Questrial")+
+  scale_x_log10(limits = c(2, 10**8),
+                expand = c(0,0),
+                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x)))
+  facet_wrap(~func, ncol = 1)+
+  theme(
+    legend.position = 'bottom',
+    text = element_text(size=14)
+  )
+
 ggplot(prob_dists_plot[prob_dists_plot$variants<8,]) +
   geom_tile(aes(x = spvl, y = variants, fill = p))+
  
