@@ -45,7 +45,7 @@ List Fraser_cpp_model(NumericVector times,NumericVector state,
   double d = parms["d"]; //death rate of anti-HIV CTLs
   double z_0 = parms["z_0"]; //pre-infection frequency of anti-HIV CTLs
   double infectious_0 = parms["infectious_0"];
-  double bc_ratio = parms["b"]; // ratio of viral production rate in productively infected cells and viral lifetime
+  double bc_ratio = parms["bc_ratio"]; // ratio of viral production rate in productively infected cells and viral lifetime
   double sigma = parms["sigma"]; // max rat of CTL killing of HIV infected cells
   //double N_PB = parms["N_PB"];
   double theta_cd4 = parms["theta_cd4"]; // average clearance rate in antigenic exposure model
