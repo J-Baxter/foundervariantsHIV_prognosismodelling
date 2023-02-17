@@ -37,7 +37,7 @@ plt1 <- ggplot(pop, aes(x = transmitter, recipient)) +
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   annotation_logticks() +
-  theme
+  my_theme
 
 setEPS()
 postscript( paste(figs_dir, 'population.eps', sep = '/'), width = 10, height = 10)
@@ -61,10 +61,10 @@ fig_2a <- ggplot(transmitterspvl_variantdist,
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.1)) +
   annotation_logticks(sides = 'b') +
-  theme
+  my_theme
 
 
-fig_2b <- ggplot(sim_recipientspvl_variantdist, 
+fig_2b <- ggplot(recipientspvl_variantdist, 
                  aes(x = recipient,
                      y = 1 - variant_distribution.V1))+
   geom_point(colour = '#ef654a',  
@@ -79,7 +79,7 @@ fig_2b <- ggplot(sim_recipientspvl_variantdist,
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.1)) +
   annotation_logticks(sides = 'b') +
-  theme
+  my_theme
 
 
 # Null Scenario (Variant distribution ~ transmitter SPVL)
@@ -92,48 +92,23 @@ transmitterspvl_variantdist_plot <- transmitterspvl_variantdist %>%
 fig_2c <- ggplot(transmitterspvl_variantdist_plot, 
                  aes(x = transmitter, 
                      y = variants, height = p))+
-  geom_ridgeline()
+  geom_ridgeline() +
   geom_point(colour = '#ef654a',  
-             shape = 4, size = 3)+
+             shape = 4, size = 3) +
   scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+  scale_y_continuous(name = 'Variants',
                      expand = c(0,0),
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.1)) +
   annotation_logticks(sides = 'b') +
-  theme
+  my_theme
 
 
 
-
-# Alternative
-# Toy Plots
-  
-data <- expand_grid(v1 = seq(4,6,by=0.2), v2 = seq(4,6,by=0.2)) %>%
-  rowwise() %>% 
-  mutate(Additive = Additive(5, c(v1, v2))) %>%
-  mutate(Interaction = Interaction(5, c(v1, v2))) %>%
-  mutate(Exclusion = Exclusion(5, c(v1, v2))) %>%
-  pivot_longer(cols = c(Additive, Interaction, Exclusion), names_to = 'func', values_to = 'recip')
-  
-
-toy_models <- ggplot(data) +
-  geom_raster(aes(x = v1, y = v2, fill= recip))+
-  scale_fill_viridis_c('Recipient SPVL', option = 'inferno') +
-  theme_classic(base_family = "Questrial")+
-  facet_wrap(~func, ncol = 1)+
-  theme(
-    legend.position = 'bottom',
-    text = element_text(size=14)
-  )
-setEPS()
-postscript( paste(figs_dir, 'toy_models.eps', sep = '/'), width = 8, height = 16)
-toy_models
-dev.off()
 
 
 ggplot(pops_com, aes(x = transmitter_log10SPVL, recipient_log10SPVL, colour = hypothesis)) +
