@@ -26,7 +26,7 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
-NPAIRS <- 500 #500
+NPAIRS <- 100 #500
 
 pop <- InitPop(N = NPAIRS, 
                H2 = 0.67, #0.33

@@ -223,7 +223,7 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   
   variant_distribution <- as.data.frame(matrix(
     unlist(purrr::map(.x = weight_numberFounderStrainDistribution,
-                      .f = ~(select(., starts_with("V")) %>%
+                      .f = ~(dplyr::select(., starts_with("V")) %>%
                                colSums(.)))),
     ncol = maxVirionsConsidered,
     byrow = TRUE))  %>%
@@ -239,7 +239,7 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
    # unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
    #                    .y = as.list(tauc),
    #                    .f = ~( filter(., tvals <= taup) %>%
-    #                             select(., starts_with("V")) %>%
+    #                             dplyr::select(., starts_with("V")) %>%
     #                             colSums(.)))),
     #ncol = maxVirionsConsidered,
     #byrow = TRUE)) %>%
@@ -253,7 +253,7 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
    # unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
    #                    .y = as.list(tauc),
     #                   .f = ~(filter(., tvals > taup & tvals <= (taup + .y)) %>%
-  #                              select(., starts_with("V")) %>%
+  #                              dplyr::select(., starts_with("V")) %>%
    #                             colSums(.)))),
    # ncol = maxVirionsConsidered,
    # byrow = TRUE)) %>%
@@ -267,7 +267,7 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
     #unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
     #                   .y = as.list(tauc),
      #                  .f = ~(filter(., tvals > (taup + .y) & (tvals <= (taup + .y + taua))) %>%
-     #                           select(., starts_with("V")) %>%
+     #                           dplyr::select(., starts_with("V")) %>%
      #                           colSums(.)))),
   #  ncol = maxVirionsConsidered,
    # byrow = TRUE)) %>%
