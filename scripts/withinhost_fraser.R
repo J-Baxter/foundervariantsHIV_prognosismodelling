@@ -16,7 +16,8 @@ source('./scripts/init.R')
 source('./scripts/event_func.R')
 
 df <- read.csv('./variantsim_app/default_parms.csv') 
-
+library(Rcpp)
+library(deSolve)
 
 ###################################################################################################
 ##### Compile C++ Code #####
@@ -30,32 +31,45 @@ set.seed(4472)
 
 ###################################################################################################
 #### Set initial states ####
-init <- list()
+init <- c(cd4 =0.66, 
+             cd8 = 0.33, 
+             cd4_activated = 0, 
+             cd8_activated = 0, 
+             infectious_active = 0, 
+             infectious_latent = 0, 
+             z = 0, 
+             v = 0.1, 
+             k_cd4 = 0, 
+             k_cd8 = 0, 
+             dpk_cd4 = 0, 
+             dpk_cd8 =0)
+
+
 
 ###################################################################################################
 #### Set parameters ####
-parms <- list(lambda_cd4 = , #daily thymic production of new cd4
-              lambda_cd8 = parms["lambda_cd8"], #daily thymic production of new cd8
-              a_0 = parms["a_0"], #average rate of T cell activation per antigenic exposure
-              mu = parms["mu"], #daily rate of non-antigen-driven homeostaatic T cell division
-              x_s = parms["x_s"], #relative t cell pool size, below which t cell activation fails due to exhaustion
-              mu_a = parms["mu_a"], # activated t cell division rate
-              p_a = parms["p_a"], # average probability of an activated t cell successfully dividing in an HIV negative control
-              beta = parms["beta"], # average per virion infection rate of an activated CD4+ T cell
-              alpha = parms["alpha"], #death rate of productively infected cell (in the absence of CTL)
-              alpha_latent = parms["alpha_latent"], #rate of reactivation of latent infected cells
-              frac_latent = parms["frac_latent"], #proportion of successful infections that result in latency
-              p = parms["p"], #maximum proliferation rate of anti-HIV CTLs
-              d = parms["d"], #death rate of anti-HIV CTL
-              z_0 = parms["z_0"], #pre-infection frequency of anti-HIV CTLs
-              infectious_0 = parms["infectious_0"],
-              bc_ratio = parms["b"], # ratio of viral production rate in productively infected cells and viral lifetime
-              sigma = parms["sigma"], # max rat of CTL killing of HIV infected cells
+parms <- list(lambda_cd4 = (10**(-4)/6)*5, #daily thymic production of new cd4
+              lambda_cd8 = 10**(-4)/6, #daily thymic production of new cd8
+              a_0 = 1/10**-4, #average rate of T cell activation per antigenic exposure
+              mu = 0.01, #daily rate of non-antigen-driven homeostaatic T cell division
+              x_s = 0.05, #relative t cell pool size, below which t cell activation fails due to exhaustion
+              mu_a = 1, # activated t cell division rate
+              p_a = 0.55, # average probability of an activated t cell successfully dividing in an HIV negative control
+              beta = 1/754, # average per virion infection rate of an activated CD4+ T cell
+              alpha = 1/0.5, #death rate of productively infected cell (in the absence of CTL)
+              alpha_latent = 1/0.01, #rate of reactivation of latent infected cells
+              frac_latent = 10**-5, #proportion of successful infections that result in latency
+              p = 1/0.5, #maximum proliferation rate of anti-HIV CTLs
+              d = 1/0.05, #death rate of anti-HIV CTL
+              z_0 = 10**-06, #pre-infection frequency of anti-HIV CTLs
+              infectious_0 = 10**-3.5,
+              bc_ratio = 265, # ratio of viral production rate in productively infected cells and viral lifetime
+              sigma = 1/(10**4), # max rat of CTL killing of HIV infected cells
               # N_PB = parms["N_PB"],
-              theta_cd4 = parms["theta_cd4"], # average clearance rate in antigenic exposure model
-              theta_cd8 = parms["theta_cd8"], # average exposure rate in antigenic exposure model
-              e_cd4 = parms["e_cd4"],
-              e_cd8 = parms["e_cd8"])
+              theta_cd4 = 1/0.02, # average clearance rate in antigenic exposure model
+              theta_cd8 = 1/0.02, # average exposure rate in antigenic exposure model
+              e_cd4 = 1/0.1,
+              e_cd8 = 1/0.1)
 
 
 ###################################################################################################

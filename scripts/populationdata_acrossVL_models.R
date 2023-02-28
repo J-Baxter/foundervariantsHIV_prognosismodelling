@@ -217,7 +217,7 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
                                                                           tvals > (taup + .y) & (tvals <= (taup + .y + taua)) ~ probNVirionsTransmittedPerSexAct_PREAIDS[nparticles+1],
                                                                           (tvals > (taup + .y + taua)) ~ 0)) %>%
                                                                  mutate(
-                                                                   across(starts_with("V"), ~(.* prob_nparticles)))))
+                                                                   across(dplyr::starts_with("V"), ~(.* prob_nparticles)))))
   
   
   
@@ -249,19 +249,20 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
  # multiple_founder_proportion_primary <- 1 - as.numeric(variant_distribution_primary[1])
   
   # sum up across all times in chronic infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
- # variant_distribution_chronic <- as.data.frame(matrix(
-   # unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
-   #                    .y = as.list(tauc),
-    #                   .f = ~(filter(., tvals > taup & tvals <= (taup + .y)) %>%
-  #                              dplyr::select(., starts_with("V")) %>%
-   #                             colSums(.)))),
-   # ncol = maxVirionsConsidered,
-   # byrow = TRUE)) %>%
-   # mutate(across(everything(), ~(. * g * (1/tauc))) ) %>% 
-   # colSums()
- # variant_distribution_chronic <- variant_distribution_chronic / sum(variant_distribution_chronic)
-  #multiple_founder_proportion_chronic <- 1 - as.numeric(variant_distribution_chronic[1])
-  
+
+  variant_distribution_chronic <- as.data.frame(matrix(
+    unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
+                       .y = as.list(tauc),
+                       .f = ~(filter(., tvals > taup & tvals <= (taup + .y)) %>%
+                                dplyr::select(., dplyr::starts_with("V")) %>%
+                               colSums(.)))),
+   ncol = maxVirionsConsidered,
+   byrow = TRUE)) %>%
+   mutate(across(everything(), ~(. * g * (1/tauc))) ) %>% 
+   colSums()
+  variant_distribution_chronic <- variant_distribution_chronic / sum(variant_distribution_chronic)
+  multiple_founder_proportion_chronic <- 1 - as.numeric(variant_distribution_chronic[1])
+
   # sum up across all times in preaids infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
   #variant_distribution_preaids <- as.data.frame(matrix(
     #unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
@@ -280,12 +281,13 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   
   # output the prob of transmission across all infectious period and the chance of multiple lineages
   output <- c(probTransmissionPerSexAct = probTransmissionPerSexAct,
-              variant_distribution = variant_distribution
+              variant_distribution = variant_distribution,
                  #multiple_founder_proportion = multiple_founder_proportion,
                  #probTransmissionPerSexAct_primary = 1 - probNVirionsTransmittedPerSexAct_PRIMARY[1],
-                 #probTransmissionPerSexAct_chronic = 1 - probNVirionsTransmittedPerSexAct_CHRONIC[1],
+              probTransmissionPerSexAct_chronic = 1 - probNVirionsTransmittedPerSexAct_CHRONIC[1],
                  #probTransmissionPerSexAct_preaids = 1 - probNVirionsTransmittedPerSexAct_PREAIDS[1],
                  #multiple_founder_proportion_primary = multiple_founder_proportion_primary,
+              variant_distribution_chronic = variant_distribution_chronic
                  #multiple_founder_proportion_chronic = multiple_founder_proportion_chronic,
                  #multiple_founder_proportion_preaids = multiple_founder_proportion_preaids
                  )
