@@ -26,10 +26,10 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
-NPAIRS <- 500 #500
+NPAIRS <- 50 #500
 
 pop <- InitPop(N = NPAIRS, 
-               H2 = 0.67, #0.33
+               H2 = 0.33,
                donor_vl = index, 
                recipient_vl = secondary)
 
@@ -41,6 +41,7 @@ h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL , data = pop) # Pop i
 ################################### P(Multiple Variants) | Transmitter SPVL (H0) ###################################
 # Probability that recipient infection is initiated by multiple founder variants
 # applies populationmodel_acrossVL_Environment function written by Katie Atkins
+# extracts estimates for 1) Chronic transmitters and 2) Integrated over the course of transmitter infection
 
 prob_recip_multiple <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter) %>%
   do.call(cbind.data.frame, .) %>% t()
