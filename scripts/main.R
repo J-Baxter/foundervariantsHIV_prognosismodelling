@@ -116,22 +116,6 @@ sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environmen
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
 
 
-################################### Non-Linear Models ###################################
-# Exponential, Logarithmic & Sigmoid (Non-Segregated)
-prior1 <- prior(normal(1, 2), nlpar = "b1") +
-  prior(normal(0, 2), nlpar = "b2")
-
-fit1 <- brm(bf(recipient_log10SPVL ~ b1 * exp(b2 * transmitter_log10SPVL), b1 + b2 ~ 1, nl = TRUE),
-            data = pop, prior = prior1)
-
-exp_model <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL) + sex + age, data = pop)
-
-log_model <- 
-
-sig_model <- 
-
-
-
 ################################### Write to file ###################################
 # population only
 write_csv(pop, file = paste(results_dir, 'base_population.csv', sep = '/'))
@@ -141,6 +125,34 @@ write_csv(transmitterspvl_variantdist, file = paste(results_dir, 'transmitterspv
 
 # recipient SPVL & variant distribution
 write_csv(sim_recipientspvl_variantdist, file = paste(results_dir, 'recipientspvl_variantdist.csv', sep = '/'))
+
+
+###################################################################################################
+################################### Non-Linear Models (No Segregation) ###################################
+# Four groups of nonlinear relationships trialled: Polynomial, Concave/Convex Curves, Sigmoidal, Curves with Max/Min
+
+quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2) + age + sex , data = pop) 
+
+exp_model <- 
+
+asymp_model <- 
+
+logistic_model <- 
+
+  
+################################### Non-Linear Models (Probability MV weights) ###################################
+# Four groups of nonlinear relationships trialled: Polynomial, Concave/Convex Curves, Sigmoidal, Curves with Max/Min
+
+poly_model <- 
+  
+concave_model <- 
+  
+convex_model <- 
+  
+sigmoid_model <- 
+  
+max_model <- 
+  
 
 
 
