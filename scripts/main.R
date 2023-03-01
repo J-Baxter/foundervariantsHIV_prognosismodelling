@@ -39,22 +39,7 @@ pop <- InitPop(N = NPAIRS,
 h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL , data = pop) # Pop init is a key focus area
 
 
-################################### P(Multiple Variants) | Transmitter SPVL (H0) ###################################
-# Probability that recipient infection is initiated by multiple founder variants
-# applies populationmodel_acrossVL_Environment function written by Katie Atkins
-# extracts estimates for 1) Chronic transmitters and 2) Integrated over the course of transmitter infection
-
-prob_recip_multiple <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter) %>%
-  do.call(cbind.data.frame, .) %>% t()
-
-transmitterspvl_variantdist <- cbind.data.frame(transmitter = pop$transmitter, prob_recip_multiple)
-
-
-################################### P(Multiple Variants) | Recipient SPVL (H0) ###################################
-# Generate weightings using function g from Thompson et al
-# This function generates a probability distribution (lognormal) which is used to sample from our range
-# of simulated transmitter viral loads to generalise over a population
-
+################################### Initialise Simulated Populations ###################################
 WeightPDF <- function(viralload){
   alpha = -3.55
   sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
@@ -64,11 +49,6 @@ WeightPDF <- function(viralload){
 } 
 
 
-transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
-hist(transmitter_prob) #visual check - should look normal(ish) as already log
-
-
-# Initialise simulation donor population from a specified min and max log spvl
 InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sample_prob){
   sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
   sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
@@ -77,18 +57,51 @@ InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sampl
 }
 
 
+transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
+#hist(transmitter_prob) #visual check - should look normal(ish) as already log
+
 sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
-                                              transmitter_min = 1, 
-                                              transmitter_max = 7, 
-                                              sample_prob = transmitter_prob)
-hist(sim_transmitter_log10SPVL) #visual check - should look uniform
+                                                transmitter_min = 1, 
+                                                transmitter_max = 7, 
+                                                sample_prob = transmitter_prob)
+#hist(sim_transmitter_log10SPVL) #visual check - should look uniform
 
 
-# Leverage heritability model to estimate recipient SPVL
 sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
   cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
   `colnames<-` (str_remove(colnames(.), 'sim_'))
+
+
+################################### P(Multiple Variants) | Transmitter SPVL (H0) ###################################
+# Probability that recipient infection is initiated by multiple founder variants
+# applies populationmodel_acrossVL_Environment function written by Katie Atkins
+# extracts estimates for 1) Chronic transmitters and 2) Integrated over the course of transmitter infection
+
+transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter) %>%
+  
+  # Post-Processing 
+  do.call(cbind.data.frame, .) %>% 
+  t() %>%
+  cbind.data.frame(transmitter = pop$transmitter, .) %>%
+  rename(probTransmissionPerSexAct_average = probTransmissionPerSexAct) %>%
+  rename_with(function(x) gsub('\\.(?<=\\V)', '\\1_average.\\2',x, perl= TRUE), 
+              .cols = !contains('chronic') & contains('V')) %>%
+  
+  # Long Format
+  pivot_longer(cols = c(contains('chronic'),contains('average')), 
+               names_to = c('type', 'stage', 'variants'), 
+               names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
+               values_to = 'p') %>% 
+  mutate(stage = gsub('^.*_', '', stage)) %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
+
+
+################################### P(Multiple Variants) | Recipient SPVL (H0) ###################################
+# Generate weightings using function g from Thompson et al
+# This function generates a probability distribution (lognormal) which is used to sample from our range
+# of simulated transmitter viral loads to generalise over a population
+
 
 
 # Calculate probability of mulitple founder infection in recipient
