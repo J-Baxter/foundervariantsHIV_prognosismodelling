@@ -24,5 +24,20 @@ InitPop <- function(N, H2, donor_vl, recipient_vl){
 }
 
 
+################################### Initialise Population ###################################
+# Dummy population until we incorporate Rakai data
+
+index <- c('mean'= 4.61, 'sd' = 0.63) 
+secondary <- c('mean' = 4.60 , 'sd' = 0.85)
+
+NPAIRS <- 50 #500
+
+pop <- InitPop(N = NPAIRS, 
+               H2 = 0.33,
+               donor_vl = index, 
+               recipient_vl = secondary) %>%
+  cbind.data.frame(sex = sample(c('M', 'F'), nrow(.), replace = T)) %>%
+  cbind.data.frame(age = sample(18:50, nrow(.), replace = T))
+
 
 ## END ##
