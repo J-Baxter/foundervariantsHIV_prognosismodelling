@@ -23,6 +23,7 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 
 ################################### Initialise Population ###################################
 # Distributions of SPVL for couples with strong support for transmission Hollingsworth et al, 2010
+# Dummy population until we incorporate Rakai data
 
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
@@ -32,40 +33,34 @@ NPAIRS <- 50 #500
 pop <- InitPop(N = NPAIRS, 
                H2 = 0.33,
                donor_vl = index, 
-               recipient_vl = secondary)
+               recipient_vl = secondary) %>%
+  cbind.data.frame(sex = sample(c('M', 'F'), nrow(.), replace = T)) %>%
+  cbind.data.frame(age = sample(18:50, nrow(.), replace = T))
 
 
 ################################### Estimate Heritability ###################################
-h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL , data = pop) # Pop init is a key focus area
+h2_model <- glm(recipient_log10SPVL ~ transmitter_log10SPVL + sex, data = pop) # Building this H2 model is a key step BRMS?
 
+h2_priors <- prior(normal(1, 2), nlpar = "b1") + prior(normal(0, 1), nlpar = "b2") + prior(normal(0, 2), nlpar = "b3") 
+
+h2_fit <- brm(bf(recipient_log10SPVL ~ b1*transmitter_log10SPVL + b2*sex + b3*age, b1 + b2 + b3 ~ 1, nl = TRUE),
+              data = pop, prior = h2_priors )
+
+summary(h2_fit) #Check output makes sense + ESS
+plot(h2_fit) # Check convergence
+bayes_R2(h2_fit) #Estimate R2
 
 ################################### Initialise Simulated Populations ###################################
-WeightPDF <- function(viralload){
-  alpha = -3.55
-  sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
-  mu <-  4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)))
-  weight <-  (2/sigma)*dnorm((log10(viralload) - mu)/sigma)*pnorm(alpha*(log10(viralload) - mu)/sigma)
-  return(weight)
-} 
-
-
-InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sample_prob){
-  sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
-  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
-  
-  return(sim_logspvl)
-}
-
-
 transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
+
 #hist(transmitter_prob) #visual check - should look normal(ish) as already log
 
 sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
                                                 transmitter_min = 1, 
                                                 transmitter_max = 7, 
                                                 sample_prob = transmitter_prob)
-#hist(sim_transmitter_log10SPVL) #visual check - should look uniform
 
+#hist(sim_transmitter_log10SPVL) #visual check - should look uniform
 
 sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
   cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
@@ -123,11 +118,17 @@ sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environmen
 
 ################################### Non-Linear Models ###################################
 # Exponential, Logarithmic & Sigmoid (Non-Segregated)
-exp_model <- nls(recipient_log10SPVL ~ I(a * exp(b * transmitter_log10SPVL)), data = pop, start = list(a = 1, b = 0), trace = T)
+prior1 <- prior(normal(1, 2), nlpar = "b1") +
+  prior(normal(0, 2), nlpar = "b2")
 
-log_model <- nls(recipient_log10SPVL ~ I(a * exp(b * transmitter_log10SPVL)), data = pop, start = list(a = 1, b = 0), trace = T)
+fit1 <- brm(bf(recipient_log10SPVL ~ b1 * exp(b2 * transmitter_log10SPVL), b1 + b2 ~ 1, nl = TRUE),
+            data = pop, prior = prior1)
 
-sig_model <- nls(recipient_log10SPVL ~ I(a * exp(b * transmitter_log10SPVL)), data = pop, start = list(a = 1, b = 0), trace = T)
+exp_model <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL) + sex + age, data = pop)
+
+log_model <- 
+
+sig_model <- 
 
 
 
