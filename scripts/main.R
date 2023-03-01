@@ -103,12 +103,22 @@ transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment,
 # of simulated transmitter viral loads to generalise over a population
 
 
-
-# Calculate probability of mulitple founder infection in recipient
-sim_prob_multiple <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl$transmitter)  %>%
-  do.call(cbind.data.frame, .) %>% t()
-
-sim_recipientspvl_variantdist <- cbind.data.frame(recipient = sim_spvl$recipient, sim_prob_multiple)
+# Calculate probability of multiple founder infection in recipient
+sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl$transmitter)  %>%
+  do.call(cbind.data.frame, .) %>% 
+  t() %>%
+  cbind.data.frame(recipient = sim_spvl$recipient, .) %>%
+  rename(probTransmissionPerSexAct_average = probTransmissionPerSexAct) %>%
+  rename_with(function(x) gsub('\\.(?<=\\V)', '\\1_average.\\2',x, perl= TRUE), 
+              .cols = !contains('chronic') & contains('V')) %>%
+  
+  # Long Format
+  pivot_longer(cols = c(contains('chronic'),contains('average')), 
+               names_to = c('type', 'stage', 'variants'), 
+               names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
+               values_to = 'p') %>% 
+  mutate(stage = gsub('^.*_', '', stage)) %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
 
 
 ################################### Write to file ###################################
