@@ -121,6 +121,16 @@ sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environmen
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
 
 
+################################### Non-Linear Models ###################################
+# Exponential, Logarithmic & Sigmoid (Non-Segregated)
+exp_model <- nls(recipient_log10SPVL ~ I(a * exp(b * transmitter_log10SPVL)), data = pop, start = list(a = 1, b = 0), trace = T)
+
+log_model <- nls(recipient_log10SPVL ~ I(a * exp(b * transmitter_log10SPVL)), data = pop, start = list(a = 1, b = 0), trace = T)
+
+sig_model <- nls(recipient_log10SPVL ~ I(a * exp(b * transmitter_log10SPVL)), data = pop, start = list(a = 1, b = 0), trace = T)
+
+
+
 ################################### Write to file ###################################
 # population only
 write_csv(pop, file = paste(results_dir, 'base_population.csv', sep = '/'))
@@ -132,7 +142,6 @@ write_csv(transmitterspvl_variantdist, file = paste(results_dir, 'transmitterspv
 write_csv(sim_recipientspvl_variantdist, file = paste(results_dir, 'recipientspvl_variantdist.csv', sep = '/'))
 
 
-################################### Alternative Hypotheses ###################################
 
 # Generate a matrix of transmitter/founding particles and associated viral loads
 FoundingVars <- function(spvl, sd, p_dists){
