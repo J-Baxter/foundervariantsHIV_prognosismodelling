@@ -24,20 +24,21 @@ InitPop <- function(N, H2, donor_vl, recipient_vl){
 }
 
 
-################################### Initialise Population ###################################
-# Dummy population until we incorporate Rakai data
+WeightPDF <- function(viralload){
+  alpha = -3.55
+  sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
+  mu <-  4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)))
+  weight <-  (2/sigma)*dnorm((log10(viralload) - mu)/sigma)*pnorm(alpha*(log10(viralload) - mu)/sigma)
+  return(weight)
+} 
 
-index <- c('mean'= 4.61, 'sd' = 0.63) 
-secondary <- c('mean' = 4.60 , 'sd' = 0.85)
 
-NPAIRS <- 50 #500
-
-pop <- InitPop(N = NPAIRS, 
-               H2 = 0.33,
-               donor_vl = index, 
-               recipient_vl = secondary) %>%
-  cbind.data.frame(sex = sample(c('M', 'F'), nrow(.), replace = T)) %>%
-  cbind.data.frame(age = sample(18:50, nrow(.), replace = T))
+InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sample_prob){
+  sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
+  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
+  
+  return(sim_logspvl)
+}
 
 
 ## END ##
