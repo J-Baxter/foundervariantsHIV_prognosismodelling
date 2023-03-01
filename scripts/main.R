@@ -89,7 +89,10 @@ transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment,
                names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
                values_to = 'p') %>% 
   mutate(stage = gsub('^.*_', '', stage)) %>%
-  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) %>%
+  
+  # Incorporate CD4 decline
+  mutate(CD4_decline = (0.0111*log10(recipient_log10SPVL))**2 + )# Error term
 
 
 ################################### P(Multiple Variants) | Recipient SPVL (H0) ###################################
@@ -113,7 +116,10 @@ sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environmen
                names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
                values_to = 'p') %>% 
   mutate(stage = gsub('^.*_', '', stage)) %>%
-  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) %>%
+  
+  # Incorporate CD4 decline
+  mutate(CD4_decline = (0.0111*log10(recipient_log10SPVL))**2 + )# Error term
 
 
 ################################### Write to file ###################################
@@ -142,6 +148,9 @@ logistic_model <-
   
 ################################### Non-Linear Models (Probability MV weights) ###################################
 # Four groups of nonlinear relationships trialled: Polynomial, Concave/Convex Curves, Sigmoidal, Curves with Max/Min
+
+# Calculate weights based on transmitter SPVL
+
 
 poly_model <- 
   
