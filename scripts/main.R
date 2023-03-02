@@ -15,6 +15,7 @@ source('./scripts/dependencies.R')
 source('./scripts/populationdata_acrossVL_models.R')
 source('./scripts/init_population.R')
 source('./scripts/ecologicalhypos.R')
+source('./scripts/cd4_delcine.R')
 
 # Set Seed
 set.seed(4472)
@@ -55,9 +56,9 @@ transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/s
 
 #hist(transmitter_prob) #visual check - should look normal(ish) as already log
 
-sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
-                                                transmitter_min = 1, 
-                                                transmitter_max = 7, 
+sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS, transmitters = pop
+                                                #transmitter_min = 1, 
+                                                #transmitter_max = 7, 
                                                 sample_prob = transmitter_prob)
 
 #hist(sim_transmitter_log10SPVL) #visual check - should look uniform
@@ -89,10 +90,7 @@ transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment,
                names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
                values_to = 'p') %>% 
   mutate(stage = gsub('^.*_', '', stage)) %>%
-  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) %>%
-  
-  # Incorporate CD4 decline
-  mutate(CD4_decline = (0.0111*log10(recipient_log10SPVL))**2 + )# Error term
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
 
 
 ################################### P(Multiple Variants) | Recipient SPVL (H0) ###################################
@@ -119,7 +117,7 @@ sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environmen
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) %>%
   
   # Incorporate CD4 decline
-  mutate(CD4_decline = (0.0111*log10(recipient_log10SPVL))**2 + )# Error term
+  mutate(CD4_decline = CD4Decline(recipient_log10SPVL, age, sex))
 
 
 ################################### Write to file ###################################
@@ -141,7 +139,7 @@ quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log1
 
 exp_model <- 
 
-asymp_model <- 
+asymp_model <-
 
 logistic_model <- 
 

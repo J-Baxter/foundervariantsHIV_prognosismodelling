@@ -33,9 +33,9 @@ WeightPDF <- function(viralload){
 } 
 
 
-InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sample_prob){
-  sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
-  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
+InitSimTransmitter <- function(pop_size, population, sample_prob){
+  #sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
+  sim_logspvl <- sample(population['transmitter_log10SPVL'], size = pop_size, prob = sample_prob, replace = T)
   
   return(sim_logspvl)
 }
