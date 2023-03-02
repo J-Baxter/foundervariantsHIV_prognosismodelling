@@ -2,7 +2,6 @@
 # from Disentangling Human Tolerance and Resistance Against HIV
 # Regoes et al. PLoS Biology 2014
 
-
 CD4Decline <- function(log10SPVL,age,sex){
   alpha_f = -0.005866
   eta_m = 0.000491
@@ -16,3 +15,5 @@ CD4Decline <- function(log10SPVL,age,sex){
   
   return(deltaCD4)
 } 
+
+## END ##
