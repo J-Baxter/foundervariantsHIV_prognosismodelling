@@ -5,8 +5,28 @@
 
 cd4_data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t' )
 
+
+cd4_plt <- ggplot(cd4_data, aes(x = spVL, y=CD4.decline))+
+  geom_point(colour = '#ef654a', shape= 4) +
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**1)),  #
+                     expand = c(0,0),
+                     limits = c(-2,2))+
+  scale_x_continuous(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                     expand = c(0,0),
+                     )+
+  
+  geom_smooth(method = 'lm', formula = 'y ~ x + I(x**2)', colour = 'black') + 
+  my_theme + 
+  annotation_logticks(sides = 'b') 
+
+setEPS()
+postscript( paste(figs_dir, 'cd4_plt.eps', sep = '/'), width = 10, height = 10)
+cd4_plt 
+dev.off()
+
+
 # -0.1 + 0.051*log10(V) - 0.017*(log10(V))**2
-cd4_model <- lm(CD4.decline ~ poly(spVL, degree =1), data = cd4_data )
+cd4_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = cd4_data )
 summary(cd4_model)
 confint(cd4_model, level = 0.95)
 
