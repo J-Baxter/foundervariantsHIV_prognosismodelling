@@ -36,6 +36,7 @@ plt1 <- ggplot(pop, aes(x = transmitter, recipient)) +
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
+   + 
   annotation_logticks() +
   my_theme
 

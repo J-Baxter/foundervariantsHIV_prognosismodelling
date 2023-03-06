@@ -40,7 +40,7 @@ pop <- InitPop(N = NPAIRS,
 
 
 ################################### Estimate Heritability ###################################
-h2_model <- glm(recipient_log10SPVL ~ transmitter_log10SPVL + sex, data = pop) # Building this H2 model is a key step BRMS?
+h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL, data = test_data) # Building this H2 model is a key step BRMS?
 
 h2_priors <- prior(normal(1, 2), nlpar = "b1") + prior(normal(0, 1), nlpar = "b2") + prior(normal(0, 2), nlpar = "b3") 
 
@@ -55,10 +55,16 @@ pred.data = expand.grid(transmitter_log10SPVL = seq(min(pop$transmitter_log10SPV
                         sex = c('M', 'F'),
                         age = seq(min(pop$age), max(pop$age), length=20))
 
-pred.data$recipient_log10SPVL = predict(h2_fit, newdata=pred.data)
+pred.data <- pred.data %>% cbind.data.frame(., predict(h2_fit, newdata=pred.data))
 
+pop%>%
+  add_predicted_draws(h2_fit) %>%  # adding the posterior distribution
+  ggplot(aes(x = transmitter, y = recipient)) +  
+  stat_lineribbon(aes(y = .prediction), .width = c(.95, .80, .50),  # regression line and CI
+                  alpha = 0.5, colour = "black") +
+  geom_point(data = France, colour = "darkseagreen4", size = 3)
 
-+
+ggplot()+
   geom_point(data = pop, aes(x = transmitter, recipient), #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
     colour = '#ef654a',
     shape = 4, size = 3) +
@@ -72,8 +78,8 @@ pred.data$recipient_log10SPVL = predict(h2_fit, newdata=pred.data)
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  ggplot() +
-  geom_line(data = pred.data, aes(y = recipient_log10SPVL.Estimate, x = transmitter_log10SPVL))
+  ggplot(pred.data, aes(y = Estimate, x = transmitter_log10SPVL))+
+  geom_line()
   
   annotation_logticks() +
   my_theme
