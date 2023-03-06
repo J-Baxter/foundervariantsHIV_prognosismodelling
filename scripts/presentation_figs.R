@@ -139,3 +139,32 @@ setEPS()
 postscript("probability_comparison.eps", width = 14, height = 9)
 plt3
 dev.off()
+
+
+cd4_data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t' )
+
+
+cd4_plt <- ggplot(cd4_data, aes(x = spVL, y=CD4.decline))+
+  geom_point(colour = '#ef654a', shape= 4, alpha = 0.3) +
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
+                     expand = c(0,0),
+                     limits = c(-2,2))+
+  scale_x_continuous(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                     expand = c(0,0),
+  )+
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#fdbb84', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.55, y = -0.35), label = "20 yrs", colour = "#fdbb84", size = 6) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*40) * x**2, colour = '#ef6548', linewidth = 1.2, xlim = c(0,6.3))+
+  geom_text(aes(x = 6.55, y = -0.5, label = "40 yrs"), colour = "#ef6548", size = 6) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*60) * x**2, colour = '#b30000', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.55, y = -0.62, label = "60 yrs"), colour = "#b30000", size = 6) +
+  
+  #geom_smooth(method = 'lm', formula = 'y ~ x + I(x**2)', colour = 'black') + 
+  my_theme + theme(axis.title.y = element_text(family = 'sans')) + 
+  annotation_logticks(sides = 'b') 
+
+
+ggsave(paste(figs_dir,sep = '/', "cd4_plt.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
+Sys.sleep(0.5)
+cd4_plt 
+dev.off()
