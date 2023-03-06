@@ -51,6 +51,33 @@ summary(h2_fit) #Check output makes sense + ESS
 plot(h2_fit) # Check convergence
 bayes_R2(h2_fit) #Estimate R2
 
+pred.data = expand.grid(transmitter_log10SPVL = seq(min(pop$transmitter_log10SPVL), max(pop$transmitter_log10SPVL), length=20),
+                        sex = c('M', 'F'),
+                        age = seq(min(pop$age), max(pop$age), length=20))
+
+pred.data$recipient_log10SPVL = predict(h2_fit, newdata=pred.data)
+
+
++
+  geom_point(data = pop, aes(x = transmitter, recipient), #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
+    colour = '#ef654a',
+    shape = 4, size = 3) +
+  scale_x_log10(limits = c(1, 10**10),
+                expand = c(0,0),
+                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**10),
+                expand = c(0,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  ggplot() +
+  geom_line(data = pred.data, aes(y = recipient_log10SPVL.Estimate, x = transmitter_log10SPVL))
+  
+  annotation_logticks() +
+  my_theme
+
 ################################### Initialise Simulated Populations ###################################
 transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
 
