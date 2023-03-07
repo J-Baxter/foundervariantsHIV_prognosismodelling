@@ -36,20 +36,35 @@ pop <- InitPop(N = NPAIRS,
                donor_vl = index, 
                recipient_vl = secondary) %>%
   cbind.data.frame(sex = sample(c('M', 'F'), nrow(.), replace = T)) %>%
-  cbind.data.frame(age = sample(18:50, nrow(.), replace = T))
+  cbind.data.frame(age = sample(18:70, nrow(.), replace = T))
 
 
 ################################### Estimate Heritability ###################################
-h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL, data = test_data) # Building this H2 model is a key step BRMS?
+h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL, data = pop) # Building this H2 model is a key step BRMS?
 
 h2_priors <- prior(normal(1, 2), nlpar = "b1") + prior(normal(0, 1), nlpar = "b2") + prior(normal(0, 2), nlpar = "b3") 
 
-h2_fit <- brm(bf(recipient_log10SPVL ~ b1*transmitter_log10SPVL + b2*sex + b3*age, b1 + b2 + b3 ~ 1, nl = TRUE),
-              data = pop, prior = h2_priors )
+h2_fit <- brm(recipient_log10SPVL ~ transmitter_log10SPVL + sex + age,
+              data = pop)
 
 summary(h2_fit) #Check output makes sense + ESS
 plot(h2_fit) # Check convergence
 bayes_R2(h2_fit) #Estimate R2
+
+model_fit <- pop %>%
+    add_predicted_draws(h2_fit) %>%  # adding the posterior distribution
+    ggplot(aes(x = transmitter_log10SPVL , y = recipient_log10SPVL )) +  
+    stat_lineribbon(aes(y = .prediction), .width = c(.95, .80, .50),  # regression line and CI
+                    alpha = 0.5, colour = "black") +
+    geom_point(data = pop, colour = "darkseagreen4", size = 3) +   # raw data
+    scale_fill_brewer(palette = "Greys") +
+    ylab("Calidris canutus abundance\n") +  # latin name for red knot
+    xlab("\nYear") +
+    theme_bw() +
+    theme(legend.title = element_blank(),
+          legend.position = c(0.15, 0.85))
+
+
 
 pred.data = expand.grid(transmitter_log10SPVL = seq(min(pop$transmitter_log10SPVL), max(pop$transmitter_log10SPVL), length=20),
                         sex = c('M', 'F'),
@@ -87,19 +102,19 @@ ggplot()+
 ################################### Initialise Simulated Populations ###################################
 transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
 
-#hist(transmitter_prob) #visual check - should look normal(ish) as already log
+hist(transmitter_prob) #visual check - should look normal(ish) as already log
 
-sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS, transmitters = pop
-                                                #transmitter_min = 1, 
-                                                #transmitter_max = 7, 
+sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
+                                                transmitter_min = 1, 
+                                                transmitter_max = 7, 
                                                 sample_prob = transmitter_prob)
 
-#hist(sim_transmitter_log10SPVL) #visual check - should look uniform
+hist(sim_transmitter_log10SPVL) #visual check - should look uniform
 
 sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
   cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
-  `colnames<-` (str_remove(colnames(.), 'sim_'))
+  `colnames<-` (str_remove(colnames(.), 'sim_')) %>% mutate(sim = 'linear')
 
 
 ################################### P(Multiple Variants) | Transmitter SPVL (H0) ###################################
@@ -148,11 +163,9 @@ sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environmen
                values_to = 'p') %>% 
   mutate(stage = gsub('^.*_', '', stage)) %>%
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) %>%
-  
-  # Incorporate CD4 decline
-  mutate(CD4_decline = CD4Decline(recipient_log10SPVL, age, sex))
+  mutate(model = 'linear')
 
-
+sim_recipientspvl_variantdist$CD4_decline <- predict(cd4_model, newdata = data.frame(spVL = log10(sim_recipientspvl_variantdist$recipient)))
 ################################### Write to file ###################################
 # population only
 write_csv(pop, file = paste(results_dir, 'base_population.csv', sep = '/'))
@@ -168,15 +181,133 @@ write_csv(sim_recipientspvl_variantdist, file = paste(results_dir, 'recipientspv
 ################################### Non-Linear Models (No Segregation) ###################################
 # Four groups of nonlinear relationships trialled: Polynomial, Concave/Convex Curves, Sigmoidal, Curves with Max/Min
 
-quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2) + age + sex , data = pop) 
+quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2), data = pop) 
+sim_spvl_quad <- predict(quad_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
+  cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
+  `colnames<-` (str_remove(colnames(.), 'sim_'))  %>% mutate(sim = 'quad')
 
-exp_model <- 
+exp_model <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL), data = pop) 
+sim_spvl_exp <- predict(exp_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
+  cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
+  `colnames<-` (str_remove(colnames(.), 'sim_')) %>% mutate(sim = 'exp')
 
-asymp_model <-
+nls_df <- rbind.data.frame(sim_spvl_quad , sim_spvl_exp, sim_spvl )
 
-logistic_model <- 
+fig_3a= ggplot(nls_df) + 
+  geom_density(aes(x = recipient_log10SPVL, fill = sim), alpha = 0.4)+
+  my_theme +
+  scale_fill_brewer(palette = 'OrRd')+
+  scale_y_continuous(expand = c(0,0))+
+  scale_x_continuous(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                     limits = c(0,8), expand = c(0,0))+ theme(
+                       legend.position = 'none')
 
+
+
+quad_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl_quad$transmitter)  %>%
+  do.call(cbind.data.frame, .) %>% 
+  t() %>%
+  cbind.data.frame(recipient = sim_spvl_quad$recipient, .) %>%
+  rename(probTransmissionPerSexAct_average = probTransmissionPerSexAct) %>%
+  rename_with(function(x) gsub('\\.(?<=\\V)', '\\1_average.\\2',x, perl= TRUE), 
+              .cols = !contains('chronic') & contains('V')) %>%
   
+  # Long Format
+  pivot_longer(cols = c(contains('chronic'),contains('average')), 
+               names_to = c('type', 'stage', 'variants'), 
+               names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
+               values_to = 'p') %>% 
+  mutate(stage = gsub('^.*_', '', stage)) %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) %>%
+  mutate(model = 'quad')
+
+quad_recipientspvl_variantdist$CD4_decline <- predict(cd4_model, newdata = data.frame(spVL = log10(quad_recipientspvl_variantdist$recipient)))
+
+exp_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl_exp$transmitter)  %>%
+  do.call(cbind.data.frame, .) %>% 
+  t() %>%
+  cbind.data.frame(recipient = sim_spvl_exp$recipient, .) %>%
+  rename(probTransmissionPerSexAct_average = probTransmissionPerSexAct) %>%
+  rename_with(function(x) gsub('\\.(?<=\\V)', '\\1_average.\\2',x, perl= TRUE), 
+              .cols = !contains('chronic') & contains('V')) %>%
+  
+  # Long Format
+  pivot_longer(cols = c(contains('chronic'),contains('average')), 
+               names_to = c('type', 'stage', 'variants'), 
+               names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
+               values_to = 'p') %>% 
+  mutate(stage = gsub('^.*_', '', stage)) %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) %>%
+  mutate(model = 'exp')
+
+exp_recipientspvl_variantdist$CD4_decline <- predict(cd4_model, newdata = data.frame(spVL = log10(exp_recipientspvl_variantdist$recipient)))
+
+
+combined <- rbind.data.frame(exp_recipientspvl_variantdist, quad_recipientspvl_variantdist, sim_recipientspvl_variantdist)
+
+fig3_data <- combined %>% 
+  filter(variants == 1) %>%
+  filter (stage == 'average')
+
+fig_3b <- ggplot(fig3_data , 
+                 aes(x = recipient,
+                     y = 1 - p,
+                     colour = model))+
+  geom_point(shape = 3, size = 4) +
+  scale_colour_brewer(palette = 'OrRd')+
+  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**8),
+                expand = c(0,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0,0),
+                     limits = c(0,0.6),
+                     breaks = seq(0, 0.6, by = 0.1)) +
+  annotation_logticks(sides = 'b') +
+  my_theme+ theme(
+    legend.position = 'none')
+
+
+
+fig_3c <- ggplot(fig3_data , 
+                 aes(y = CD4_decline,
+                     x = 1-p,
+                     colour = model,
+                     group = model))+
+  geom_point(shape = 3, size = 4) +
+  scale_colour_brewer(palette = 'OrRd')+
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
+                     expand = c(0,0),
+                     limits = c(-2,2)) +
+  scale_x_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0,0),
+                     limits = c(0,0.6),
+                     breaks = seq(0, 0.6, by = 0.1))+
+  geom_smooth(method = 'lm', formula = 'y~x') +
+  
+  my_theme + theme(axis.title.y = element_text(family = 'sans'), 
+                   legend.position = 'none')
+
+
+
+grid_3 <- cowplot::plot_grid(fig_3a, fig_3b, fig_3c, align = 'hv', nrow = 1, labels = 'AUTO')
+
+legend <- get_legend(
+  fig_3a +theme(legend.position = "bottom")
+)
+grid_4 <- cowplot::plot_grid(grid_3,legend , nrow = 2, rel_heights = c(1, .1) )
+
+ggsave(paste0(figs_dir, '/test.eps'), device = cairo_ps , plot = grid_4, width = 16, height = 10)
+
+
+setEPS()
+postscript( paste(figs_dir, 'grid_2.eps', sep = '/'), width = 20, height = 10)
+grid_2 
+dev.off()
+
 ################################### Non-Linear Models (Probability MV weights) ###################################
 # Four groups of nonlinear relationships trialled: Polynomial, Concave/Convex Curves, Sigmoidal, Curves with Max/Min
 
