@@ -1,5 +1,5 @@
 #H2 model
-
+library(caret)
 NPAIRS = 100
 
 rnormt <- function(n, range, mu, s = 1) {
