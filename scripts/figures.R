@@ -38,7 +38,7 @@ plt1 <- ggplot(pop, aes(x = transmitter, recipient)) +
                 labels = trans_format("log10", math_format(.x))) +
    + 
   annotation_logticks() +
-  my_theme
+  my_theme + theme(legend.position = 'none')
 
 setEPS()
 postscript( paste(figs_dir, 'population.eps', sep = '/'), width = 10, height = 10)
@@ -47,29 +47,39 @@ dev.off()
 
 
 # Null Scenario (Probability of multiple variants ~ transmitter SPVL)
+fig2_data <- transmitterspvl_variantdist %>% 
+  filter(variants == 1) 
 fig_2a <- ggplot(transmitterspvl_variantdist, 
                  aes(x = transmitter, 
-                     y = 1 - variant_distribution.V1))+
-  geom_point(colour = '#ef654a',  
-             shape = 4, size = 3)+
-  scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                     y = 1 - p,
+                     colour = stage))+
+  geom_point(shape = 3, size = 4) +
+  scale_colour_manual(values = c('#e34a33','#fdbb84')) + 
+  scale_x_log10(name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
-                expand = c(0,0),
+                expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
-                     expand = c(0,0),
+                     expand = c(0.02,0.02),
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.1)) +
   annotation_logticks(sides = 'b') +
-  my_theme
+  my_theme + theme(legend.position = 'none')
 
+setEPS()
+postscript( paste(figs_dir, 'fig_2a .eps', sep = '/'), width = 10, height = 10)
+fig_2a 
+dev.off()
 
-fig_2b <- ggplot(recipientspvl_variantdist, 
+fig2b_data <- sim_recipientspvl_variantdist %>% 
+  filter(variants == 1) 
+fig_2b <- ggplot(fig2b_data , 
                  aes(x = recipient,
-                     y = 1 - variant_distribution.V1))+
-  geom_point(colour = '#ef654a',  
-             shape = 4, size = 3)+
+                     y = 1 - p,
+                     colour = stage))+
+  geom_point(shape = 3, size = 4) +
+  scale_colour_manual(values = c('#e34a33','#fdbb84'))+
   scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0,0),
@@ -80,7 +90,42 @@ fig_2b <- ggplot(recipientspvl_variantdist,
                      limits = c(0,0.6),
                      breaks = seq(0, 0.6, by = 0.1)) +
   annotation_logticks(sides = 'b') +
-  my_theme
+  my_theme+ theme(
+                  legend.position = 'none')
+
+
+fig2c_data <- sim_recipientspvl_variantdist %>% 
+  filter(variants == 1) 
+fig_2c <- ggplot(fig2c_data , 
+                 aes(y = CD4_decline,
+                     x = 1-p,
+                     colour = stage,
+                     group = stage))+
+  geom_point(shape = 3, size = 4) +
+  scale_colour_manual(values = c('#e34a33','#fdbb84'))+
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**1)),  #
+                     expand = c(0,0),
+                     limits = c(-2,2)) +
+  scale_x_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0,0),
+                     limits = c(0,0.6),
+                     breaks = seq(0, 0.6, by = 0.1))+
+  geom_smooth(method = 'lm', formula = 'y~x') +
+  
+  my_theme + theme(axis.title.y = element_text(family = 'sans'), 
+                   legend.position = 'none')
+
+
+grid_1 <- cowplot::plot_grid(fig_2a, fig_2b, fig_2c, align = 'hv', nrow = 1, labels = 'AUTO')
+legend <- get_legend(
+  fig_2a +theme(legend.position = "bottom")
+)
+grid_2 <- cowplot::plot_grid(grid_1,legend , nrow = 2, rel_heights = c(1, .1) )
+
+setEPS()
+postscript( paste(figs_dir, 'grid_2.eps', sep = '/'), width = 20, height = 10)
+grid_2 
+dev.off()
 
 
 # Null Scenario (Variant distribution ~ transmitter SPVL)
