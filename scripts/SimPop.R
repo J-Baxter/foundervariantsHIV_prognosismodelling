@@ -15,9 +15,12 @@ InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sampl
 }
 
 
-SimPop <- function(initpop, model, n, , modeltype = 'linear'){
+SimPop <- function(initpop, model, n, modeltype = 'linear'){
   
-  transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
+  stopifnot('transmitter_log10SPVL' %in% colnames(initpop))
+  t <- initpop['transmitter_log10SPVL']
+  
+  transmitter_prob <- sapply(t, function(x) WeightPDF(x)/sum(WeightPDF(t)))
   
   hist(transmitter_prob) #visual check - should look normal(ish) as already log
   
@@ -28,9 +31,11 @@ SimPop <- function(initpop, model, n, , modeltype = 'linear'){
   
   hist(sim_transmitter_log10SPVL) #visual check - should look uniform
   
-  sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
+  sim_spvl <- predict(model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
     cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
     mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
     `colnames<-` (str_remove(colnames(.), 'sim_')) %>% mutate(model = modeltype)
+  
+  return(sim_spvl)
 }
 

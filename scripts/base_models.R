@@ -3,16 +3,15 @@
 
 # Dependencies
 require(tidyverse)
-
 require(scales)
 require(cowplot)
 source('./scripts/populationmodel_acrossVL_Environment.R')
 
-
-
 # Import Theme
 source('./scripts/plot_theme.R')
 
+# Sanity Check
+stopifnot('data' %in% ls(envir = .GlobalEnv))
 
 ################################### Fit Heritability Model ###################################
 h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL + age + transmission + sex, data = data) 
