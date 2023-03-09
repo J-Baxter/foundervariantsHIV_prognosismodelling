@@ -15,7 +15,7 @@ InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sampl
 }
 
 
-SimPop <- function(initpop, model, n){
+SimPop <- function(initpop, model, n, , modeltype = 'linear'){
   
   transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
   
@@ -31,6 +31,6 @@ SimPop <- function(initpop, model, n){
   sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
     cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
     mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
-    `colnames<-` (str_remove(colnames(.), 'sim_')) %>% mutate(sim = 'linear')
+    `colnames<-` (str_remove(colnames(.), 'sim_')) %>% mutate(model = modeltype)
 }
 
