@@ -13,108 +13,49 @@
 ################################### Dependencies ###################################
 source('./scripts/dependencies.R')
 source('./scripts/populationdata_acrossVL_models.R')
-source('./scripts/init_population.R')
-source('./scripts/ecologicalhypos.R')
-source('./scripts/cd4_delcine.R')
+source('./SimPop.R')
+source('./global_theme.R')
+
 
 # Set Seed
 set.seed(4472)
 options(scipen = 100) #options(scipen = 100, digits = 4)
 
 
-################################### Initialise Population ###################################
-# Distributions of SPVL for couples with strong support for transmission Hollingsworth et al, 2010
-# Dummy population until we incorporate Rakai data
-
-index <- c('mean'= 4.61, 'sd' = 0.63) 
-secondary <- c('mean' = 4.60 , 'sd' = 0.85)
-
-NPAIRS <- 50 #500
-
-pop <- InitPop(N = NPAIRS, 
-               H2 = 0.33,
-               donor_vl = index, 
-               recipient_vl = secondary) %>%
-  cbind.data.frame(sex = sample(c('M', 'F'), nrow(.), replace = T)) %>%
-  cbind.data.frame(age = sample(18:70, nrow(.), replace = T))
+################################### Import Data ###################################
+data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t') #Post processing
 
 
-################################### Estimate Heritability ###################################
-h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL, data = pop) # Building this H2 model is a key step BRMS?
-
-h2_priors <- prior(normal(1, 2), nlpar = "b1") + prior(normal(0, 1), nlpar = "b2") + prior(normal(0, 2), nlpar = "b3") 
-
-h2_fit <- brm(recipient_log10SPVL ~ transmitter_log10SPVL + sex + age,
-              data = pop)
-
-summary(h2_fit) #Check output makes sense + ESS
-plot(h2_fit) # Check convergence
-bayes_R2(h2_fit) #Estimate R2
-
-model_fit <- pop %>%
-    add_predicted_draws(h2_fit) %>%  # adding the posterior distribution
-    ggplot(aes(x = transmitter_log10SPVL , y = recipient_log10SPVL )) +  
-    stat_lineribbon(aes(y = .prediction), .width = c(.95, .80, .50),  # regression line and CI
-                    alpha = 0.5, colour = "black") +
-    geom_point(data = pop, colour = "darkseagreen4", size = 3) +   # raw data
-    scale_fill_brewer(palette = "Greys") +
-    ylab("Calidris canutus abundance\n") +  # latin name for red knot
-    xlab("\nYear") +
-    theme_bw() +
-    theme(legend.title = element_blank(),
-          legend.position = c(0.15, 0.85))
+################################### Run Base Models ###################################
+source('./scripts/base_models.R')
 
 
+################################### Fit Non Linear Models (unweighted) ###################################
 
-pred.data = expand.grid(transmitter_log10SPVL = seq(min(pop$transmitter_log10SPVL), max(pop$transmitter_log10SPVL), length=20),
-                        sex = c('M', 'F'),
-                        age = seq(min(pop$age), max(pop$age), length=20))
+quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2), data = pop) 
 
-pred.data <- pred.data %>% cbind.data.frame(., predict(h2_fit, newdata=pred.data))
+exp_model <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL), data = pop) 
 
-pop%>%
-  add_predicted_draws(h2_fit) %>%  # adding the posterior distribution
-  ggplot(aes(x = transmitter, y = recipient)) +  
-  stat_lineribbon(aes(y = .prediction), .width = c(.95, .80, .50),  # regression line and CI
-                  alpha = 0.5, colour = "black") +
-  geom_point(data = France, colour = "darkseagreen4", size = 3)
 
-ggplot()+
-  geom_point(data = pop, aes(x = transmitter, recipient), #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
-    colour = '#ef654a',
-    shape = 4, size = 3) +
-  scale_x_log10(limits = c(1, 10**10),
-                expand = c(0,0),
-                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**10),
-                expand = c(0,0),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  ggplot(pred.data, aes(y = Estimate, x = transmitter_log10SPVL))+
-  geom_line()
+# Check Fit
+
+
+################################### Run Simulations ###################################
+NSIM <- 200
   
-  annotation_logticks() +
-  my_theme
+linear_sim <- SimPop(data$transmitter, h2_model, NSIM)
 
-################################### Initialise Simulated Populations ###################################
-transmitter_prob <- sapply(pop$transmitter_log10SPVL, function(x) WeightPDF(x)/sum(WeightPDF(pop$transmitter_log10SPVL)))
+quad_sim <- SimPop(data$transmitter, quad_model, NSIM)
 
-hist(transmitter_prob) #visual check - should look normal(ish) as already log
+exp_sim <- SimPop(data$transmitter, exp_model, NSIM)
 
-sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
-                                                transmitter_min = 1, 
-                                                transmitter_max = 7, 
-                                                sample_prob = transmitter_prob)
 
-hist(sim_transmitter_log10SPVL) #visual check - should look uniform
+################################### Run Transmission Model on Simulations ###################################
+linear_pred <- RunTM4Sim(linear_sim, modeltype = 'linear')
 
-sim_spvl <- predict(h2_model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
-  cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
-  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
-  `colnames<-` (str_remove(colnames(.), 'sim_')) %>% mutate(sim = 'linear')
+quad_pred <- RunTM4Sim(quad_sim, modeltype = 'quad')
+
+exp_pred <- RunTM4Sim(exp_sim, modeltype = 'exp')
 
 
 ################################### P(Multiple Variants) | Transmitter SPVL (H0) ###################################
@@ -148,7 +89,7 @@ transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment,
 
 
 # Calculate probability of multiple founder infection in recipient
-sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl$transmitter)  %>%
+sim_recipientspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, sim_spvl$transmitter) %>%
   do.call(cbind.data.frame, .) %>% 
   t() %>%
   cbind.data.frame(recipient = sim_spvl$recipient, .) %>%
