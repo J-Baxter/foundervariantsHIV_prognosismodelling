@@ -13,8 +13,9 @@
 ################################### Dependencies ###################################
 source('./scripts/dependencies.R')
 source('./scripts/populationdata_acrossVL_models.R')
-source('./SimPop.R')
-source('./global_theme.R')
+source('./scripts/SimPop.R')
+source('./scripts/RunTM4Sim.R')
+source('./scripts/global_theme.R')
 
 
 # Set Seed
