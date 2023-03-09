@@ -1,3 +1,6 @@
+# Function that implements the Transmission Model (from Thompson et al., 2019) on 
+# simulated data, and subsequently predicts CD4 decline using the Tolerance Model
+# (from Regoes et al., 2014).
 
 RunTM4Sim <- function(data, modeltype = 'linear'){
   
