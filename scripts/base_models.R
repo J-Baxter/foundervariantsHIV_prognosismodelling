@@ -3,15 +3,12 @@
 
 # Dependencies
 require(tidyverse)
-require(showtext)
-require(showtextdb)
+
 require(scales)
 require(cowplot)
 source('./scripts/populationmodel_acrossVL_Environment.R')
 
-# Format fonts for output
-font_add_google("Questrial", "Questrial")
-showtext_auto()
+
 
 # Import Theme
 source('./scripts/plot_theme.R')
