@@ -20,7 +20,7 @@ source('./scripts/plot_theme.R')
 ################################### Fit Heritability Model ###################################
 h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL + age + transmission + sex, data = data) 
 
-# Sanity check model
+# Sanity check model (convergence, linearity)
 
 plt_1a <- ggplot(data, aes(x = transmitter, recipient)) +
   geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
@@ -45,7 +45,13 @@ plt_1a <- ggplot(data, aes(x = transmitter, recipient)) +
 ################################### Fit Tolerance Model ###################################
 cd4_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = data)
 
-# Sanity check model
+# Sanity check model (convergence, linearity)
+
+##################################################
+# parameters from Regoes et al. PLoS Biology 2014 
+##################################################
+# a_f = -0.010941 
+# n_m = - 0.000243 
 
 plt_1b <- ggplot(cd4_data, aes(x = spVL, y=CD4.decline))+
   geom_point(colour = '#ef654a', shape= 4, alpha = 0.3) +
