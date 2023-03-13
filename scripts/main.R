@@ -37,6 +37,7 @@ quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log1
 
 exp_model <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL), data = pop) 
 
+sigmoid_model <-  
 
 # Check Fit
 
@@ -50,6 +51,8 @@ quad_sim <- SimPop(data$transmitter, quad_model, NSIM)
 
 exp_sim <- SimPop(data$transmitter, exp_model, NSIM)
 
+sigmoid_sim <- SimPop(data$transmitter, sigmoid_model, NSIM)
+
 
 ################################### Run Transmission Model on Simulations ###################################
 linear_pred <- RunTM4Sim(linear_sim, modeltype = 'linear')
@@ -58,10 +61,9 @@ quad_pred <- RunTM4Sim(quad_sim, modeltype = 'quad')
 
 exp_pred <- RunTM4Sim(exp_sim, modeltype = 'exp')
 
+sigmoid_pred <- RunTM4Sim(sigmoid_sim, modeltype = 'sigmoid')
 
 ################################### Write to file ################################### To be changed
-# population only
-write_csv(pop, file = paste(results_dir, 'base_population.csv', sep = '/'))
 
 # transmitter SPVL & variant distribution
 write_csv(transmitterspvl_variantdist, file = paste(results_dir, 'transmitterspvl_variantdist.csv', sep = '/'))
