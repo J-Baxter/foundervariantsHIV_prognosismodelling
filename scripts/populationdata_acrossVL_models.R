@@ -1,7 +1,7 @@
 # for fixed spVL, per virion prob of infection and proportion of exposure with potential for infection
 # this function calculates i) the probability of infection, ii) the probability of multiple founder variants
 
-populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029){
+populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029, w = 10){
   
   
   # The different SPVLs of donors
@@ -10,25 +10,31 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   # rename for reducing code length
   f <- PropExposuresInfective # fraction of exposure that can lead to infection
   
-  ##################################################
-  # parameters from the Thomson paper for ....
-  ##################################################
-  alpha = -3.55
-  sigma = 0.78/(sqrt(1 - ((2*alpha^2)/(pi*(1 + alpha^2)))))
-  mu = 4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha^2)))
-  Vp = 87173000
-  Va = 24004000
-  kappa = 1
-  np = round(kappa*Vp)
-  na = round(kappa*Va)
-  sp_ViralLoad = round(kappa*sp_ViralLoad)
-  Dmax = 25.4
-  Dfifty = 3058
-  Dk = 0.41
+  if (w = 1){
+    ##################################################
+    # parameters from the Thomson paper for ....
+    ##################################################
+    alpha = -3.55
+    sigma = 0.78/(sqrt(1 - ((2*alpha^2)/(pi*(1 + alpha^2)))))
+    mu = 4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha^2)))
+    Vp = 87173000
+    Va = 24004000
+    kappa = 1
+    np = round(kappa*Vp)
+    na = round(kappa*Va)
+    sp_ViralLoad = round(kappa*sp_ViralLoad)
+    Dmax = 25.4
+    Dfifty = 3058
+    Dk = 0.41
+  }else if(w>1){
+    stop(warning('parms are different'))
+  }
+  
   
   tauc = array(0, length(sp_ViralLoad))
   taup = 0.24
   taua = 0.75
+  taucrit = 2
   
   # spVL specific quantities: i) weights for the viral loads, ii) duration of chronic infection
   
@@ -220,15 +226,25 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
                                                                    across(dplyr::starts_with("V"), ~(.* prob_nparticles)))))
   
   
+
+  #variant_distribution <- as.data.frame(matrix(
+   # unlist(purrr::map(.x = weight_numberFounderStrainDistribution,
+    #                  .f = ~(dplyr::select(., starts_with("V")) %>%
+   #                            colSums(.)))),
+   # ncol = maxVirionsConsidered,
+   # byrow = TRUE))  %>%
+   # mutate(across(everything(), ~(. * g * (1/( taup + tauc + taua))))) %>%
+   # colSums()
+ #variant_distribution <- variant_distribution / sum(variant_distribution)
+ # multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
   
-  variant_distribution <- as.data.frame(matrix(
-    unlist(purrr::map(.x = weight_numberFounderStrainDistribution,
-                      .f = ~(dplyr::select(., starts_with("V")) %>%
-                               colSums(.)))),
-    ncol = maxVirionsConsidered,
-    byrow = TRUE))  %>%
-    mutate(across(everything(), ~(. * g * (1/(taup + tauc + taua))))) %>%
+  
+  variant_distribution <- as.data.frame(weight_numberFounderStrainDistribution) %>%
+    mutate(case_when(tvals <= taucrit & taucrit < (taup + tauc + taua) ~ (dplyr::select(., starts_with("V")) * g * (w/((w-1)*taucrit + taup + tauc + taua))), 
+                     tvals > taucrit ~ (dplyr::select(., starts_with("V")) * g * (1/( (w-1)*taucrit +taup + tauc + taua))))) %>%
+    dplyr::select(., starts_with("V")) %>%
     colSums()
+  
   variant_distribution <- variant_distribution / sum(variant_distribution)
   multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
   
@@ -250,18 +266,18 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   
   # sum up across all times in chronic infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
 
-  variant_distribution_chronic <- as.data.frame(matrix(
-    unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
-                       .y = as.list(tauc),
-                       .f = ~(filter(., tvals > taup & tvals <= (taup + .y)) %>%
-                                dplyr::select(., dplyr::starts_with("V")) %>%
-                               colSums(.)))),
-   ncol = maxVirionsConsidered,
-   byrow = TRUE)) %>%
-   mutate(across(everything(), ~(. * g * (1/tauc))) ) %>% 
-   colSums()
-  variant_distribution_chronic <- variant_distribution_chronic / sum(variant_distribution_chronic)
-  multiple_founder_proportion_chronic <- 1 - as.numeric(variant_distribution_chronic[1])
+  #variant_distribution_chronic <- as.data.frame(matrix(
+    #unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
+                     #  .y = as.list(tauc),
+                      # .f = ~(filter(., tvals > taup & tvals <= (taup + .y)) %>%
+                            #    dplyr::select(., dplyr::starts_with("V")) %>%
+                             #  colSums(.)))),
+   #ncol = maxVirionsConsidered,
+   #byrow = TRUE)) %>%
+  # mutate(across(everything(), ~(. * g * (1/tauc))) ) %>% 
+  # colSums()
+ #variant_distribution_chronic <- variant_distribution_chronic / sum(variant_distribution_chronic)
+  #multiple_founder_proportion_chronic <- 1 - as.numeric(variant_distribution_chronic[1])
 
   # sum up across all times in preaids infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
   #variant_distribution_preaids <- as.data.frame(matrix(
@@ -281,13 +297,13 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   
   # output the prob of transmission across all infectious period and the chance of multiple lineages
   output <- c(probTransmissionPerSexAct = probTransmissionPerSexAct,
-              variant_distribution = variant_distribution,
+              variant_distribution = variant_distribution#,
                  #multiple_founder_proportion = multiple_founder_proportion,
                  #probTransmissionPerSexAct_primary = 1 - probNVirionsTransmittedPerSexAct_PRIMARY[1],
-              probTransmissionPerSexAct_chronic = 1 - probNVirionsTransmittedPerSexAct_CHRONIC[1],
+             # probTransmissionPerSexAct_chronic = 1 - probNVirionsTransmittedPerSexAct_CHRONIC[1],
                  #probTransmissionPerSexAct_preaids = 1 - probNVirionsTransmittedPerSexAct_PREAIDS[1],
                  #multiple_founder_proportion_primary = multiple_founder_proportion_primary,
-              variant_distribution_chronic = variant_distribution_chronic
+              #variant_distribution_chronic = variant_distribution_chronic
                  #multiple_founder_proportion_chronic = multiple_founder_proportion_chronic,
                  #multiple_founder_proportion_preaids = multiple_founder_proportion_preaids
                  )
