@@ -237,11 +237,14 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   variant_distribution <- as.data.frame(weight_numberFounderStrainDistribution) %>%
     mutate(case_when(tvals <= taucrit & taucrit < (taup + tauc + taua) ~ (dplyr::select(., starts_with("V")) * g * (w/((w-1)*taucrit + taup + tauc + taua))), 
                      tvals > taucrit ~ (dplyr::select(., starts_with("V")) * g * (1/( (w-1)*taucrit +taup + tauc + taua))))) %>%
-    dplyr::select(., starts_with("V")) %>%
-    colSums()
+    group_by(nparticles) %>%
+    summarise(across(.cols = starts_with(c("V" , 'prob')), .fns = sum)) %>%
+    ungroup()
   
-  variant_distribution <- variant_distribution / sum(variant_distribution)
-  multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
+  variant_distribution <- variant_distribution  %>% 
+    mutate(across(.cols = starts_with("V"), .fns = ~ .x / sum(variant_distribution %>% select(starts_with('V'))))) 
+           
+ # multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
   
   # sum up across all times in primary infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
   
@@ -291,8 +294,8 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   
   
   # output the prob of transmission across all infectious period and the chance of multiple lineages
-  output <- c(probTransmissionPerSexAct = probTransmissionPerSexAct,
-              variant_distribution = variant_distribution#,
+  output <- cbind.data.frame(probTransmissionPerSexAct,
+                             variant_distribution#,
                  #multiple_founder_proportion = multiple_founder_proportion,
                  #probTransmissionPerSexAct_primary = 1 - probNVirionsTransmittedPerSexAct_PRIMARY[1],
              # probTransmissionPerSexAct_chronic = 1 - probNVirionsTransmittedPerSexAct_CHRONIC[1],
