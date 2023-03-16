@@ -95,34 +95,13 @@ test <- c(RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 1),
 
 
 
-
-
-
-transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1) %>%
-  
-  # Post-Processing 
-  do.call(cbind.data.frame, .) %>% 
-  t() %>%
-  cbind.data.frame(transmitter = pop$transmitter, .) %>%
-  rename(probTransmissionPerSexAct_average = probTransmissionPerSexAct) %>%
-  rename_with(function(x) gsub('\\.(?<=\\V)', '\\1_average.\\2',x, perl= TRUE), 
-              .cols = !contains('chronic') & contains('V')) %>%
-  
-  # Long Format
-  pivot_longer(cols = c(contains('chronic'),contains('average')), 
-               names_to = c('type', 'stage', 'variants'), 
-               names_pattern = "(^[^_]+)(_[^.]*)(.*)", 
-               values_to = 'p') %>% 
-  mutate(stage = gsub('^.*_', '', stage)) %>%
-  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
-
-plt_1c <- ggplot(transmitterspvl_variantdist %>% 
+plt_1c <- ggplot(test %>% 
                    filter(variants == 1) , 
                  aes(x = transmitter, 
                      y = 1 - p,
-                     colour = stage))+
+                     colour = as.factor(w)))+
   geom_point(shape = 3, size = 4) +
-  scale_colour_brewer(palette = 'RdOr') +
+  scale_colour_brewer(palette = 'OrRd') +
   scale_x_log10(name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
@@ -130,8 +109,8 @@ plt_1c <- ggplot(transmitterspvl_variantdist %>%
                 labels = trans_format("log10", math_format(.x))) +
   scale_y_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0.02,0.02),
-                     limits = c(0,0.6),
-                     breaks = seq(0, 0.6, by = 0.1)) +
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
   annotation_logticks(sides = 'b') +
   my_theme + theme(legend.position = 'none')
 
