@@ -66,8 +66,39 @@ plt_1b <- ggplot(cd4_data, aes(x = spVL, y=CD4.decline))+
   annotation_logticks(sides = 'b') 
 
 
-################################### Run Transmission ###################################
-transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter) %>%
+################################### Run Transmission ###################################t
+test_pop <- pop$transmitter[1:10]
+w = 1:10
+
+test <- c(RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 1),
+          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 2.5),
+          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 5),
+          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 7.5),
+          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 10)) %>%
+  
+  # Label
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) %>%
+  
+  # Post-process into dataframe for P(V|Transmitter), segregated by weighting
+  lapply(., cbind.data.frame) %>%
+  do.call(rbind.data.frame,.) %>%
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  group_by(transmitter, probTransmissionPerSexAct, w) %>%
+  select(-contains('nparticles')) %>%
+  summarise(across(starts_with('V'), sum)) %>%
+  
+  # Long format
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
+
+
+
+
+
+
+transmitterspvl_variantdist <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1) %>%
   
   # Post-Processing 
   do.call(cbind.data.frame, .) %>% 
