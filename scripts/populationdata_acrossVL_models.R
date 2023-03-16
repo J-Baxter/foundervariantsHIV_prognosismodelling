@@ -294,8 +294,10 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   
   
   # output the prob of transmission across all infectious period and the chance of multiple lineages
-  output <- cbind.data.frame(probTransmissionPerSexAct,
-                             variant_distribution#,
+  output <- list(variant_distribution,
+                 probTransmissionPerSexAct,
+                 sp_ViralLoad, 
+                 w
                  #multiple_founder_proportion = multiple_founder_proportion,
                  #probTransmissionPerSexAct_primary = 1 - probNVirionsTransmittedPerSexAct_PRIMARY[1],
              # probTransmissionPerSexAct_chronic = 1 - probNVirionsTransmittedPerSexAct_CHRONIC[1],
