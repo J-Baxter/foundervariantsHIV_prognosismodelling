@@ -106,16 +106,19 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   probNVirionsTransmittedPerSexAct[-1] <- colSums(matrix(unlist(purrr::pmap(.l = list(as.list(g),as.list(tauc), chronic_prob_fulldist),
                                                                             .f = myfun2)), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
   
+  
   probNVirionsTransmittedPerSexAct_CHRONIC[1] <- sum(unlist(purrr::pmap(.l = list(as.list(g), chronic_prob_fulldist),
                                                                         .f = myfun3)))   
   probNVirionsTransmittedPerSexAct_CHRONIC[-1] <- colSums(matrix(unlist(purrr::pmap(.l = list(as.list(g), chronic_prob_fulldist),
                                                                                     .f = myfun4)), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
   
+  
   probNVirionsTransmittedPerSexAct_PRIMARY[1] <- sum(unlist(purrr::map(.x = g,
                                                                        .f = ~(.x*((1-f) + f*primary_prob_fulldist[1])) )))  
-  
   probNVirionsTransmittedPerSexAct_PRIMARY[-1] <- colSums(matrix(unlist(purrr::map(.x = g,
                                                                                    .f = ~(.x*f*primary_prob_fulldist[-1]))), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
+  
+  
   probNVirionsTransmittedPerSexAct_PREAIDS[1] = sum(unlist(purrr::map(.x = g,
                                                                       .f = ~(.x * ((1-f) + f*preaids_prob_fulldist[1])))))
   probNVirionsTransmittedPerSexAct_PREAIDS[-1] <- colSums(matrix(unlist(purrr::map(.x = g,
