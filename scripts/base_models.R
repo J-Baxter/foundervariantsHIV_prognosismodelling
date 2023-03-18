@@ -8,10 +8,24 @@ require(cowplot)
 source('./scripts/populationdata_acrossVL_models.R')
 
 # Import Theme
-source('./scripts/plot_theme.R')
+source('./scripts/global_theme.R')
 
 # Sanity Check
 stopifnot('data' %in% ls(envir = .GlobalEnv))
+
+
+
+index <- c('mean'= 4.61, 'sd' = 0.63) 
+secondary <- c('mean' = 4.60 , 'sd' = 0.85)
+
+pop <- InitPop(N = NPAIRS, 
+               H2 = 0.33,
+               donor_vl = index, 
+               recipient_vl = secondary) %>%
+  cbind.data.frame(sex = sample(c('M', 'F'), nrow(.), replace = T)) %>%
+  cbind.data.frame(age = sample(18:50, nrow(.), replace = T))
+
+
 
 ################################### Fit Heritability Model ###################################
 h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL + age + transmission + sex, data = data) 
@@ -67,18 +81,19 @@ plt_1b <- ggplot(cd4_data, aes(x = spVL, y=CD4.decline))+
 
 
 ################################### Run Transmission ###################################t
-test_pop <- pop$transmitter[1:10]
-w = 1:10
 
-test <- c(RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 1),
-          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 2.5),
-          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 5),
-          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 7.5),
-          RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 10)) %>%
+
+
+base_tm_sims <- c(RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1),
+          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 5),
+          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 10),
+          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 15),
+          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 20)) %>%
   
   # Label
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) %>%
-  
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+
+variant_baseline <- base_tm_sims %>%
   # Post-process into dataframe for P(V|Transmitter), segregated by weighting
   lapply(., cbind.data.frame) %>%
   do.call(rbind.data.frame,.) %>%
@@ -95,7 +110,7 @@ test <- c(RunParallel(populationmodel_acrossVL_Environment, test_pop, w= 1),
 
 
 
-plt_1c <- ggplot(test %>% 
+plt_1c <- ggplot(variant_baseline %>% 
                    filter(variants == 1) , 
                  aes(x = transmitter, 
                      y = 1 - p,
