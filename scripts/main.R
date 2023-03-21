@@ -26,42 +26,67 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 ################################### Import Data ###################################
 data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t') #Post processing
 
-
+NSIM <- 120
 ################################### Run Base Models ###################################
 source('./scripts/base_models.R')
 
+################################### Q1 ###################################
+# Does SPVL in the transmitting partner confound the relationship between the number of founder 
+# variants and viral load in the recipient?
 
-################################### Fit Non Linear Models (unweighted) ###################################
+transmitter_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)
 
-quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2), data = pop) 
+linear_sim <- SimPop(data$transmitter, h2_model, NSIM)
 
-exp_model <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL), data = pop) 
+linear_pred <- RunTM4Sim(linear_sim, modeltype = 'linear')
 
-sigmoid_model <-  
+
+################################### Q2 ###################################
+# Is the SPVL in recipient partner determined by a non-linear relationship with the SPVL in the
+# transmitting partner, and how is this affect by the number of variants initiating infection in 
+# the recipient partner?
+
+quad_model_uw <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2), data = pop) 
+
+exp_model_uw <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL), data = pop) 
+
+sigmoid_model_uw <-  
 
 # Check Fit
 
+# Simulate Populations
+quad_sim_uw  <- SimPop(data$transmitter, quad_model_uw , NSIM)
 
-################################### Run Simulations ###################################
-NSIM <- 200
+exp_sim_uw  <- SimPop(data$transmitter, exp_model_uw , NSIM)
+
+sigmoid_sim_uw  <- SimPop(data$transmitter, sigmoid_model_uw , NSIM)
+
+# Run Transmission Model on Simulations
+quad_pred_uw  <- RunTM4Sim(quad_sim_uw , modeltype = 'quad')
+
+exp_pred_uw  <- RunTM4Sim(exp_sim_uw , modeltype = 'exp')
+
+sigmoid_pred_uw  <- RunTM4Sim(sigmoid_sim_uw , modeltype = 'sigmoid')
+
+
+# Models with weights
+
+
+
+################################### Q3 ###################################
+# How does the timing of transmission impact observations of the association between the number
+# of founder variants and CD4+ T cell decline?
+
+# weighting either random or fitted from network model
+transmitter_timing <- c(RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 5),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 10),
+                  #RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 15),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 20)) %>%
   
-linear_sim <- SimPop(data$transmitter, h2_model, NSIM)
+  # Label
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
 
-quad_sim <- SimPop(data$transmitter, quad_model, NSIM)
-
-exp_sim <- SimPop(data$transmitter, exp_model, NSIM)
-
-sigmoid_sim <- SimPop(data$transmitter, sigmoid_model, NSIM)
-
-
-################################### Run Transmission Model on Simulations ###################################
-linear_pred <- RunTM4Sim(linear_sim, modeltype = 'linear')
-
-quad_pred <- RunTM4Sim(quad_sim, modeltype = 'quad')
-
-exp_pred <- RunTM4Sim(exp_sim, modeltype = 'exp')
-
-sigmoid_pred <- RunTM4Sim(sigmoid_sim, modeltype = 'sigmoid')
 
 ################################### Write to file ################################### To be changed
 
