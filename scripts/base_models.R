@@ -17,7 +17,7 @@ stopifnot('data' %in% ls(envir = .GlobalEnv))
 
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
-
+NPAIRS = 120
 pop <- InitPop(N = NPAIRS, 
                H2 = 0.33,
                donor_vl = index, 
@@ -28,7 +28,7 @@ pop <- InitPop(N = NPAIRS,
 
 
 ################################### Fit Heritability Model ###################################
-h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL + age + transmission + sex, data = data) 
+h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL, data = pop) 
 
 # Sanity check model (convergence, linearity)
 
@@ -63,7 +63,7 @@ cd4_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = data)
 # a_f = -0.010941 
 # n_m = - 0.000243 
 
-plt_1b <- ggplot(cd4_data, aes(x = spVL, y=CD4.decline))+
+plt_1b <- ggplot(data, aes(x = spVL, y=CD4.decline))+
   geom_point(colour = '#ef654a', shape= 4, alpha = 0.3) +
   scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
                      expand = c(0,0),
@@ -81,14 +81,72 @@ plt_1b <- ggplot(cd4_data, aes(x = spVL, y=CD4.decline))+
 
 
 ################################### Run Transmission ###################################t
+baseline_tm <- populationmodel_acrossVL_Environment(sp_ViralLoad = 10**6, w = 1)  %>%
+  setNames(nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+ 
 
+# Format for marginal probability of the number of variants 
+marginal_probs <- baseline_tm %>%
+  cbind.data.frame() %>% 
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  group_by(transmitter, probTransmissionPerSexAct, w) %>%
+  select(-contains('nparticles')) %>%
+  summarise(across(starts_with('V'), sum)) %>%
+  ungroup() %>%
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric())  %>%
+  filter(variants <= 10)
+
+
+# Format for joint probability of the number of variants and virions
+joint_probs <- baseline_tm %>%
+  cbind.data.frame() %>% 
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric()) %>%
+  filter(p > 0)
+
+# Plots
+plt_1c <-ggplot(marginal_probs)+
+  geom_bar(aes(x = variants, y = p), stat = 'identity', fill = '#ef654a') +
+  scale_y_continuous(name = 'P(MV)', expand = c(0,0), limits = c(0,0.8), breaks = seq(0,0.8, by = 0.2))+ 
+  scale_x_continuous(name = 'Variants', expand = c(0,0), breaks = 1:10 )+
+  my_theme
+
+plt_1d <- ggplot(joint_probs, aes(y = variants, x = nparticles))+
+  geom_point(aes(size = p), colour = '#ef654a')+
+  scale_size(range = c(0,15), name = 'P(Variants \u2229 Virions)')+
+  scale_y_continuous(name = 'Variants', expand = c(0,0), limits = c(0.5,10.5), breaks = 1:10)+ 
+  scale_x_continuous(name = 'Virions', expand = c(0,0), limits = c(0.5,10.5), breaks = 1:10)+
+  my_theme+
+  theme(legend.position =  c(0.2,0.85),
+        legend.title = element_text(family = 'sans'))
+
+################################### Export Plots ###################################
+
+panel_1 <- plot_grid(plt_1a, plt_1b, plt_1c, align = 'hv', nrow = 1, labels = 'AUTO')
+panel_alt <- plot_grid(plt_1c, plt_1d, align = 'hv', nrow = 1, labels = 'AUTO')
+
+ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
+ggsave(plot = panel_alt, filename =  "panel_alt.eps", device=cairo_ps, width = 20, height = 10, units= 'in')
+
+## END ##
+
+
+################################### Deprecated################################### 
 
 
 base_tm_sims <- c(RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1),
-          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 5),
-          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 10),
-          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 15),
-          RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 20)) %>%
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 5),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 10),
+                  #RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 15),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 20)) %>%
   
   # Label
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
@@ -107,16 +165,31 @@ variant_baseline <- base_tm_sims %>%
                names_to = 'variants',
                values_to = 'p') %>%
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
-
+variant_baseline <- base_tm_sims %>%
+  # Post-process into dataframe for P(V|Transmitter), segregated by weighting
+  lapply(., cbind.data.frame) %>%
+  do.call(rbind.data.frame,.) %>%
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  group_by(transmitter, probTransmissionPerSexAct, w) %>%
+  select(-contains('nparticles')) %>%
+  summarise(across(starts_with('V'), sum)) %>%
+  
+  # Long format
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
 
 
 plt_1c <- ggplot(variant_baseline %>% 
-                   filter(variants == 1) , 
+                   filter(variants == 1) %>%
+                   filter(w == 1 ), 
                  aes(x = transmitter, 
-                     y = 1 - p,
-                     colour = as.factor(w)))+
-  geom_point(shape = 3, size = 4) +
-  scale_colour_brewer(palette = 'OrRd') +
+                     y = 1 - p#,
+                     #colour = as.factor(w)
+                 ))+
+  geom_point(shape= 4, alpha = 0.5, size = 4, colour = '#ef654a') +
+  #scale_colour_brewer(palette = 'OrRd') +
   scale_x_log10(name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
@@ -128,11 +201,3 @@ plt_1c <- ggplot(variant_baseline %>%
                      breaks = seq(0, 0.5, by = 0.1)) +
   annotation_logticks(sides = 'b') +
   my_theme + theme(legend.position = 'none')
-
-################################### Export Plots ###################################
-
-panel_1 <- plot_grid(plt_1a, plt_1b, plt_1c, align = 'hv', nrow = 1, labels = 'AUTO')
-
-ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
-
-## END ##
