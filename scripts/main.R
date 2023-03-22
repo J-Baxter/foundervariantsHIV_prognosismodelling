@@ -14,8 +14,8 @@
 source('./scripts/dependencies.R')
 source('./scripts/populationdata_acrossVL_models.R')
 source('./scripts/SimPop.R')
-source('./scripts/RunTM4Sim.R')
 source('./scripts/global_theme.R')
+source('./scripts/postprocessingfuncs.R')
 
 
 # Set Seed
@@ -51,20 +51,22 @@ pop_tm <- transmitter_tm %>%
   filter(variants <= 10) %>%
   mutate(w = 1)
 
-pop_pred_variants <- transmitter_tm  %>%
-  VariantPP(pop = pop) 
 
-pop_pred_virions <- transmitter_tm %>%
-  VirionPP(pop = pop) 
 
 
 linear_sim <- SimDonor(100, 1,7) %>%
-  posterior_predict(fit_heritability, .) %>%
+  posterior_predict(heritability_model, .) %>%
   apply(., 2, sample, 1) %>% #Sample one value from posterior predictions per transmitter
   cbind.data.frame(recipient_log10SPVL = ., transmitter_log10SPVL = pop[['transmitter_log10SPVL']]) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
   `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
   mutate(model = 'linear') 
+
+pop_pred_variants <- transmitter_tm  %>%
+  VariantPP(pop = pop) 
+
+pop_pred_virions <- transmitter_tm %>%
+  VirionPP(pop = pop) 
 
 
 linear_pred <- RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 1) %>%
