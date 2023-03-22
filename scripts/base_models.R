@@ -1,4 +1,4 @@
-# Run baseline models, fitting to data from Swiss HIV Cohort
+# Run baseline models, 
 # Exports plots to file as produced for publication
 
 # Dependencies
@@ -14,7 +14,7 @@ source('./scripts/global_theme.R')
 stopifnot('data' %in% ls(envir = .GlobalEnv))
 
 
-
+# Initialise demo population from fitted distributions of Rakkai CC
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
 NPAIRS = 100
@@ -37,8 +37,8 @@ heritability_model <- brms::brm(
 )
 
 
-# Sanity check model (convergence, linearity)
-plt_1a <- ggplot(data, aes(x = transmitter, recipient)) +
+# Scatter plot of transmitter ~ recipient viral loads
+plt_1a <- ggplot(pop, aes(x = transmitter, recipient)) +
   geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
     colour = '#ef654a',
     shape = 4, size = 3) +
@@ -59,9 +59,8 @@ plt_1a <- ggplot(data, aes(x = transmitter, recipient)) +
 
 
 ################################### Fit Tolerance Model ###################################
+# Fits model as described by Regoes et al. 2014
 tolerance_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = data)
-
-# Sanity check model (convergence, linearity)
 
 ##################################################
 # parameters from Regoes et al. PLoS Biology 2014 
@@ -135,11 +134,9 @@ plt_1d <- ggplot(joint_probs, aes(y = variants, x = nparticles))+
         legend.title = element_text(family = 'sans'))
 
 ################################### Export Plots ###################################
-
-panel_1 <- plot_grid(plt_1a, plt_1b, plt_1c, align = 'hv', nrow = 1, labels = 'AUTO')
-panel_alt <- plot_grid(plt_1c, plt_1d, align = 'hv', nrow = 1, labels = 'AUTO')
-
-ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
-ggsave(plot = panel_alt, filename =  "panel_alt.eps", device=cairo_ps, width = 20, height = 10, units= 'in')
+ggsave(plot = plt_1a, filename = paste(figs_dir,sep = '/', "plt_1a.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
+ggsave(plot = plt_1b, filename =  paste(figs_dir,sep = '/',"plt_1b.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
+ggsave(plot = plt_1c, filename =  paste(figs_dir,sep = '/',"plt_1c.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
+ggsave(plot = plt_1d, filename =  paste(figs_dir,sep = '/',"plt_1d.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
 
 ## END ##
