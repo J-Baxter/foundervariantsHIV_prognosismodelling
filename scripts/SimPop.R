@@ -1,3 +1,4 @@
+# PDF ('g' from Thompson et al. 2019)
 WeightPDF <- function(viralload){
   alpha = -3.55
   sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
@@ -6,6 +7,8 @@ WeightPDF <- function(viralload){
   return(weight)
 } 
 
+# Simulates donor population of length, within specified boundaries according to probability distribution
+# above
 
 SimDonor <- function(n, transmitter_min, transmitter_max){
   
