@@ -7,7 +7,7 @@ VariantPP <- function(preds, pop){
     do.call(rbind.data.frame,.) %>%
     rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
     dplyr::select(-contains('nparticles')) %>%
-    dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
+    dplyr::summarise(across(starts_with('V'), .fns =sum),.by = c(transmitter, w)) %>%
     select(starts_with('V')) %>%
     
     #Infer expected number of variants, given probability distribution for each transmitter
@@ -25,7 +25,7 @@ VariantPP <- function(preds, pop){
     filter(variants <= 12) %>%
     
     # Annotation
-    mutate(model = 'linear', w = 1) 
+    mutate(model = 'linear') 
   
   return(out)
 }
@@ -55,7 +55,7 @@ VirionPP <- function(preds, pop){
              as.numeric())  %>%
     
     # Annotation
-    mutate(model = 'linear', w = 1) %>%
+    mutate(model = 'linear') %>%
     
   return(out)
 }
