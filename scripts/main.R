@@ -26,7 +26,7 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 ################################### Import Data ###################################
 data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t') #Post processing
 
-NSIM <- 120
+NSIM <- 100
 ################################### Run Base Models ###################################
 source('./scripts/base_models.R')
 
@@ -34,12 +34,51 @@ source('./scripts/base_models.R')
 # Does SPVL in the transmitting partner confound the relationship between the number of founder 
 # variants and viral load in the recipient?
 
-transmitter_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)
+transmitter_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)%>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) %>%
+  lapply(., cbind.data.frame) %>%
+  do.call(rbind.data.frame,.) %>%
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  dplyr::select(-contains('nparticles')) %>%
+  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric())  %>%
+  filter(variants <= 10) %>%
+  mutate(w = 1)
 
-linear_sim <- SimPop(data$transmitter, h2_model, NSIM)
+linear_sim <- SimPop(pop, h2_model, 100)
 
-linear_pred <- RunTM4Sim(linear_sim, modeltype = 'linear')
+linear_pred <- RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 1) %>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
 
+
+CleanUpOnAisle6 <- function(x){
+  out <- lapply(x, function(i) any(is.na(i[['variant_distribution']]))) %>% unlist() %>% which()
+  return(out)
+}
+
+linear_pred_mp <- linear_pred[-CleanUpOnAisle6(linear_pred)] %>%
+  lapply(., cbind.data.frame) %>%
+  do.call(rbind.data.frame,.) %>%
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  dplyr::select(-contains('nparticles')) %>%
+  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
+  mutate(recipient = pop$recipient[-CleanUpOnAisle6(linear_pred)]) %>%
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric())  %>%
+  filter(variants <= 10) %>%
+  mutate(model = 'linear', w = 1) %>%
+  
+  # Predict CD4 decline using fitted CD4 model
+  mutate(cd4_decline = predict(cd4_model, newdata = data.frame(spVL = log10(recipient)))) 
+  
+  
 
 ################################### Q2 ###################################
 # Is the SPVL in recipient partner determined by a non-linear relationship with the SPVL in the
