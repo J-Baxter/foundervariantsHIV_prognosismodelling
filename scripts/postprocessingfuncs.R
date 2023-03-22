@@ -11,7 +11,9 @@ VariantPP <- function(preds, pop){
     select(starts_with('V')) %>%
     
     #Infer expected number of variants, given probability distribution for each transmitter
+    #mutate(exp.var = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
     mutate(exp.var = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
+    
     mutate(transmitter = pop[['transmitter']], recipient = pop[['recipient']]) %>%
     
     #Pivot 
@@ -45,7 +47,7 @@ VirionPP <- function(preds, pop){
     
     #Infer expected number of virions, given probability distribution for each transmitter
     mutate(exp.virions = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
-    mutate(transmitter = linear_sim$transmitter, recipient = linear_sim$recipient) %>%
+    mutate(transmitter = pop[['transmitter']], recipient = pop[['recipient']]) %>%
     
     #Pivot 
     pivot_longer(cols = starts_with('v'),
