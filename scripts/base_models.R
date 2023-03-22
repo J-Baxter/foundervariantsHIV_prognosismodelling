@@ -17,7 +17,7 @@ stopifnot('data' %in% ls(envir = .GlobalEnv))
 
 index <- c('mean'= 4.61, 'sd' = 0.63) 
 secondary <- c('mean' = 4.60 , 'sd' = 0.85)
-NPAIRS = 120
+NPAIRS = 100
 pop <- InitPop(N = NPAIRS, 
                H2 = 0.33,
                donor_vl = index, 
@@ -28,10 +28,16 @@ pop <- InitPop(N = NPAIRS,
 
 
 ################################### Fit Heritability Model ###################################
-h2_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL, data = pop) 
+heritability_model <- brms::brm(
+  # specify what to explain in terms of what
+  #  using the formula syntax
+  formula = recipient_log10SPVL ~ 1 + transmitter_log10SPVL,
+  # which data to use
+  data = pop
+)
+
 
 # Sanity check model (convergence, linearity)
-
 plt_1a <- ggplot(data, aes(x = transmitter, recipient)) +
   geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
     colour = '#ef654a',
@@ -53,7 +59,7 @@ plt_1a <- ggplot(data, aes(x = transmitter, recipient)) +
 
 
 ################################### Fit Tolerance Model ###################################
-cd4_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = data)
+tolerance_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = data)
 
 # Sanity check model (convergence, linearity)
 
