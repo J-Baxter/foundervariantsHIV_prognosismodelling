@@ -35,7 +35,9 @@ source('./scripts/base_models.R')
 # variants and viral load in the recipient?
 
 transmitter_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)%>%
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) %>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) 
+
+pop_tm <- transmitter_tm %>%
   lapply(., cbind.data.frame) %>%
   do.call(rbind.data.frame,.) %>%
   rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
@@ -49,37 +51,35 @@ transmitter_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmit
   filter(variants <= 10) %>%
   mutate(w = 1)
 
-linear_sim <- SimPop(pop, h2_model, 100)
+pop_pred_variants <- transmitter_tm  %>%
+  VariantPP(pop = pop) 
+
+pop_pred_virions <- transmitter_tm %>%
+  VirionPP(pop = pop) 
+
+
+linear_sim <- SimDonor(100, 1,7) %>%
+  posterior_predict(fit_heritability, .) %>%
+  apply(., 2, sample, 1) %>% #Sample one value from posterior predictions per transmitter
+  cbind.data.frame(recipient_log10SPVL = ., transmitter_log10SPVL = pop[['transmitter_log10SPVL']]) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
+  `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
+  mutate(model = 'linear') 
+
 
 linear_pred <- RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 1) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
 
-
-CleanUpOnAisle6 <- function(x){
-  out <- lapply(x, function(i) any(is.na(i[['variant_distribution']]))) %>% unlist() %>% which()
-  return(out)
-}
-
-linear_pred_mp <- linear_pred[-CleanUpOnAisle6(linear_pred)] %>%
-  lapply(., cbind.data.frame) %>%
-  do.call(rbind.data.frame,.) %>%
-  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
-  dplyr::select(-contains('nparticles')) %>%
-  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
-  mutate(recipient = pop$recipient[-CleanUpOnAisle6(linear_pred)]) %>%
-  pivot_longer(cols = starts_with('V'),
-               names_to = 'variants',
-               values_to = 'p') %>%
-  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
-           as.numeric())  %>%
-  filter(variants <= 10) %>%
-  mutate(model = 'linear', w = 1) %>%
-  
-  # Predict CD4 decline using fitted CD4 model
+linear_pred_variants <- linear_pred %>%
+  VariantPP(pop = linear_sim) %>%
   mutate(cd4_decline = predict(cd4_model, newdata = data.frame(spVL = log10(recipient)))) 
   
-  
+linear_pred_virions <- linear_pred %>% 
+  VirionPP(pop = linear_sim) %>% 
+  mutate(cd4_decline = predict(cd4_model, newdata = data.frame(spVL = log10(recipient))))
 
+
+  
 ################################### Q2 ###################################
 # Is the SPVL in recipient partner determined by a non-linear relationship with the SPVL in the
 # transmitting partner, and how is this affect by the number of variants initiating infection in 
@@ -126,7 +126,11 @@ transmitter_timing <- c(RunParallel(populationmodel_acrossVL_Environment, pop$tr
   # Label
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
 
+transmitter_timing_pred_variants <- transmitter_timing  %>%
+  VariantPP(pop = linear_sim) 
 
+transmitter_timing_pred_virions <- transmitter_timing %>%
+  VirionPP(pop = linear_sim) 
 ################################### Write to file ################################### To be changed
 
 # transmitter SPVL & variant distribution
@@ -153,42 +157,5 @@ sigmoid_model <-
   
 max_model <- 
   
-###################################################################################################
-################################### Variants vs Virions ###################################
-
-
-
-# Generate a matrix of transmitter/founding particles and associated viral loads
-FoundingVars <- function(spvl, sd, p_dists){
-  
-  #Round Log10 SPVL to nearest .5
-  spvl_disc <- round(spvl/0.5)*0.5
-  
-  #Identify appropriate probability distribution
-  lookup <- which(spvl_disc == seq(2,7,by=0.5))
-  prob_var <- p_dists[,lookup]
-  
-  n_var <- sample(x = 1:33, 1, replace = T, prob = prob_var)
-  
-  within_host_genotypes <- rnorm(n = n_var, mean = spvl, sd = sd)
-  
-  m <- matrix(NA, nrow = 1, ncol = 33)
-  
-  m[1:length(within_host_genotypes)] <- within_host_genotypes
-  
-  
-  return(m)
-  
-}
-
-spvl <- seq(2,7,by=0.5)
-prob_dists <- lapply(spvl, populationmodel_acrossVL_Environment) %>% sapply(., function(x) x[2:length(x)])
-
-variant_matrix <- sapply(pop$transmitter_log10SPVL, FoundingVars, sd = 0.5, p_dists = prob_dists) %>% t()
-
-# Sanity check
-apply(variant_matrix, 1, function(x) sum(!is.na(x))) %>%
-  all() %>%
-  stopifnot()
 
 
