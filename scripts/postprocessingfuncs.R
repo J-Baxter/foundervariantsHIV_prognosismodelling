@@ -1,6 +1,6 @@
 # Functions for result post-processing
 
-# Returns marginal probabilites and expected number of variants initiating infection
+# Returns marginal probabilities and expected number of variants initiating infection
 VariantPP <- function(preds, pop){
   out <- preds %>%
     lapply(., cbind.data.frame) %>%
@@ -34,27 +34,20 @@ VariantPP <- function(preds, pop){
 
 
 
-# Returns marginal probabilites and expected number of virions initiating infection
+# Returns marginal probabilities and expected number of virions initiating infection
 VirionPP <- function(preds, pop){
   
-  out <- preds %>%
+  out <- transmitter_tm %>%
     lapply(., cbind.data.frame) %>%
     do.call(rbind.data.frame,.) %>%
     rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
-    dplyr::select(-starts_with('V')) %>% 
-    pivot_wider(names_from = nparticles, names_prefix = 'virions_', values_from = prob_nparticles) %>%
-    select(contains('virions_')) %>%
-    
-    #Infer expected number of virions, given probability distribution for each transmitter
-    mutate(exp.virions = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
-    mutate(transmitter = pop[['transmitter']], recipient = pop[['recipient']]) %>%
-    
-    #Pivot 
-    pivot_longer(cols = starts_with('v'),
-                 names_to = 'virions',
-                 values_to = 'p') %>%
-    mutate(virions = str_remove_all(virions,'[:alpha:]|[:punct:]') %>% 
-             as.numeric())  %>%
+    rowwise() %>%
+    mutate(p_virion = sum(c_across(starts_with('V')))) %>%
+    select(transmitter, p_virion, nparticles) %>%
+    group_by(transmitter) %>%
+    mutate(exp.virions = sample(1:33, 1, replace = T, prob = unlist(p_virion))) %>%
+    ungroup() %>%
+    mutate(recipient = rep(pop[['recipient']], each = 33))  %>%
     
     # Annotation
     mutate(model = 'linear') %>%
