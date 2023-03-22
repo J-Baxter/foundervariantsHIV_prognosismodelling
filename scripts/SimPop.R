@@ -6,6 +6,14 @@ WeightPDF <- function(viralload){
   return(weight)
 } 
 
+logSpVL <- seq(1, 7, by = 0.01)
+Prob <- WeightPDF(logSpVL)/sum(WeightPDF(logSpVL))
+mydonorspVL <- sample(logSpVL, prob = Prob) 
+
+fitted <- brms::brm(formula = recipient_log10SPVL ~ transmitter_log10SPVL, data = pop)
+preds <- posterior_predict(fitted , cbind.data.frame(transmitter_log10SPVL = mydonorspVL), ndraws = 10) %>% apply(., 2, sample, 1)
+
+
 
 InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sample_prob){
   sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
@@ -15,10 +23,12 @@ InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sampl
 }
 
 
+
+
 SimPop <- function(initpop, model, n, modeltype = 'linear'){
   
   stopifnot('transmitter_log10SPVL' %in% colnames(initpop))
-  t <- initpop['transmitter_log10SPVL']
+  t <- pop[['transmitter_log10SPVL']]
   
   transmitter_prob <- sapply(t, function(x) WeightPDF(x)/sum(WeightPDF(t)))
   
