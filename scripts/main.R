@@ -74,11 +74,11 @@ linear_pred <- RunParallel(populationmodel_acrossVL_Environment, linear_sim$tran
 
 linear_pred_variants <- linear_pred %>%
   VariantPP(pop = linear_sim) %>%
-  mutate(cd4_decline = predict(cd4_model, newdata = data.frame(spVL = log10(recipient)))) 
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(spVL = log10(recipient)))) 
   
 linear_pred_virions <- linear_pred %>% 
   VirionPP(pop = linear_sim) %>% 
-  mutate(cd4_decline = predict(cd4_model, newdata = data.frame(spVL = log10(recipient))))
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(spVL = log10(recipient))))
 
 
   
