@@ -185,25 +185,3 @@ variant_baseline <- base_tm_sims %>%
                names_to = 'variants',
                values_to = 'p') %>%
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric()) 
-
-
-plt_1c <- ggplot(variant_baseline %>% 
-                   filter(variants == 1) %>%
-                   filter(w == 1 ), 
-                 aes(x = transmitter, 
-                     y = 1 - p#,
-                     #colour = as.factor(w)
-                 ))+
-  geom_point(shape= 4, alpha = 0.5, size = 4, colour = '#ef654a') +
-  #scale_colour_brewer(palette = 'OrRd') +
-  scale_x_log10(name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**8),
-                expand = c(0.02,0.02),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +
-  my_theme + theme(legend.position = 'none')
