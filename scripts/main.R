@@ -128,11 +128,42 @@ transmitter_timing <- c(RunParallel(populationmodel_acrossVL_Environment, pop$tr
   # Label
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
 
-transmitter_timing_pred_variants <- transmitter_timing  %>%
+
+timing_tm <- transmitter_timing  %>%
+  lapply(., cbind.data.frame) %>%
+  do.call(rbind.data.frame,.) %>%
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  dplyr::select(-contains('nparticles')) %>%
+  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = c(transmitter, w)) %>%
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric()) 
+
+transmitter_timing_variants <- transmitter_timing  %>%
   VariantPP(pop = linear_sim) 
 
-transmitter_timing_pred_virions <- transmitter_timing %>%
+transmitter_timing_virions <- transmitter_timing %>%
   VirionPP(pop = linear_sim) 
+
+
+timing_pred <- c(RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 1),
+                 RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 5),
+                 RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 10),
+                 #RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 15),
+                 RunParallel(populationmodel_acrossVL_Environment, linear_sim$transmitter, w= 20)) %>%
+  
+  # Label
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+
+timing_pred_variants <- timing_pred %>%
+  VariantPP(pop = linear_sim) %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(spVL = log10(recipient)))) 
+
+timing_pred_virions <- timing_pred %>% 
+  VirionPP(pop = linear_sim) %>% 
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(spVL = log10(recipient))))
 ################################### Write to file ################################### To be changed
 
 # transmitter SPVL & variant distribution
