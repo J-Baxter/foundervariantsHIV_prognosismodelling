@@ -240,3 +240,6 @@ legend <- get_legend(
 grid_4 <- cowplot::plot_grid(grid_3,legend , nrow = 2, rel_heights = c(1, .1) )
 
 ggsave(paste0(figs_dir, '/test.eps'), device = cairo_ps , plot = grid_4, width = 16, height = 10)
+
+
+donor_diversity <- cbind.data.frame(time = 1:300, v = rgamma() )

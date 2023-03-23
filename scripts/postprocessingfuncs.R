@@ -1,6 +1,6 @@
 # Functions for result post-processing
 
-# Returns marginal probabilites and expected number of variants initiating infection
+# Returns marginal probabilities and expected number of variants initiating infection
 VariantPP <- function(preds, pop){
   out <- preds %>%
     lapply(., cbind.data.frame) %>%
@@ -32,7 +32,7 @@ VariantPP <- function(preds, pop){
 
 
 
-# Returns marginal probabilites and expected number of virions initiating infection
+# Returns marginal probabilities and expected number of virions initiating infection
 VirionPP <- function(preds, pop){
   
   out <- preds %>%

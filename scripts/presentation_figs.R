@@ -1,7 +1,8 @@
 # Probability of Acquisition plots
 library(tidyverse)
 library(showtext)
-
+font_add_google("Questrial", "Questrial")
+showtext_auto()
 
 p_aq <- data.frame(route = c('FM', 'MF', 'MSM (IA)', 'MSM (RA)', 'PWID', 'MTC'),
                    p_aq.ci.lower = c(1/10000, 6/10000, 4/10000, 102/10000, 41/10000, 1700/10000),
@@ -92,11 +93,14 @@ plt2 <- ggplot() +
   theme(
     text = element_text(size=20),
     axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    legend.position = 'bottom'
   )
 
+
+ggsave("probability_numbervariants_pres.eps", device = cairo_ps , plot = plt2, width = 10, height = 10)
 setEPS()
-postscript("probability_numbervariants.eps", width = 16, height = 9)
+postscript("probability_numbervariants_pres.eps", width = 10, height = 12)
 plt2
 dev.off()
 
