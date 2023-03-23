@@ -6,7 +6,7 @@ VariantPP <- function(preds, pop){
   
   #Suggest refactoring as per VirionPP
   reps <- length(preds)/nrow(pop)
-  
+
   out <- preds %>%
     lapply(., cbind.data.frame) %>%
     do.call(rbind.data.frame,.) %>%
@@ -19,7 +19,7 @@ VariantPP <- function(preds, pop){
     #mutate(exp.var = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
     mutate(exp.var = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
     
-    mutate(transmitter = rep(pop[['transmitter']], reps) , recipient = rep(pop[['recipient']],reps), w = rep(1:reps, each = nrow(pop))) %>%
+    mutate(transmitter = rep(pop[['transmitter']], reps) , recipient = rep(pop[['recipient']],reps), w = rep(c(1,5,10,20), each = nrow(pop))) %>%
     
     #Pivot 
     pivot_longer(cols = starts_with('V'),
