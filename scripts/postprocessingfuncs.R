@@ -13,13 +13,9 @@ VariantPP <- function(preds, pop){
     rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
     dplyr::select(-contains('nparticles')) %>%
     dplyr::summarise(across(starts_with('V'), .fns =sum),.by = c(transmitter, w)) %>%
-    select(starts_with('V')) %>%
-    
-    #Infer expected number of variants, given probability distribution for each transmitter
-    #mutate(exp.var = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
-    mutate(exp.var = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
-    
-    mutate(transmitter = rep(pop[['transmitter']], reps) , recipient = rep(pop[['recipient']],reps), w = rep(c(1,5,10,20), each = nrow(pop))) %>%
+    mutate(exp.var = apply(test_df [,grepl( "V" , names( test_df ) ) ],1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
+    mutate(recipient = rep(pop[['recipient']], each = maxvirions*reps )) %>%
+
     
     #Pivot 
     pivot_longer(cols = starts_with('V'),
