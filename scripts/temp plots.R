@@ -94,7 +94,7 @@ plt_3d <- ggplot() +
                 labels = trans_format("log10", math_format(.x))) + 
   scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0), name = 'Variants') + 
   my_theme + 
-  geom_smooth(method='lm', data = linear_pred_variants, aes(x = recipient, y = exp.var, colour = '#ef654a')) + 
+  geom_smooth(method= VGAM::vglm , method.args = list(family = "poisson"), data = linear_pred_variants, aes(x = recipient, y = exp.var, colour = '#ef654a')) + # should be truncated poisson
   theme(legend.position = 'none')
 
 
