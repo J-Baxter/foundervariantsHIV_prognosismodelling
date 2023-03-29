@@ -20,6 +20,21 @@ my_theme <- theme_classic(base_family = "Questrial")+
     axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
   )
 
+#################### Panel 1 is graphical abstract, so starting from panel 2 ####################
+
+############################################## Panel 2 ##############################################
+#3 model outputs (tolerance, herit, jp transmission)
+
+############################################## Panel 3 ##############################################
+#Confounder
+
+############################################## Panel 4 ##############################################
+#Timing
+
+############################################## Panel 5 ##############################################
+#Non-Linear
+
+
 
 # Transmitter SPVL ~ Recipient SPVL (include distributions on axis?)
 plt1 <- ggplot(pop, aes(x = transmitter, recipient)) +
