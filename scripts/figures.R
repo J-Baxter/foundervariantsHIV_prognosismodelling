@@ -78,9 +78,82 @@ ggsave("panel1.jpeg", device =  jpeg , plot =panel_1 , width = 14, height = 14)
 
 
 ############################################## Panel 2 ##############################################
-
 #Confounder
+plt_2a <- ggplot(pop_tm %>% 
+                   filter(variants == 1) %>%
+                   filter(w == 1 ), 
+                 aes(x = transmitter, 
+                     y = 1 - p#,
+                     #colour = as.factor(w)
+                 ))+
+  geom_point(shape= 4, size = 4, colour = '#ef654a') +
+  #scale_colour_brewer(palette = 'OrRd') +
+  scale_x_log10(name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**8),
+                expand = c(0.02,0.02),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  annotation_logticks(sides = 'b') +
+  my_theme + theme(legend.position = 'none')
 
+plt_2b <- ggplot(linear_pred_variants %>% 
+                   filter(variants == 1) %>%
+                   filter(w == 1 ), 
+                 aes(x = recipient, 
+                     y = 1 - p#,
+                     #colour = as.factor(w)
+                 ))+
+  geom_point(shape= 4, size = 4, colour = '#ef654a') +
+  #scale_colour_brewer(palette = 'OrRd') +
+  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**8),
+                expand = c(0.02,0.02),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  annotation_logticks(sides = 'b') +
+  #coord_flip() + 
+  my_theme + theme(legend.position = 'none')
+
+
+
+plt_2c <- ggplot(aes(x = recipient_rounded, y = nparticles, size = mean_p_virion), data = linear_pred_virions ) + 
+  geom_point(colour = '#ef654a') + 
+  scale_size(range = c(0.00001,10), name = 'P(X=x)') + 
+  scale_x_log10(limits = c(1, 10**8),
+                expand = c(0,0),
+                name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) + 
+  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Virions') + 
+  my_theme + 
+  annotation_logticks(sides = 'b') +
+  #geom_smooth(method='lm', data = linear_pred_virions, aes(x = recipient, y = exp.virions, colour = '#ef654a')) + 
+  theme(legend.position = 'none')
+
+plt_2d <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = linear_pred_variants ) + 
+  geom_point(colour = '#ef654a') + 
+  scale_size(range = c(0,10), name = 'P(X=x)') +
+  scale_x_log10(limits = c(1, 10**8),
+                expand = c(0,0),
+                name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) + 
+  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
+  my_theme + 
+  annotation_logticks(sides = 'b') +
+  #geom_smooth(method= VGAM::vglm , method.args = list(family = "poisson"), data = linear_pred_variants, aes(x = recipient, y = exp.var, colour = '#ef654a')) + # should be truncated poisson
+  theme(legend.position = 'none')
+
+panel_2 <- plot_grid(plt_2a, plt_2b, plt_2c, plt_2d, ncol = 2, labels = 'AUTO')
+ggsave("panel2.jpeg", device =  jpeg , plot =panel_2 , width = 14, height = 14)
 ############################################## Panel 4 ##############################################
 #Timing
 
