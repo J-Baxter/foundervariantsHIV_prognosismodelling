@@ -76,7 +76,9 @@ plt_1d <- ggplot(joint_probs, aes(y = variants, x = nparticles))+
 panel_1 <- plot_grid(plt_1a, plt_1b, plt_1c, plt_1d, ncol = 2, labels = 'AUTO')
 ggsave("panel1.jpeg", device =  jpeg , plot =panel_1 , width = 14, height = 14)
 
+
 ############################################## Panel 2 ##############################################
+
 #Confounder
 
 ############################################## Panel 4 ##############################################
