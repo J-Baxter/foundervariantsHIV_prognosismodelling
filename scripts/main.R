@@ -85,7 +85,7 @@ linear_pred_virions <- linear_pred %>%
 # transmitting partner, and how is this affect by the number of variants initiating infection in 
 # the recipient partner?
 
-quad_model_uw <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2), data = pop) 
+quad_model_uw <- lm(recipient_log10SPVL ~ transmitter_log10SPVL + I(transmitter_log10SPVL**2), data = pop) 
 
 exp_model_uw <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL), data = pop) 
 
