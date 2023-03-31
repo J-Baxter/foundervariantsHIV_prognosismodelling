@@ -12,7 +12,7 @@ VariantPP <- function(preds, pop){
     do.call(rbind.data.frame,.) %>%
     rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
     dplyr::select(-contains('nparticles')) %>%
-    
+
     # Sum for marginal probability (Variant) for any number of virions
     dplyr::summarise(across(starts_with('V'), .fns =sum),.by = c(transmitter, w)) %>%
     
