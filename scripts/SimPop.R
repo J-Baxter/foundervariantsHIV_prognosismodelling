@@ -27,6 +27,24 @@ WeightPDF <- function(viralload){
   weight <-  (2/sigma)*dnorm((log10(viralload) - mu)/sigma)*pnorm(alpha*(log10(viralload) - mu)/sigma)
   return(weight)
 } 
+## 4.74/0.61 (Zambia - HSX)
+## 4.35/0.47 (Amsterdam - MSM)
+
+# Selection for transmission acts on log spVL and is given by the transmission potential. Specifically,
+# the probability of transmission for a given log spVL:
+SelectTransmitters <- function(viralload){
+  
+  ##################################################
+  # parameters from Bonhoeffer et al. PLoS Pathogens 2015
+  ##################################################
+  mu = 4.64 #±0.021
+  sigma = sqrt(0.96) #±0.025 
+  
+  weight <- (1/(viralload * sigma * sqrt(2*pi)))*exp(-((viralload-mu)**2)/(2*sigma**2))
+  
+  return(weight)
+}
+
 
 # Simulates donor population of length, within specified boundaries according to probability distribution
 # above

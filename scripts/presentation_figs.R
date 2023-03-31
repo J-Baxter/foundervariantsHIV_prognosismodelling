@@ -172,3 +172,36 @@ ggsave(paste(figs_dir,sep = '/', "cd4_plt.eps"), device=cairo_ps, width = 10, he
 Sys.sleep(0.5)
 cd4_plt 
 dev.off()
+
+
+################################# Transmitter Dynamics Plots (Adpated from Thompson et al.) #################
+
+
+
+my_palette <- RColorBrewer::brewer.pal(name="OrRd",n=9)[4:9]
+spvl_infdur <- read_csv('./data/spvl_infectionduration.csv')
+
+plt_tda <- 
+  ggplot(spvl_infdur)+
+  geom_line(aes(x = t, y = p, colour = as.factor(spvl)), size = 1.5)+
+  scale_color_manual(values = my_palette, name = 'SpVL')+
+  my_theme+
+  scale_x_continuous(expand = c(0,0), limits = c(0,17), 'Time') +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 0.04), 'P(Acquisition)')+
+  theme(legend.position = c(0.92,0.88))
+
+
+var_t <- read_csv('./data/variant_distribution_time.csv') %>% mutate(x_var = as.factor(x_var)) %>% rename(time = T)
+
+plot_var <- ggplot(var_t, aes(x = time, y = P, fill = x_var)) + 
+  geom_area() + 
+  scale_x_continuous(name = 'Time', expand = c(0,0))+
+  scale_y_continuous(name = 'Proportion of Xth Most Common Variant', expand = c(0,0))+
+  scale_fill_brewer(palette = 'OrRd', na.value = 'black')+
+  my_theme+
+  theme(legend.position = 'none')
+
+tm_grid <- cowplot::plot_grid( plot_var,plt_tda, nrow = 1, align = 'hv', labels = 'AUTO')
+
+ggsave("acquisition_time.jpeg", device =  jpeg , plot =tm_grid , width = 21, height = 12)
+#ggsave("acquisition_time.eps", device =  cairo_ps , plot =tm_grid , width = 21, height = 12)

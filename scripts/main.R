@@ -5,9 +5,7 @@
 # This script combines the functions for the analysis of paired SPVL distributions, occuring in
 # three main stages:
 
-# 1. Initialisation of study population
-# 2. Null hypothesis
-# 3. Ecological hypotheses
+# ALL VIRAL LOADS ARE REAL NUMBERS UNLESS EXPLICITLY STATED
 
 
 ################################### Dependencies ###################################
