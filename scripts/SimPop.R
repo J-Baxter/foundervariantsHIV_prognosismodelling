@@ -20,48 +20,100 @@ InitPop <- function(N, H2, donor_vl, recipient_vl){
 
 
 # PDF ('g' from Thompson et al. 2019)
-WeightPDF <- function(viralload){
+# Duration of Infection
+D <- function(viralload){
+  Dmax = 25.4
+  Dfifty = 3058
+  Dk = 0.41
+  
+  out <- Dmax*(Dfifty**Dk)/(viralload**Dk + Dfifty**Dk)
+  
+  
+  return(out)
+  
+}
+
+
+# The fraction of individuals at seroconversion (the point at which HIV-1 antibodies develop and become
+# detectable) with each log(SPVL), vc, in the population at any given time is described by 'g'
+WeightSerocons <- function(viralload){
   alpha = -3.55
   sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
   mu <-  4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)))
   weight <-  (2/sigma)*dnorm((log10(viralload) - mu)/sigma)*pnorm(alpha*(log10(viralload) - mu)/sigma)
   return(weight)
 } 
-## 4.74/0.61 (Zambia - HSX)
-## 4.35/0.47 (Amsterdam - MSM)
 
-# Selection for transmission acts on log spVL and is given by the transmission potential. Specifically,
-# the probability of transmission for a given log spVL:
-SelectTransmitters <- function(viralload){
+
+# Infectiousness
+B <- function(viralload){
+  Bmax = 0.317
+  Bfifty = 13938
+  Bk = 1.02
   
-  ##################################################
-  # parameters from Bonhoeffer et al. PLoS Pathogens 2015
-  ##################################################
-  mu = 4.64 #±0.021
-  sigma = sqrt(0.96) #±0.025 
+  out <- (Bmax*viralload**Bk)/(viralload**Bk + Bfifty**Bk)
   
-  weight <- (1/(viralload * sigma * sqrt(2*pi)))*exp(-((viralload-mu)**2)/(2*sigma**2))
-  
-  return(weight)
+  return(out)
 }
 
 
-# Simulates donor population of length, within specified boundaries according to probability distribution
-# above
+# Probability of observing at least one infection for a given viral load
+Obs <- function(viralload){
+  d <-  D(viralload)
+  
+  tp <- B(viralload) * d
+  
+  p_0 <- ((tp*d)**0*exp(-tp*d))/factorial(tp)
+  
+  return(1-p_0)
+}
 
-SimDonor <- function(n, transmitter_min, transmitter_max){
+
+## 4.74/0.61 (Zambia - HSX)
+## 4.35/0.47 (Amsterdam - MSM)
+
+
+# Simulates donor population of length n according to probability distributions above
+SimDonor <- function(n){
   
-  spvl_vec <- seq(transmitter_min, transmitter_max, length.out = 10000)
+  spvl_vec <- spvl_vec <- seq(2, 7, length.out = 10000) %>% raise_to_power(10,.)
   
-  sim_probs <- sapply(spvl_vec, function(x) WeightPDF(x)/sum(WeightPDF(spvl_vec)))
+  p_spvl <- sapply(spvl_vec, function(x) WeightSerocons(x)/sum(WeightSerocons(spvl_vec)))
   
-  sim_logspvl <- sample(spvl_vec, size = n, prob = sim_probs, replace = F) %>%
-    cbind.data.frame('transmitter_log10SPVL' = .)
+  p_obs <- Obs(spvl_vec)
+  
+  sim_logspvl <- sample(spvl_vec, size = n, prob = p_spvl*p_obs, replace = F) 
   
   return(sim_logspvl)
 }
 
 
+##TO DO: Estimate Covariance matrix for these features from SHCS so we can simulate
+RecipChars <- function(n){
+  
+  df <- matrix(NA, nrow = n)
+  mutate(riskgroup = sample(c('MM', 'FM', 'MF'), n, replace = T, prob = c(0.5, 0.15, 0.35))) %>%
+    
+    # Infer recipient sex from risk group
+    separate(riskgroup, c('sex_t', 'sex_r'), remove = FALSE) %>%
+    
+    #Age distribution (estimated from Swiss Cohort Data)
+    mutate(age = sample(18:50, n, replace = T)) 
+  
+  return(df)
+    
+}
 
+RecipChars(2)
 
+matrix(NA, nrow = n) %>%
+  as.data.frame() %>%
+  #Sample riskgroup - probs estimated from Swiss Cohort Data
+  mutate(riskgroup = sample(c('MM', 'FM', 'MF'), n, replace = T, prob = c(0.5, 0.15, 0.35))) %>%
+  
+  # Infer recipient sex from risk group
+  separate(riskgroup, c('sex_t', 'sex_r'), remove = FALSE) %>%
+  
+  #Age distribution (estimated from Swiss Cohort Data)
+  mutate(age = sample(18:50, n, replace = T)) 
 
