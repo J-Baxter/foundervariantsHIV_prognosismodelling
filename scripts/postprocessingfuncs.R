@@ -42,7 +42,7 @@ VariantPP <- function(preds, pop){
   return(out)
 }
 
-vglm(stay ~ age + hmo + died, family = pospoisson(), data = dat)
+
 
 # Returns marginal probabilities and expected number of virions initiating infection
 VirionPP <- function(preds, pop){
