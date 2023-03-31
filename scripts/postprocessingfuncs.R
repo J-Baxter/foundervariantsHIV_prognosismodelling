@@ -13,7 +13,7 @@ VariantPP <- function(preds, pop){
     rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
     dplyr::select(-contains('nparticles')) %>%
     dplyr::summarise(across(starts_with('V'), .fns =sum),.by = c(transmitter, w)) %>%
-    select(starts_with('V')) %>%
+    select(starts_with('V')) %>% #is this necessary
     
     #Infer expected number of variants, given probability distribution for each transmitter
     #mutate(exp.var = apply(.,1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
