@@ -34,10 +34,7 @@ VariantPP <- function(preds, pop){
     # Get probabilities for binned vls
     mutate(recipient_rounded = 10**(round(log10(recipient)/0.5)*0.5))%>%
     mutate(transmitter_rounded = 10**(round(log10(transmitter)/0.5)*0.5)) %>%
-    mutate(mean_p = mean(p), .by = c(recipient_rounded, variants)) %>%
-    
-    # Annotation
-    mutate(model = 'linear') 
+    mutate(mean_p = mean(p), .by = c(recipient_rounded, variants)) 
   
   return(out)
 }
@@ -71,10 +68,7 @@ VirionPP <- function(preds, pop){
     # Get probabilities for binned vls
     mutate(recipient_rounded = 10**(round(log10(recipient)/0.5)*0.5))%>%
     mutate(transmitter_rounded = 10**(round(log10(transmitter)/0.5)*0.5)) %>%
-    mutate(mean_p_virion = mean(p_virion), .by = c(recipient_rounded, nparticles)) %>%
-    
-    # Annotation
-    mutate(model = 'linear')
+    mutate(mean_p_virion = mean(p_virion), .by = c(recipient_rounded, nparticles)) 
     
   return(out)
 }
