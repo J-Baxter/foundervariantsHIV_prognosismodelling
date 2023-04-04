@@ -91,29 +91,17 @@ SimDonor <- function(n){
 ##TO DO: Estimate Covariance matrix for these features from SHCS so we can simulate
 RecipChars <- function(n){
   
-  df <- matrix(NA, nrow = n)
-  mutate(riskgroup = sample(c('MM', 'FM', 'MF'), n, replace = T, prob = c(0.5, 0.15, 0.35))) %>%
-    
+  rg <- sample(c('M-M', 'F-M', 'M-F'), n, replace = T, prob = c(0.5, 0.15, 0.35))
+  age <- sample(16:60, n, replace = T)
+  
+  df <- cbind.data.frame(riskgroup = rg, age_r = age) %>%
+
     # Infer recipient sex from risk group
-    separate(riskgroup, c('sex_t', 'sex_r'), remove = FALSE) %>%
-    
-    #Age distribution (estimated from Swiss Cohort Data)
-    mutate(age = sample(18:50, n, replace = T)) 
+    separate(riskgroup, c('sex_t', 'sex_r'),  remove = FALSE) 
   
   return(df)
     
 }
 
-RecipChars(2)
 
-matrix(NA, nrow = n) %>%
-  as.data.frame() %>%
-  #Sample riskgroup - probs estimated from Swiss Cohort Data
-  mutate(riskgroup = sample(c('MM', 'FM', 'MF'), n, replace = T, prob = c(0.5, 0.15, 0.35))) %>%
-  
-  # Infer recipient sex from risk group
-  separate(riskgroup, c('sex_t', 'sex_r'), remove = FALSE) %>%
-  
-  #Age distribution (estimated from Swiss Cohort Data)
-  mutate(age = sample(18:50, n, replace = T)) 
 
