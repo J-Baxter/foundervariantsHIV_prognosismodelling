@@ -2,7 +2,7 @@
 # simulated data, and subsequently predicts CD4 decline using the Tolerance Model
 # (from Regoes et al., 2014).
 
-RunTM4Sim <- function(data, modeltype = 'linear'){
+RunTM4Sim <- function(data, modeltype = 'linear', w=1){
   
   # Sanity check
   stopifnot('cd4_model' %in% ls(envir = .GlobalEnv))
@@ -10,7 +10,11 @@ RunTM4Sim <- function(data, modeltype = 'linear'){
   
   
   # Run transmission model in parallel on simulated data
-  results <- RunParallel(populationmodel_acrossVL_Environment, data['transmitter']) %>%
+  results <- RunParallel(populationmodel_acrossVL_Environment, data[['transmitter']], w=w) %>%
+    
+    # Label
+    setNames(nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+  
     do.call(cbind.data.frame, .) %>% 
     t() %>%
     cbind.data.frame(recipient = data['recipient'], .) %>%

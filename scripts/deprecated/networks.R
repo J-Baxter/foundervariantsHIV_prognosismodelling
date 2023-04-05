@@ -14,14 +14,16 @@ InitNetwork <- function(n, exponent, k_max){
 }
 
 # create networks assuming different epi characteristics
-msm_net <- InitNetwork (10000,  2, 250) 
-hsx_net <- InitNetwork (10000,  3, 60) 
+msm_net <- InitNetwork (10000, 250, 2) 
+hsx_net <- InitNetwork (10000,  60, 3) 
 
 # Simulate HIV epidemic over networks (split infectious period into primary, chronic and pre-aids)
 
 
 # plot epidemic curve
-
+test_msm <- net.random.plc(10000, 250, 2) %>%  graph_from_adj_list() %>% intergraph::asNetwork()
+ergm(test_msm ~ edges)
+test_msm_2 <- 
 
 # distribution of infections by stage of transmitter(?)
 
