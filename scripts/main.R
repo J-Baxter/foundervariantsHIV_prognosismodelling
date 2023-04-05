@@ -285,13 +285,18 @@ convex_uw_virions_timing <- convex_uw_tm %>%
   mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
 
 
-################################### Write to file ################################### To be changed
+################################### Write to file ################################### 
+source('./scripts/figures.R')
 
-# transmitter SpVL & variant distribution
-write_csv(transmitterSpVL_variantdist, file = paste(results_dir, 'transmitterSpVL_variantdist.csv', sep = '/'))
+ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.jpeg"), device = jpeg, width = 14, height = 14) # Model Components
+ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 14) # Confounder
+ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
+ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 14) # Timing of transmission
 
-# recipient SpVL & variant distribution
-write_csv(sim_recipientSpVL_variantdist, file = paste(results_dir, 'recipientSpVL_variantdist.csv', sep = '/'))
+# Supplementary plots
+ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 14, height = 14) #Within-host dynamics
+ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 14, height = 14) #Simulating transmitter population
+ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting
 
 
 ###################################################################################################
