@@ -5,7 +5,7 @@
 require(tidyverse)
 require(scales)
 require(cowplot)
-source('./scripts/populationdata_acrossVL_models.R')
+
 
 # Import Theme
 source('./scripts/global_theme.R')
@@ -28,6 +28,7 @@ pop <- InitPop(N = NPAIRS,
 
 
 ################################### Fit Heritability Model ###################################
+cat('Fitting heritablity model...')
 heritability_model <- brms::brm(
   # specify what to explain in terms of what
   #  using the formula syntax
@@ -60,6 +61,7 @@ plt_1a <- ggplot(pop, aes(x = transmitter, recipient)) +
 
 ################################### Fit Tolerance Model ###################################
 # Fits model as described by Regoes et al. 2014
+cat('Fitting tolerance model...')
 tolerance_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = data)
 
 ##################################################
@@ -86,6 +88,7 @@ plt_1b <- ggplot(data, aes(x = spVL, y=CD4.decline))+
 
 
 ################################### Run Transmission ###################################t
+cat('Simulating transmission model...')
 baseline_tm <- populationmodel_acrossVL_Environment(sp_ViralLoad = 10**6, w = 1)  %>%
   setNames(nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
  
@@ -134,9 +137,11 @@ plt_1d <- ggplot(joint_probs, aes(y = variants, x = nparticles))+
         legend.title = element_text(family = 'sans'))
 
 ################################### Export Plots ###################################
+cat('Preparing outputs...')
 ggsave(plot = plt_1a, filename = paste(figs_dir,sep = '/', "plt_1a.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
 ggsave(plot = plt_1b, filename =  paste(figs_dir,sep = '/',"plt_1b.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
 ggsave(plot = plt_1c, filename =  paste(figs_dir,sep = '/',"plt_1c.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
 ggsave(plot = plt_1d, filename =  paste(figs_dir,sep = '/',"plt_1d.eps"), device=cairo_ps, width = 10, height = 10, units= 'in')
 
+cat('base_models.R complete.')
 ## END ##
