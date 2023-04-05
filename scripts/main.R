@@ -2,20 +2,18 @@
 # OF CD4+ DECLINE"
 # J Baxter
 
-# This script combines the functions for the analysis of paired SPVL distributions, occuring in
+# This script combines the functions for the analysis of paired SpVL distributions, occuring in
 # three main stages:
 
-# 1. Initialisation of study population
-# 2. Null hypothesis
-# 3. Ecological hypotheses
+# ALL VIRAL LOADS ARE REAL NUMBERS UNLESS EXPLICITLY STATED
 
 
 ################################### Dependencies ###################################
 source('./scripts/dependencies.R')
 source('./scripts/populationdata_acrossVL_models.R')
 source('./scripts/SimPop.R')
-source('./scripts/RunTM4Sim.R')
 source('./scripts/global_theme.R')
+source('./scripts/postprocessingfuncs.R')
 
 
 # Set Seed
@@ -24,107 +22,277 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 
 
 ################################### Import Data ###################################
-data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t') #Post processing
+data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t') %>%
+  rename(SpVL = spVL) #Post processing
 
-
+NSIM <- 100
 ################################### Run Base Models ###################################
 source('./scripts/base_models.R')
 
 
-################################### Fit Non Linear Models (unweighted) ###################################
+################################### Estimate Heritability Under different Assumptions ###############################
+# Fit 
 
-quad_model <- lm(recipient_log10SPVL ~ transmitter_log10SPVL+ I(transmitter_log10SPVL**2), data = pop) 
-
-exp_model <- lm(recipient_log10SPVL ~ exp(transmitter_log10SPVL), data = pop) 
-
-sigmoid_model <-  
-
-# Check Fit
+linear_model_uw <- heritability_model # Linear model imported from base_models
 
 
-################################### Run Simulations ###################################
-NSIM <- 200
+prior2 <- prior(normal(1, 2), nlpar = "b1") +
+  prior(normal(0, 2), nlpar = "b2")
+
+concave_model_uw <- brms::brm(
+  bf(recipient_log10SpVL ~  b1 * exp(b2 * transmitter_log10SpVL),  
+     b1 + b2 ~1, 
+     nl = TRUE),
+  data = pop,
+  prior = prior2
+)
+
+
+prior3 <- prior(normal(1, 2), nlpar = "b1") +
+  prior(normal(0, 2), nlpar = "b2")
+
+convex_model_uw <- brms::brm(
+  bf(recipient_log10SpVL ~  b1 + b2*log(transmitter_log10SpVL),  
+     b1 + b2 ~1, 
+     nl = TRUE),
+  data = pop,
+  prior = prior3
+)
+
+
+################################### Simulate Model Populations ###################################
+# Generate donor population of SpVLs - sampled according to the probability that a given SpVL
+# is present in the population and that at least one transmission event is observed.
+sim_donor <- SimDonor(NSIM)
+
+sim_recip_chars <- RecipChars(NSIM)
+
+linear_uw_pop <- sim_donor %>% 
+  cbind.data.frame(transmitter = sim_donor) %>% 
+  mutate(transmitter_log10SpVL= log10(transmitter)) %>%
   
-linear_sim <- SimPop(data$transmitter, h2_model, NSIM)
+  # Bind simulated recipient characteristics
+  cbind.data.frame(sim_recip_chars) %>%
+  
+  # Predict recipient SpVL according to heritability model
+  posterior_predict(linear_model_uw, .) %>%
+  
+  #Sample one value from posterior predictions per transmitter
+  apply(., 2, sample, 1) %>% 
+  
+  # Bind predicted recipient SpVl with transmission pair characteristics
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL= log10(sim_donor),sim_recip_chars) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
+  `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
+  cbind.data.frame(sim_recip_chars) %>%
+  mutate(model = 'linear_uw') 
 
-quad_sim <- SimPop(data$transmitter, quad_model, NSIM)
 
-exp_sim <- SimPop(data$transmitter, exp_model, NSIM)
+concave_uw_pop <-  sim_donor %>% 
+  cbind.data.frame(transmitter = sim_donor) %>% 
+  mutate(transmitter_log10SpVL= log10(transmitter)) %>%
+  
+  # Bind simulated recipient characteristics
+  cbind.data.frame(sim_recip_chars) %>%
+  
+  # Predict recipient SpVL according to heritability model
+  posterior_predict(linear_model_uw, .) %>%
+  
+  #Sample one value from posterior predictions per transmitter
+  apply(., 2, sample, 1) %>% 
+  
+  # Bind predicted recipient SpVl with transmission pair characteristics
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor), sim_recip_chars) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
+  `colnames<-` (str_remove(colnames(.), 'sim_'))  %>% 
+  cbind.data.frame(sim_recip_chars) %>%
+  mutate(model = 'concave_uw') 
 
-sigmoid_sim <- SimPop(data$transmitter, sigmoid_model, NSIM)
+
+convex_uw_pop <-  sim_donor %>% 
+  cbind.data.frame(transmitter = sim_donor) %>% 
+  mutate(transmitter_log10SpVL= log10(transmitter)) %>%
+  
+  # Bind simulated recipient characteristics
+  cbind.data.frame(sim_recip_chars) %>%
+  
+  # Predict recipient SpVL according to heritability model
+  posterior_predict(linear_model_uw, .) %>%
+  
+  #Sample one value from posterior predictions per transmitter
+  apply(., 2, sample, 1) %>% 
+  
+  # Bind predicted recipient SpVl with transmission pair characteristics
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
+  mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
+  `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
+  cbind.data.frame(sim_recip_chars) %>%
+  mutate(model = 'convex_uw') 
 
 
-################################### Run Transmission Model on Simulations ###################################
-linear_pred <- RunTM4Sim(linear_sim, modeltype = 'linear')
+################################### Run Transmission Models ##################################
 
-quad_pred <- RunTM4Sim(quad_sim, modeltype = 'quad')
+shcs_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)%>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) 
 
-exp_pred <- RunTM4Sim(exp_sim, modeltype = 'exp')
 
-sigmoid_pred <- RunTM4Sim(sigmoid_sim, modeltype = 'sigmoid')
+linear_uw_tm <- c(RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 5),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 10),
+                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 20)) %>%
+  
+  # Label
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+
+
+concave_uw_tm <- c(RunParallel(populationmodel_acrossVL_Environment, concave_uw_pop$transmitter, w= 1),
+                  RunParallel(populationmodel_acrossVL_Environment, concave_uw_pop$transmitter, w= 5),
+                  RunParallel(populationmodel_acrossVL_Environment, concave_uw_pop$transmitter, w= 10),
+                  RunParallel(populationmodel_acrossVL_Environment, concave_uw_pop$transmitter, w= 20)) %>%
+  
+  # Label
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+
+
+convex_uw_tm <- c(RunParallel(populationmodel_acrossVL_Environment, convex_uw_pop$transmitter, w= 1),
+                  RunParallel(populationmodel_acrossVL_Environment, convex_uw_pop$transmitter, w= 5),
+                  RunParallel(populationmodel_acrossVL_Environment, convex_uw_pop$transmitter, w= 10),
+                  RunParallel(populationmodel_acrossVL_Environment, convex_uw_pop$transmitter, w= 20)) %>%
+  
+  # Label
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+
+
+################################### Extract Model Outputs ##################################
+
+# Q1: Does SpVL in the transmitting partner confound the relationship between the number of founder 
+# variants and viral load in the recipient?
+
+shcs_transmitters <- shcs_tm  %>%
+  lapply(., cbind.data.frame) %>%
+  do.call(rbind.data.frame,.) %>%
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  dplyr::select(-contains('nparticles')) %>%
+  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric())  %>%
+  filter(variants <= 10) %>%
+  mutate(w = 1)
+
+shcs_pred_variants <- shcs_tm %>%
+  VariantPP(pop = pop) 
+
+shcs_pred__virions <- shcs_tm %>%
+  VirionPP(pop = pop) 
+
+linear_uw_variants <- linear_uw_tm %>%
+  .[sapply(., function(x) x[['w']] == 1)] %>%
+  VariantPP(pop = linear_uw_pop) %>% 
+  mutate(model = 'linear_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+  
+linear_uw_virions <- linear_uw_tm %>% 
+  .[sapply(., function(x) x[['w']] == 1)] %>%
+  VirionPP(pop = linear_uw_pop) %>% 
+  mutate(model = 'linear_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient))))
+
+
+# Q2: Is the SpVL in recipient partner determined by a non-linear relationship with the SpVL in the
+# transmitting partner, and how is this affect by the number of variants initiating infection in 
+# the recipient partner?
+
+concave_uw_variants <- concave_uw_tm  %>%
+  .[sapply(., function(x) x[['w']] == 1)] %>%
+  VariantPP(pop = concave_uw_pop) %>%
+  mutate(model = 'concave_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+concave_uw_virions <- concave_uw_tm %>%
+  .[sapply(., function(x) x[['w']] == 1)] %>%
+  VirionPP(pop = concave_uw_pop) %>%
+  mutate(model = 'concave_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+
+convex_uw_variants <- convex_uw_tm  %>%
+  .[sapply(., function(x) x[['w']] == 1)] %>%
+  VariantPP(pop = convex_uw_pop) %>%
+  mutate(model = 'convex_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+convex_uw_virions <- convex_uw_tm %>%
+  .[sapply(., function(x) x[['w']] == 1)] %>%
+  VirionPP(pop = convex_uw_pop) %>%
+  mutate(model = 'convex_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+
+# Q3: How does the timing of transmission impact observations of the association between the number
+# of founder variants and CD4+ T cell decline?
+
+
+
+
+
+timing_tm <- transmitter_timing  %>%
+  lapply(., cbind.data.frame) %>%
+  do.call(rbind.data.frame,.) %>%
+  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
+  dplyr::select(-contains('nparticles')) %>%
+  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = c(transmitter, w)) %>%
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric()) 
+
+
+
+linear_uw_variants_timing <- linear_uw_tm %>%
+  VariantPP(pop = linear_uw_pop) %>% 
+  mutate(model = 'linear_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+linear_uw_virions_timing <- linear_uw_tm %>% 
+  VirionPP(pop = linear_uw_pop) %>% 
+  mutate(model = 'linear_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient))))
+
+
+concave_uw_variants_timing <- concave_uw_tm  %>%
+  VariantPP(pop = concave_uw_pop) %>%
+  mutate(model = 'concave_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+concave_uw_virions_timing <- concave_uw_tm %>%
+  VirionPP(pop = concave_uw_pop) %>%
+  mutate(model = 'concave_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+
+convex_uw_variants_timing <- convex_uw_tm  %>%
+  VariantPP(pop = convex_uw_pop) %>%
+  mutate(model = 'convex_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
+convex_uw_virions_timing <- convex_uw_tm %>%
+  VirionPP(pop = convex_uw_pop) %>%
+  mutate(model = 'convex_uw') %>%
+  mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient)))) 
+
 
 ################################### Write to file ################################### To be changed
 
-# transmitter SPVL & variant distribution
-write_csv(transmitterspvl_variantdist, file = paste(results_dir, 'transmitterspvl_variantdist.csv', sep = '/'))
+# transmitter SpVL & variant distribution
+write_csv(transmitterSpVL_variantdist, file = paste(results_dir, 'transmitterSpVL_variantdist.csv', sep = '/'))
 
-# recipient SPVL & variant distribution
-write_csv(sim_recipientspvl_variantdist, file = paste(results_dir, 'recipientspvl_variantdist.csv', sep = '/'))
+# recipient SpVL & variant distribution
+write_csv(sim_recipientSpVL_variantdist, file = paste(results_dir, 'recipientSpVL_variantdist.csv', sep = '/'))
 
 
 ###################################################################################################
-################################### Non-Linear Models (Probability MV weights) ###################################
-# Four groups of nonlinear relationships trialled: Polynomial, Concave/Convex Curves, Sigmoidal, Curves with Max/Min
-
-# Calculate weights based on transmitter SPVL
-
-
-poly_model <- 
-  
-concave_model <- 
-  
-convex_model <- 
-  
-sigmoid_model <- 
-  
-max_model <- 
-  
-###################################################################################################
-################################### Variants vs Virions ###################################
-
-
-
-# Generate a matrix of transmitter/founding particles and associated viral loads
-FoundingVars <- function(spvl, sd, p_dists){
-  
-  #Round Log10 SPVL to nearest .5
-  spvl_disc <- round(spvl/0.5)*0.5
-  
-  #Identify appropriate probability distribution
-  lookup <- which(spvl_disc == seq(2,7,by=0.5))
-  prob_var <- p_dists[,lookup]
-  
-  n_var <- sample(x = 1:33, 1, replace = T, prob = prob_var)
-  
-  within_host_genotypes <- rnorm(n = n_var, mean = spvl, sd = sd)
-  
-  m <- matrix(NA, nrow = 1, ncol = 33)
-  
-  m[1:length(within_host_genotypes)] <- within_host_genotypes
-  
-  
-  return(m)
-  
-}
-
-spvl <- seq(2,7,by=0.5)
-prob_dists <- lapply(spvl, populationmodel_acrossVL_Environment) %>% sapply(., function(x) x[2:length(x)])
-
-variant_matrix <- sapply(pop$transmitter_log10SPVL, FoundingVars, sd = 0.5, p_dists = prob_dists) %>% t()
-
-# Sanity check
-apply(variant_matrix, 1, function(x) sum(!is.na(x))) %>%
-  all() %>%
-  stopifnot()
-
 

@@ -1,4 +1,42 @@
-WeightPDF <- function(viralload){
+InitPop <- function(N, H2, transmitter_SpVL, recipient_SpVL){
+  require(tidyverse)
+  
+  matrix <- matrix(c(1, 1-(1/H2),
+                     1-(1/H2), 1), ncol = 2)
+  
+  d <-diag(c(transmitter_SpVL[["sd"]], recipient_SpVL[["sd"]]))
+  
+  S <- d * matrix * d
+  
+  paired_SpVL <- MASS::mvrnorm(n = N, 
+                               mu = c('transmitter_log10SpVL' = transmitter_SpVL[["mean"]],
+                                      'recipient_log10SpVL' = recipient_SpVL[["mean"]]), 
+                               Sigma = S) %>% 
+    data.frame() %>%
+    mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}"))
+  
+  return(paired_SpVL)
+}
+
+
+# PDF ('g' from Thompson et al. 2019)
+# Duration of Infection
+D <- function(viralload){
+  Dmax = 25.4
+  Dfifty = 3058
+  Dk = 0.41
+  
+  out <- Dmax*(Dfifty**Dk)/(viralload**Dk + Dfifty**Dk)
+  
+  
+  return(out)
+  
+}
+
+
+# The fraction of individuals at seroconversion (the point at which HIV-1 antibodies develop and become
+# detectable) with each log(SpVL), vc, in the population at any given time is described by 'g'
+WeightSerocons <- function(viralload){
   alpha = -3.55
   sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
   mu <-  4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha**2)))
@@ -7,35 +45,63 @@ WeightPDF <- function(viralload){
 } 
 
 
-InitSimTransmitter <- function(pop_size, transmitter_min, transmitter_max, sample_prob){
-  sim_range <- seq(transmitter_min, transmitter_max, length.out = pop_size)
-  sim_logspvl <- sample(sim_range, size = pop_size, prob = sample_prob, replace = T)
+# Infectiousness
+B <- function(viralload){
+  Bmax = 0.317
+  Bfifty = 13938
+  Bk = 1.02
   
-  return(sim_logspvl)
+  out <- (Bmax*viralload**Bk)/(viralload**Bk + Bfifty**Bk)
+  
+  return(out)
 }
 
 
-SimPop <- function(initpop, model, n, modeltype = 'linear'){
+# Probability of observing at least one infection for a given viral load
+Obs <- function(viralload){
+  d <-  D(viralload)
   
-  stopifnot('transmitter_log10SPVL' %in% colnames(initpop))
-  t <- initpop['transmitter_log10SPVL']
+  tp <- B(viralload) * d
   
-  transmitter_prob <- sapply(t, function(x) WeightPDF(x)/sum(WeightPDF(t)))
+  p_0 <- ((tp*d)**0*exp(-tp*d))/factorial(tp)
   
-  hist(transmitter_prob) #visual check - should look normal(ish) as already log
-  
-  sim_transmitter_log10SPVL <- InitSimTransmitter(pop_size = NPAIRS,
-                                                  transmitter_min = 1, 
-                                                  transmitter_max = 7, 
-                                                  sample_prob = transmitter_prob)
-  
-  hist(sim_transmitter_log10SPVL) #visual check - should look uniform
-  
-  sim_spvl <- predict(model, newdata= data.frame(transmitter_log10SPVL = sim_transmitter_log10SPVL)) %>% 
-    cbind.data.frame(sim_recipient_log10SPVL = ., sim_transmitter_log10SPVL = sim_transmitter_log10SPVL) %>%
-    mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}")) %>%
-    `colnames<-` (str_remove(colnames(.), 'sim_')) %>% mutate(model = modeltype)
-  
-  return(sim_spvl)
+  return(1-p_0)
 }
+
+
+## 4.74/0.61 (Zambia - HSX)
+## 4.35/0.47 (Amsterdam - MSM)
+
+
+# Simulates donor population of length n according to probability distributions above
+SimDonor <- function(n){
+  
+  SpVL_vec <- SpVL_vec <- seq(2, 7, length.out = 10000) %>% raise_to_power(10,.)
+  
+  p_SpVL <- sapply(SpVL_vec, function(x) WeightSerocons(x)/sum(WeightSerocons(SpVL_vec)))
+  
+  p_obs <- Obs(SpVL_vec)
+  
+  sim_SpVL <- sample(SpVL_vec, size = n, prob = p_SpVL*p_obs, replace = F) 
+  
+  return(sim_SpVL)
+}
+
+
+##TO DO: Estimate Covariance matrix for these features from SHCS so we can simulate
+RecipChars <- function(n){
+  
+  rg <- sample(c('M-M', 'F-M', 'M-F'), n, replace = T, prob = c(0.5, 0.15, 0.35))
+  age <- sample(16:60, n, replace = T)
+  
+  df <- cbind.data.frame(riskgroup = rg, age_r = age) %>%
+
+    # Infer recipient sex from risk group
+    separate(riskgroup, c('sex_t', 'sex_r'),  remove = FALSE) 
+  
+  return(df)
+    
+}
+
+
 

@@ -5,7 +5,8 @@
 # increase in viral load.
 ###################################################################################################
 ############################# Check necessary packages are available and install; import if not.
-pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'scales', 'sysfonts', 'showtext', 'showtextdb', 'ggExtra', 'nlme') 
+pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'scales',
+          'sysfonts', 'showtext', 'showtextdb', 'ggExtra', 'ggdag', 'brms', 'magrittr') 
 
 for (pkg in pkgs){
   
@@ -47,7 +48,7 @@ RunParallel <- function(func, v1, ...){
   require(parallel)
  
   # Set up cluster (fork)
-  cl <- detectCores() %>% `-` (2) 
+  cl <- detectCores() %>% `-` (3) 
  
   start <- Sys.time()
   print(start)

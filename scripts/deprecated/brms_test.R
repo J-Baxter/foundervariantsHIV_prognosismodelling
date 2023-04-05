@@ -31,7 +31,10 @@ test_data <- left_join(julian_tp_data, aba5443_data_s2) %>%
   separate(type, c('transmitter', 'recipient'),  -1) %>%
   dplyr::select(transmitter, recipient, log10VL.transmitter, log10VL.recipient, VL.transmitter, VL.recipient,subtype, variants.mean, variants.multiple) %>%
   `colnames<-` (str_remove(colnames(.), '[:punct:]')) %>%
-  mutate(couple = seq(1,nrow(.)))
+  mutate(couple = seq(1,nrow(.))) %>%
+  rename(c(recipient_sex = recipient, transmitter_sex = transmitter)) %>%
+  rename(c(transmitter_log10SPVL = log10VLtransmitter, recipient_log10SPVL = log10VLrecipient, transmitter = VLtransmitter,recipient = VLrecipient )) %>%
+  
   
 # Null
 prob_recip_multiple_test <- RunParallel(populationmodel_acrossVL_Environment, test_data$VLtransmitter) %>%

@@ -3,8 +3,6 @@
 
 # Initialisation function
 InitPop <- function(N, H2, donor_vl, recipient_vl){
-  require(MASS)
-  require(tidyverse)
   
   matrix <- matrix(c(1, 1-(1/H2),
                      1-(1/H2), 1), ncol = 2)
