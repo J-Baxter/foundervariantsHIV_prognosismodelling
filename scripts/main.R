@@ -81,7 +81,7 @@ linear_uw_pop <- sim_donor %>%
   apply(., 2, sample, 1) %>% 
   
   # Bind predicted recipient SpVl with transmission pair characteristics
-  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL= log10(sim_donor),sim_recip_chars) %>%
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL= log10(sim_donor)) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
   `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
   cbind.data.frame(sim_recip_chars) %>%
@@ -102,7 +102,7 @@ concave_uw_pop <-  sim_donor %>%
   apply(., 2, sample, 1) %>% 
   
   # Bind predicted recipient SpVl with transmission pair characteristics
-  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor), sim_recip_chars) %>%
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
   `colnames<-` (str_remove(colnames(.), 'sim_'))  %>% 
   cbind.data.frame(sim_recip_chars) %>%
@@ -288,8 +288,8 @@ convex_uw_virions_timing <- convex_uw_tm %>%
 ################################### Write to file ################################### 
 source('./scripts/figures.R')
 
-ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.jpeg"), device = jpeg, width = 14, height = 14) # Model Components
-ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 14) # Confounder
+ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.jpeg"), device = jpeg, width = 14, height = 14) # Model Components - functional
+ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 14) # Confounder - functional 
 ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
 ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 14) # Timing of transmission
 
@@ -297,10 +297,11 @@ ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), dev
 source('./scripts/tm_weightings.R') # change filenane to within-host processes or something
 source('./scripts/transmitter_weightings.R') #change filename to transmitter pop sim or something
 source('./scripts/mediation_analysis.R') #
-ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 14, height = 14) #Within-host dynamics
-ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 14, height = 14) #Simulating transmitter population
-ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting
 
+ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 14, height = 14) #Within-host dynamics -functional
+ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 14, height = 14) #Simulating transmitter population - functional
+ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting 
+ggsave(plot = panel_s4, filename = paste(figs_dir,sep = '/', "panel_s4.jpeg"), device = jpeg, width = 14, height = 14) #Mediation analysis for SpVL
 
 ###################################################################################################
 
