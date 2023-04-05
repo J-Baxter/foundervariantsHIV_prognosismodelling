@@ -6,7 +6,8 @@
 ###################################################################################################
 ############################# Check necessary packages are available and install; import if not.
 pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'scales',
-          'sysfonts', 'showtext', 'showtextdb', 'ggExtra', 'ggdag', 'brms', 'magrittr') 
+          'sysfonts', 'showtext', 'showtextdb', 'ggExtra', 'ggdag', 'brms', 'magrittr',
+          'RColorBrewer') 
 
 for (pkg in pkgs){
   
