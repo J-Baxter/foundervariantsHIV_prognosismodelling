@@ -59,37 +59,6 @@ convex_model_uw <- brms::brm(
 )
 
 
-pop_weighted <-  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)%>%
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) %>%
-  lapply(., cbind.data.frame) %>%
-  do.call(rbind.data.frame,.) %>%
-  rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
-  dplyr::select(-contains('nparticles')) %>%
-  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
-  pivot_longer(cols = starts_with('V'),
-               names_to = 'variants',
-               values_to = 'p') %>%
-  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
-           as.numeric())  %>%
-  filter(variants == 1) %>%
-  mutate(pmv = 1-p) %>% 
-  dplyr::select(pmv) %>%
-  cbind.data.frame(pop)
-
-prior4 <- prior(normal(1, 2), nlpar = "b1") +
-  prior(normal(0, 2), nlpar = "b2")
-
-linear_model_w <- brms::brm(
-  bf(recipient_log10SPVL ~  b1 + b2*transmitter_log10SPVL,  
-     lf(transmitter_log10SPVL ~ 0 + pmv, cmc = FALSE),
-     b1 + b2 ~1, 
-     nl = TRUE),
-  data = pop_weighted,
-  prior = prior4,
-  weigh
-)
-
-
 ################################### Simulate Model Populations ###################################
 # Generate donor population of SpVLs - sampled according to the probability that a given SpVl
 # is present in the population and that at least one transmission event is observed.
