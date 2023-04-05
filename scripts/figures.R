@@ -157,6 +157,81 @@ ggsave("panel2.jpeg", device =  jpeg , plot =panel_2 , width = 14, height = 14)
 
 ############################################## Panel 4 ##############################################
 #Non-Linear
+all_pops <- rbind(linear_uw_pop, concave_uw_pop, convex_uw_pop)
+
+all_vars <- rbind(linear_uw_variants , concave_uw_variants , convex_uw_variants) %>%
+  filter(w == 1)
+  
+
+plt_3a <- ggplot(all_pops, aes(x = transmitter, recipient)) +
+  geom_point(
+    shape = 4, size = 3, colour = '#ef654a') +
+  scale_x_log10(limits = c(1, 10**10),
+                expand = c(0,0),
+                name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**10),
+                expand = c(0,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  facet_wrap(.~model) +
+  annotation_logticks() +
+  my_theme + 
+  theme(legend.position = 'none', 
+        panel.spacing = unit(2, "lines"), 
+        strip.background = element_blank()) 
+
+plt_3b <- ggplot(all_vars %>% 
+                   filter(variants == 1) , 
+                 aes(x = recipient, 
+                     y = 1 - p
+                 ))+
+  geom_point(shape= 4, size = 4, colour = '#ef654a') +
+  #scale_colour_brewer(palette = 'OrRd') +
+  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**8),
+                expand = c(0.02,0.02),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  annotation_logticks(sides = 'b') +  facet_wrap(.~model) +
+  #coord_flip() + 
+  my_theme + theme(legend.position = 'none', 
+                   panel.spacing = unit(2, "lines"), 
+                   strip.background = element_blank())
+
+
+plt_3c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = all_vars ) + 
+  geom_point(colour = '#ef654a') + 
+  scale_size(range = c(0,10), name = 'P(X=x)') +
+  scale_x_log10(limits = c(1, 10**8),
+                expand = c(0,0),
+                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) + 
+  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
+  my_theme + 
+  annotation_logticks(sides = 'b') +  
+  facet_wrap(.~model) +
+  theme(legend.position = 'none')
+
+
+plt_3d <-  ggplot(aes(x = model, y =cd4_decline), data = all_vars) + 
+  geom_boxplot(colour = '#ef654a') + 
+  scale_size(range = c(0,10), name = 'P(X=x)') +
+  scale_x_discrete(name = 'Model') + 
+  scale_y_continuous(limits = c(-1,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4'))) + 
+  my_theme + 
+  theme(axis.title.y = element_text(family = 'sans'))
+
+plt_3e <- NA
+
+
 
 ############################################## Panel 5 ##############################################
 
