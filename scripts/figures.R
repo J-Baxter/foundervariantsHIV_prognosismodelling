@@ -8,8 +8,8 @@ showtext_auto()
 
 # Import data
 pop <- read.csv('./results/08Feb23/base_population.csv') # Make sure you change the date!!!
-transmitterspvl_variantdist <- read.csv('./results/08Feb23/transmitterspvl_variantdist.csv')
-recipientspvl_variantdist <- read.csv('./results/08Feb23/recipientspvl_variantdist.csv')
+transmitterSpVL_variantdist <- read.csv('./results/08Feb23/transmitterSpVL_variantdist.csv')
+recipientSpVL_variantdist <- read.csv('./results/08Feb23/recipientSpVL_variantdist.csv')
 
 
 # Set theme
@@ -33,10 +33,10 @@ plt_1b <- ggplot(pop, aes(x = transmitter, recipient)) +
     shape = 4, size = 3) +
   scale_x_log10(limits = c(1, 10**10),
                 expand = c(0,0),
-                name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -46,12 +46,12 @@ plt_1b <- ggplot(pop, aes(x = transmitter, recipient)) +
   my_theme + 
   theme(legend.position = 'none')
 
-plt_1c <- ggplot(data, aes(x = spVL, y=CD4.decline))+
+plt_1c <- ggplot(data, aes(x = SpVL, y=CD4.decline))+
   geom_point(colour = '#ef654a', shape= 4, alpha = 0.3) +
   scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),
                      expand = c(0,0),
                      limits = c(-2,2))+
-  scale_x_continuous(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_continuous(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                      expand = c(0,0))+
   geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#fdbb84', linewidth = 1.2, xlim = c(0,6.3)) +
   geom_text(aes(x = 6.65, y = -0.35), label = "20 yrs", colour = "#fdbb84", size = 6) +
@@ -88,7 +88,7 @@ plt_2a <- ggplot(pop_tm %>%
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a') +
   #scale_colour_brewer(palette = 'OrRd') +
-  scale_x_log10(name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_log10(name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -109,7 +109,7 @@ plt_2b <- ggplot(linear_pred_variants %>%
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a') +
   #scale_colour_brewer(palette = 'OrRd') +
-  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -129,7 +129,7 @@ plt_2c <- ggplot(aes(x = recipient_rounded, y = nparticles, size = mean_p_virion
   scale_size(range = c(0.00001,10), name = 'P(X=x)') + 
   scale_x_log10(limits = c(1, 10**8),
                 expand = c(0,0),
-                name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) + 
   scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Virions') + 
@@ -143,7 +143,7 @@ plt_2d <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data 
   scale_size(range = c(0,10), name = 'P(X=x)') +
   scale_x_log10(limits = c(1, 10**8),
                 expand = c(0,0),
-                name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) + 
   scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
@@ -162,17 +162,17 @@ ggsave("panel2.jpeg", device =  jpeg , plot =panel_2 , width = 14, height = 14)
 
 
 
-# Transmitter SPVL ~ Recipient SPVL (include distributions on axis?)
+# Transmitter SpVL ~ Recipient SpVL (include distributions on axis?)
 plt1 <- ggplot(pop, aes(x = transmitter, recipient)) +
   geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
     colour = '#ef654a',
     shape = 4, size = 3) +
   scale_x_log10(limits = c(1, 10**10),
                 expand = c(0,0),
-                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                name = expression(paste("Donor SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -187,16 +187,16 @@ plt1
 dev.off()
 
 
-# Null Scenario (Probability of multiple variants ~ transmitter SPVL)
-fig2_data <- transmitterspvl_variantdist %>% 
+# Null Scenario (Probability of multiple variants ~ transmitter SpVL)
+fig2_data <- transmitterSpVL_variantdist %>% 
   filter(variants == 1) 
-fig_2a <- ggplot(transmitterspvl_variantdist, 
+fig_2a <- ggplot(transmitterSpVL_variantdist, 
                  aes(x = transmitter, 
                      y = 1 - p,
                      colour = stage))+
   geom_point(shape = 3, size = 4) +
   scale_colour_manual(values = c('#e34a33','#fdbb84')) + 
-  scale_x_log10(name = expression(paste("Transmitter SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_log10(name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -213,7 +213,7 @@ postscript( paste(figs_dir, 'fig_2a .eps', sep = '/'), width = 10, height = 10)
 fig_2a 
 dev.off()
 
-fig2b_data <- sim_recipientspvl_variantdist %>% 
+fig2b_data <- sim_recipientSpVL_variantdist %>% 
   filter(variants == 1) 
 fig_2b <- ggplot(fig2b_data , 
                  aes(x = recipient,
@@ -221,7 +221,7 @@ fig_2b <- ggplot(fig2b_data ,
                      colour = stage))+
   geom_point(shape = 3, size = 4) +
   scale_colour_manual(values = c('#e34a33','#fdbb84'))+
-  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -235,7 +235,7 @@ fig_2b <- ggplot(fig2b_data ,
                   legend.position = 'none')
 
 
-fig2c_data <- sim_recipientspvl_variantdist %>% 
+fig2c_data <- sim_recipientSpVL_variantdist %>% 
   filter(variants == 1) 
 fig_2c <- ggplot(fig2c_data , 
                  aes(y = CD4_decline,
@@ -269,20 +269,20 @@ grid_2
 dev.off()
 
 
-# Null Scenario (Variant distribution ~ transmitter SPVL)
-transmitterspvl_variantdist_plot <- transmitterspvl_variantdist %>% 
+# Null Scenario (Variant distribution ~ transmitter SpVL)
+transmitterSpVL_variantdist_plot <- transmitterSpVL_variantdist %>% 
   pivot_longer(cols = contains('V'), names_to = 'variants', values_to = 'p') %>% 
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% as.numeric())
 
 
 # geom_density_ridges(alpha=0.6, stat="binline", bins=20)
-fig_2c <- ggplot(transmitterspvl_variantdist_plot, 
+fig_2c <- ggplot(transmitterSpVL_variantdist_plot, 
                  aes(x = transmitter, 
                      y = variants, height = p))+
   geom_ridgeline() +
   geom_point(colour = '#ef654a',  
              shape = 4, size = 3) +
-  scale_x_log10(name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_log10(name = expression(paste("Donor SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -298,14 +298,14 @@ fig_2c <- ggplot(transmitterspvl_variantdist_plot,
 
 
 
-ggplot(pops_com, aes(x = transmitter_log10SPVL, recipient_log10SPVL, colour = hypothesis)) +
+ggplot(pops_com, aes(x = transmitter_log10SpVL, recipient_log10SpVL, colour = hypothesis)) +
   geom_point(alpha = 0.5) +
   scale_x_log10(limits = c(1, 10**10),
                 expand = c(0,0),
-                name = expression(paste("Donor SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                name = expression(paste("Donor SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**10),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -320,11 +320,11 @@ ggplot(pops_com, aes(x = transmitter_log10SPVL, recipient_log10SPVL, colour = hy
   annotation_logticks() 
 
 fig_3a= ggplot(nls_df) + 
-  geom_density(aes(x = recipient_log10SPVL, fill = sim), alpha = 0.4)+
+  geom_density(aes(x = recipient_log10SpVL, fill = sim), alpha = 0.4)+
   my_theme +
   scale_fill_brewer(palette = 'OrRd')+
   scale_y_continuous(expand = c(0,0))+
-  scale_x_continuous(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_continuous(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                      limits = c(0,8), expand = c(0,0))+ theme(
                        legend.position = 'none')
 fig3_data <- combined %>% 
@@ -337,7 +337,7 @@ fig_3b <- ggplot(fig3_data ,
                      colour = model))+
   geom_point(shape = 3, size = 4) +
   scale_colour_brewer(palette = 'OrRd')+
-  scale_x_log10(name = expression(paste("Recipient SPVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
