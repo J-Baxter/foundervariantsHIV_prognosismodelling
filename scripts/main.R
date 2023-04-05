@@ -294,6 +294,9 @@ ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), dev
 ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 14) # Timing of transmission
 
 # Supplementary plots
+source('./scripts/tm_weightings.R') # change filenane to within-host processes or something
+source('./scripts/transmitter_weightings.R') #change filename to transmitter pop sim or something
+source('./scripts/mediation_analysis.R') #
 ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 14, height = 14) #Within-host dynamics
 ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 14, height = 14) #Simulating transmitter population
 ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting
