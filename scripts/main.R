@@ -67,33 +67,66 @@ sim_donor <- SimDonor(NSIM)
 
 sim_recip_chars <- RecipChars(NSIM)
 
-linear_uw_pop <- sim_donor %>% cbind.data.frame(transmitter = sim_donor) %>% 
+linear_uw_pop <- sim_donor %>% 
+  cbind.data.frame(transmitter = sim_donor) %>% 
   mutate(transmitter_log10SpVL= log10(transmitter)) %>%
+  
+  # Bind simulated recipient characteristics
   cbind.data.frame(sim_recip_chars) %>%
+  
+  # Predict recipient SpVL according to heritability model
   posterior_predict(linear_model_uw, .) %>%
-  apply(., 2, sample, 1) %>% #Sample one value from posterior predictions per transmitter
-  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL= log10(sim_donor)) %>%
+  
+  #Sample one value from posterior predictions per transmitter
+  apply(., 2, sample, 1) %>% 
+  
+  # Bind predicted recipient SpVl with transmission pair characteristics
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL= log10(sim_donor),sim_recip_chars) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
   `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
+  cbind.data.frame(sim_recip_chars) %>%
   mutate(model = 'linear_uw') 
 
 
-concave_uw_pop <- sim_donor %>% 
+concave_uw_pop <-  sim_donor %>% 
+  cbind.data.frame(transmitter = sim_donor) %>% 
+  mutate(transmitter_log10SpVL= log10(transmitter)) %>%
+  
+  # Bind simulated recipient characteristics
   cbind.data.frame(sim_recip_chars) %>%
-  posterior_predict(concave_model_uw, .) %>%
-  apply(., 2, sample, 1) %>% #Sample one value from posterior predictions per transmitter
-  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = pop[['transmitter_log10SpVL']]) %>%
+  
+  # Predict recipient SpVL according to heritability model
+  posterior_predict(linear_model_uw, .) %>%
+  
+  #Sample one value from posterior predictions per transmitter
+  apply(., 2, sample, 1) %>% 
+  
+  # Bind predicted recipient SpVl with transmission pair characteristics
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor), sim_recip_chars) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
-  `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
+  `colnames<-` (str_remove(colnames(.), 'sim_'))  %>% 
+  cbind.data.frame(sim_recip_chars) %>%
   mutate(model = 'concave_uw') 
 
-convex_uw_pop <- sim_donor %>% 
+
+convex_uw_pop <-  sim_donor %>% 
+  cbind.data.frame(transmitter = sim_donor) %>% 
+  mutate(transmitter_log10SpVL= log10(transmitter)) %>%
+  
+  # Bind simulated recipient characteristics
   cbind.data.frame(sim_recip_chars) %>%
-  posterior_predict(convex_model_uw, .) %>%
-  apply(., 2, sample, 1) %>% #Sample one value from posterior predictions per transmitter
-  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = pop[['transmitter_log10SpVL']]) %>%
+  
+  # Predict recipient SpVL according to heritability model
+  posterior_predict(linear_model_uw, .) %>%
+  
+  #Sample one value from posterior predictions per transmitter
+  apply(., 2, sample, 1) %>% 
+  
+  # Bind predicted recipient SpVl with transmission pair characteristics
+  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
   `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
+  cbind.data.frame(sim_recip_chars) %>%
   mutate(model = 'convex_uw') 
 
 
