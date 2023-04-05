@@ -7,7 +7,7 @@ PerVirionProbability = 4.715*1e-8
 # 
 
 
-sp_ViralLoad = 10865
+sp_ViralLoad = 10**6
 PerVirionProbability = 4.715*1e-8
 f= 0.029
 alpha = -3.55
@@ -83,7 +83,8 @@ p_0_preaids = g * ((1-f) + f*((taua/(taup + tauc + taua))*preaids_prob_fulldist[
 
 
 p_0 = g * ((1-f) + f*((taup/(taup + tauc + taua))*primary_prob_fulldist[1] + (tauc/(taup + tauc + taua))*chronic_prob_fulldist[[1]][1] + (taua/(taup + tauc + taua))*preaids_prob_fulldist[1]))
-
+c(taup, tauc, taua)
+c(1-p_0_primary, 1-p_0_chronic, 1-p_0_preaids)
 1 -(p_0_primary + p_0_chronic + p_0_preaids - 2*g*(1-f))
 df <- cbind.data.frame(tau = c('p', 'c', 'a'), value= c(taup, tauc, taua), vl= c(87173000, 1e+06, 2400400), p = c(1-p_0_primary, 1-p_0_chronic, 1-p_0_preaids))
 
@@ -92,12 +93,87 @@ df$right <- cumsum(df$value)
 df$left <- c(0,  cumsum(df$value)[-3])
 
 
-ggplot(df) + 
-  geom_rect(aes(xmin = left, xmax = right, ymax = p, ymin = 0))+
-  geom_hline(aes(yintercept = 1 -(p_0_primary + p_0_chronic + p_0_preaids - 2*(1-f))))
+plot_acq <- ggplot(df) + 
+  geom_rect(aes(xmin = left, xmax = right, ymax = p, ymin = 0, fill = tau))+
+  #geom_hline(aes(yintercept = 1 -(p_0_primary + p_0_chronic + p_0_preaids - 2*(1-f)))) + 
+  scale_x_continuous(expand = c(0,0), name = 'Time', limits = c(0,6)) + 
+  scale_y_continuous(expand = c(0,0), name = 'Probability of Acquisition') + 
+  scale_fill_brewer(palette = 'OrRd')+
+  annotate(geom="text", x=0.12, y=0.004, label = expression(tau['p'] ), color="black", size = 10) + 
+  annotate(geom="text", x=2.69, y=0.004, label = expression(tau['c'] ), color="black", size = 10) + 
+  annotate(geom="text", x=5.5, y=0.004, label = expression(tau['a'] ), color="black", size = 10) + 
+  my_theme+
+  theme(legend.position = 'none')
+
+var_t <- read_csv('./data/variant_distribution_time.csv') %>% mutate(x_var = as.factor(x_var)) %>% rename(time = T)
+
+plot_var <- ggplot(var_t, aes(x = time, y = P, fill = x_var)) + 
+  geom_area() + 
+  scale_x_continuous(name = 'Time', expand = c(0,0))+
+  scale_y_continuous(name = 'Variant Proportion', expand = c(0,0))+
+  scale_fill_brewer(palette = 'OrRd', na.value = 'black')+
+  my_theme+
+  theme(legend.position = 'none')
+
+tm_grid <- cowplot::plot_grid( plot_var,plot_acq, nrow = 1, align = 'hv', labels = 'AUTO')
+
+ggsave("acquisition_time.eps", device =  cairo_ps , plot =tm_grid , width = 21, height = 12)
+
+
+# calculate distribution for each spVL
+
+
+myfun1 <- function(g0, tau0, distr0){
+  return(g0 * ((1-f) + f*((taup/(taup + tau0 + taua))*primary_prob_fulldist[1] +
+                            (tau0/(taup + tau0 + taua))*distr0[1] +
+                            (taua/(taup + tau0 + taua))*preaids_prob_fulldist[1])))
+}
+
+myfun2 <- function(g0, tau0, distr0){
+  return(g0 * (f*((taup/(taup + tau0 + taua))*primary_prob_fulldist[-1] +
+                    (tau0/(taup + tau0 + taua))*distr0[-1] +
+                    (taua/(taup + tau0 + taua))*preaids_prob_fulldist[-1])))
+}
+
+myfun3 <- function(g0, distr0){
+  return(g0 * ((1-f) + f*distr0[1]))
+}
+
+myfun4 <- function(g0, distr0){
+  return(g0 * f * distr0[-1])
+}
+
+probNVirionsTransmittedPerSexAct[1] <- sum(unlist(purrr::pmap(.l = list(as.list(g),as.list(tauc), chronic_prob_fulldist),
+                                                              .f = myfun1)))
+probNVirionsTransmittedPerSexAct[-1] <- colSums(matrix(unlist(purrr::pmap(.l = list(as.list(g),as.list(tauc), chronic_prob_fulldist),
+                                                                          .f = myfun2)), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
+
+
+probNVirionsTransmittedPerSexAct_CHRONIC[1] <- sum(unlist(purrr::pmap(.l = list(as.list(g), chronic_prob_fulldist),
+                                                                      .f = myfun3)))   
+probNVirionsTransmittedPerSexAct_CHRONIC[-1] <- colSums(matrix(unlist(purrr::pmap(.l = list(as.list(g), chronic_prob_fulldist),
+                                                                                  .f = myfun4)), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
+
+
+probNVirionsTransmittedPerSexAct_PRIMARY[1] <- sum(unlist(purrr::map(.x = g,
+                                                                     .f = ~(.x*((1-f) + f*primary_prob_fulldist[1])) )))  
+probNVirionsTransmittedPerSexAct_PRIMARY[-1] <- colSums(matrix(unlist(purrr::map(.x = g,
+                                                                                 .f = ~(.x*f*primary_prob_fulldist[-1]))), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
+
+
+probNVirionsTransmittedPerSexAct_PREAIDS[1] = sum(unlist(purrr::map(.x = g,
+                                                                    .f = ~(.x * ((1-f) + f*preaids_prob_fulldist[1])))))
+probNVirionsTransmittedPerSexAct_PREAIDS[-1] <- colSums(matrix(unlist(purrr::map(.x = g,
+                                                                                 .f = ~(.x*f*preaids_prob_fulldist[-1]))), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
+
+
+probTransmissionPerSexAct = 1 - probNVirionsTransmittedPerSexAct[1]
+
+
 
 ###################################################################################################
 # For a given t value, weighting is given by:
+nSims = 100
 nTimeSteps = 100;
 timeWindowEdges = seq(0, maximumTime, by = maximumTime/nTimeSteps)
 timeVals = timeWindowEdges[-length(timeWindowEdges)] + diff(timeWindowEdges)/2
