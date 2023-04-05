@@ -1,16 +1,16 @@
-InitPop <- function(N, H2, donor_vl, recipient_vl){
+InitPop <- function(N, H2, transmitter_SpVL, recipient_SpVL){
   require(tidyverse)
   
   matrix <- matrix(c(1, 1-(1/H2),
                      1-(1/H2), 1), ncol = 2)
   
-  d <-diag(c(donor_vl[["sd"]], recipient_vl[["sd"]]))
+  d <-diag(c(transmitter_SpVL[["sd"]], recipient_SpVL[["sd"]]))
   
   S <- d * matrix * d
   
   paired_SpVL <- MASS::mvrnorm(n = N, 
-                               mu = c('transmitter_log10SpVL' = donor_vl[["mean"]],
-                                      'recipient_log10SpVL' = recipient_vl[["mean"]]), 
+                               mu = c('transmitter_log10SpVL' = transmitter_SpVL[["mean"]],
+                                      'recipient_log10SpVL' = recipient_SpVL[["mean"]]), 
                                Sigma = S) %>% 
     data.frame() %>%
     mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}"))
