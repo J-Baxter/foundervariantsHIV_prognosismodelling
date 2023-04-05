@@ -8,14 +8,14 @@ InitPop <- function(N, H2, donor_vl, recipient_vl){
   
   S <- d * matrix * d
   
-  paired_spvl <- MASS::mvrnorm(n = N, 
-                               mu = c('transmitter_log10SPVL' = donor_vl[["mean"]],
-                                      'recipient_log10SPVL' = recipient_vl[["mean"]]), 
+  paired_SpVL <- MASS::mvrnorm(n = N, 
+                               mu = c('transmitter_log10SpVL' = donor_vl[["mean"]],
+                                      'recipient_log10SpVL' = recipient_vl[["mean"]]), 
                                Sigma = S) %>% 
     data.frame() %>%
-    mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SPVL')}"))
+    mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}"))
   
-  return(paired_spvl)
+  return(paired_SpVL)
 }
 
 
@@ -35,7 +35,7 @@ D <- function(viralload){
 
 
 # The fraction of individuals at seroconversion (the point at which HIV-1 antibodies develop and become
-# detectable) with each log(SPVL), vc, in the population at any given time is described by 'g'
+# detectable) with each log(SpVL), vc, in the population at any given time is described by 'g'
 WeightSerocons <- function(viralload){
   alpha = -3.55
   sigma <- 0.78/(sqrt(1 - ((2*alpha**2)/(pi*(1 + alpha**2)))))
@@ -76,15 +76,15 @@ Obs <- function(viralload){
 # Simulates donor population of length n according to probability distributions above
 SimDonor <- function(n){
   
-  spvl_vec <- spvl_vec <- seq(2, 7, length.out = 10000) %>% raise_to_power(10,.)
+  SpVL_vec <- SpVL_vec <- seq(2, 7, length.out = 10000) %>% raise_to_power(10,.)
   
-  p_spvl <- sapply(spvl_vec, function(x) WeightSerocons(x)/sum(WeightSerocons(spvl_vec)))
+  p_SpVL <- sapply(SpVL_vec, function(x) WeightSerocons(x)/sum(WeightSerocons(SpVL_vec)))
   
-  p_obs <- Obs(spvl_vec)
+  p_obs <- Obs(SpVL_vec)
   
-  sim_logspvl <- sample(spvl_vec, size = n, prob = p_spvl*p_obs, replace = F) 
+  sim_SpVL <- sample(SpVL_vec, size = n, prob = p_SpVL*p_obs, replace = F) 
   
-  return(sim_logspvl)
+  return(sim_SpVL)
 }
 
 
