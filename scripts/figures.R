@@ -157,11 +157,18 @@ ggsave("panel2.jpeg", device =  jpeg , plot =panel_2 , width = 14, height = 14)
 
 ############################################## Panel 4 ##############################################
 #Non-Linear
-all_pops <- rbind(linear_uw_pop, concave_uw_pop, convex_uw_pop)
+
+models = c(concave_uw ="e^{X}",
+           convex_uw = 'ln(X)',
+           linear_uw = 'X')
+
+all_pops <- rbind(linear_uw_pop, concave_uw_pop, convex_uw_pop) %>%
+  mutate(model = str_replace_all(model, models ))
+
 
 all_vars <- rbind(linear_uw_variants , concave_uw_variants , convex_uw_variants) %>%
-  filter(w == 1)
-  
+  filter(w == 1) %>%
+  mutate(model = str_replace_all(model, models ))
 
 plt_3a <- ggplot(all_pops, aes(x = transmitter, recipient)) +
   geom_point(
@@ -176,7 +183,7 @@ plt_3a <- ggplot(all_pops, aes(x = transmitter, recipient)) +
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  facet_wrap(.~model) +
+  facet_wrap(.~model, labeller = label_parsed) +
   annotation_logticks() +
   my_theme + 
   theme(legend.position = 'none', 
@@ -234,5 +241,73 @@ plt_3e <- NA
 
 
 ############################################## Panel 5 ##############################################
+# Timing
+timing_linearonly_vars <- rbind(linear_uw_variants , concave_uw_variants , convex_uw_variants) %>%
+  filter(model == 'linear_uw' ) %>%
+  mutate(model = str_replace_all(model, models ))
+
+
+plt_4b <- ggplot(timing_linearonly_vars  %>% 
+                   filter(variants == 1) , 
+                 aes(x = transmitter, 
+                     y = 1 - p,
+                     colour = w
+                 ))+
+  geom_point(shape= 4, size = 4) +
+  scale_colour_brewer(palette = 'OrRd') +
+  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**8),
+                expand = c(0.02,0.02),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  annotation_logticks(sides = 'b') +  facet_wrap(.~model) +
+  #coord_flip() + 
+  my_theme + theme(legend.position = 'none', 
+                   panel.spacing = unit(2, "lines"), 
+                   strip.background = element_blank())
+
+plt_4b <- ggplot(timing_linearonly_vars  %>% 
+                   filter(variants == 1) , 
+                 aes(x = recipient, 
+                     y = 1 - p,
+                     colour = w
+                 ))+
+  geom_point(shape= 4, size = 4) +
+  scale_colour_brewer(palette = 'OrRd') +
+  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(1, 10**8),
+                expand = c(0.02,0.02),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  annotation_logticks(sides = 'b') +  facet_wrap(.~model) +
+  #coord_flip() + 
+  my_theme + theme(legend.position = 'none', 
+                   panel.spacing = unit(2, "lines"), 
+                   strip.background = element_blank())
+
+
+plt_4c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = all_vars ) + 
+  geom_point(colour = '#ef654a') + 
+  scale_size(range = c(0,10), name = 'P(X=x)') +
+  scale_x_log10(limits = c(1, 10**8),
+                expand = c(0,0),
+                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) + 
+  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
+  my_theme + 
+  annotation_logticks(sides = 'b') +  
+  facet_wrap(.~w) +
+  theme(legend.position = 'none')
+
+# CD4 decline
 
 
