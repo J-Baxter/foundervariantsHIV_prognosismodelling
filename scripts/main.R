@@ -33,31 +33,34 @@ source('./scripts/base_models.R')
 ################################### Estimate Heritability Under different Assumptions ###############################
 # Fit 
 
-linear_model_uw <- heritability_model # Linear model imported from base_models
+linear_model_uw <- lm(recipient_log10SpVL ~  transmitter_log10SpVL, data = pop)
+
+  heritability_model # Linear model imported from base_models
 
 
 prior2 <- prior(normal(1, 2), nlpar = "b1") +
   prior(normal(0, 2), nlpar = "b2")
 
-concave_model_uw <- brms::brm(
-  bf(recipient_log10SpVL ~  b1 * exp(b2 * transmitter_log10SpVL),  
-     b1 + b2 ~1, 
-     nl = TRUE),
-  data = pop,
-  prior = prior2
-)
+concave_model_uw <- lm(recipient_log10SpVL ~  exp(transmitter_log10SpVL), data = pop)
+  #brms::brm(
+ # bf(recipient_log10SpVL ~  b1 * exp(b2 * transmitter_log10SpVL),  
+     #b1 + b2 ~1, 
+    # nl = TRUE),
+#  data = pop,
+#  prior = prior2
+#)
 
 
 prior3 <- prior(normal(1, 2), nlpar = "b1") +
   prior(normal(0, 2), nlpar = "b2")
 
-convex_model_uw <- brms::brm(
-  bf(recipient_log10SpVL ~  b1 + b2*log(transmitter_log10SpVL),  
-     b1 + b2 ~1, 
-     nl = TRUE),
-  data = pop,
-  prior = prior3
-)
+convex_model_uw <-lm(recipient_log10SpVL ~  log( transmitter_log10SpVL), data = pop) #brms::brm(
+  #bf(recipient_log10SpVL ~  b1 + b2*log(transmitter_log10SpVL),  
+   #  b1 + b2 ~1, 
+    # nl = TRUE),
+  #data = pop,
+  #prior = prior3
+#)
 
 
 ################################### Simulate Model Populations ###################################
@@ -75,10 +78,10 @@ linear_uw_pop <- sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  posterior_predict(linear_model_uw, .) %>%
-  
+  #posterior_predict(linear_model_uw, .) %>%
+  predict(linear_model_uw, .) %>%
   #Sample one value from posterior predictions per transmitter
-  apply(., 2, sample, 1) %>% 
+  #apply(., 2, sample, 1) %>% 
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL= log10(sim_donor)) %>%
@@ -96,10 +99,10 @@ concave_uw_pop <-  sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  posterior_predict(concave_model_uw, .) %>%
-  
+  #posterior_predict(concave_model_uw, .) %>%
+  predict(concave_model_uw, .) %>%
   #Sample one value from posterior predictions per transmitter
-  apply(., 2, sample, 1) %>% 
+  #apply(., 2, sample, 1) %>% 
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
@@ -117,10 +120,10 @@ convex_uw_pop <-  sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  posterior_predict(convex_model_uw, .) %>%
-  
+  #posterior_predict(convex_model_uw, .) %>%
+  predict(convex_model_uw, .) %>%
   #Sample one value from posterior predictions per transmitter
-  apply(., 2, sample, 1) %>% 
+  #apply(., 2, sample, 1) %>% 
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
