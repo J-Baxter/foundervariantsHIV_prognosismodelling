@@ -96,7 +96,7 @@ concave_uw_pop <-  sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  posterior_predict(linear_model_uw, .) %>%
+  posterior_predict(concave_model_uw, .) %>%
   
   #Sample one value from posterior predictions per transmitter
   apply(., 2, sample, 1) %>% 
@@ -117,7 +117,7 @@ convex_uw_pop <-  sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  posterior_predict(linear_model_uw, .) %>%
+  posterior_predict(convex_model_uw, .) %>%
   
   #Sample one value from posterior predictions per transmitter
   apply(., 2, sample, 1) %>% 
