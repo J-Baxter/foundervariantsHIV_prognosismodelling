@@ -166,13 +166,13 @@ all_vars <- rbind(linear_uw_variants , concave_uw_variants , convex_uw_variants)
 plt_3a <- ggplot(all_pops, aes(x = transmitter, recipient)) +
   geom_point(
     shape = 4, size = 3, colour = '#ef654a') +
-  scale_x_log10(limits = c(1, 10**10),
+  scale_x_log10(limits = c(1, 10**8),
                 expand = c(0,0),
                 name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**10),
+                limits = c(1, 10**8),
                 expand = c(0,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
