@@ -176,7 +176,7 @@ shcs_transmitters <- shcs_tm  %>%
   do.call(rbind.data.frame,.) %>%
   rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
   dplyr::select(-contains('nparticles')) %>%
-  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
+  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>% #by w too?
   pivot_longer(cols = starts_with('V'),
                names_to = 'variants',
                values_to = 'p') %>%
@@ -237,23 +237,17 @@ convex_uw_virions <- convex_uw_tm %>%
 # Q3: How does the timing of transmission impact observations of the association between the number
 # of founder variants and CD4+ T cell decline?
 
-
-
-
-
-timing_tm <- transmitter_timing  %>%
+shcs_timing <- shcs_tm  %>%
   lapply(., cbind.data.frame) %>%
   do.call(rbind.data.frame,.) %>%
   rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
   dplyr::select(-contains('nparticles')) %>%
-  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = c(transmitter, w)) %>%
+  dplyr::summarise(across(starts_with('V'), .fns =sum),.by = transmitter) %>%
   pivot_longer(cols = starts_with('V'),
                names_to = 'variants',
                values_to = 'p') %>%
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
-           as.numeric()) 
-
-
+           as.numeric())
 
 linear_uw_variants_timing <- linear_uw_tm %>%
   VariantPP(pop = linear_uw_pop) %>% 
