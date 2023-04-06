@@ -44,13 +44,6 @@ WeightSerocons <- function(viralload){
   return(weight)
 } 
 
-logSpVL <- seq(1, 7, by = 0.01)
-Prob <- WeightPDF(logSpVL)/sum(WeightPDF(logSpVL))
-mydonorspVL <- sample(logSpVL, prob = Prob) 
-
-fitted <- brms::brm(formula = recipient_log10SPVL ~ transmitter_log10SPVL, data = pop)
-preds <- posterior_predict(fitted , cbind.data.frame(transmitter_log10SPVL = mydonorspVL), ndraws = 10) %>% apply(., 2, sample, 1)
-
 
 
 # Infectiousness
