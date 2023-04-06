@@ -11,5 +11,8 @@ my_theme <- theme_classic(base_family = "Questrial")+
   theme(
     text = element_text(size=20),
     axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    legend.position = 'none', 
+    panel.spacing = unit(2, "lines"), 
+    strip.background = element_blank()
   )

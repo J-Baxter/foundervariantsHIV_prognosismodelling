@@ -1,7 +1,7 @@
 # for fixed spVL, per virion prob of infection and proportion of exposure with potential for infection
 # this function calculates i) the probability of infection, ii) the probability of multiple founder variants
 
-populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029, w = 10){
+populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029, w = 1){
   
   
   # The different SPVLs of donors
@@ -106,16 +106,19 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   probNVirionsTransmittedPerSexAct[-1] <- colSums(matrix(unlist(purrr::pmap(.l = list(as.list(g),as.list(tauc), chronic_prob_fulldist),
                                                                             .f = myfun2)), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
   
+  
   probNVirionsTransmittedPerSexAct_CHRONIC[1] <- sum(unlist(purrr::pmap(.l = list(as.list(g), chronic_prob_fulldist),
                                                                         .f = myfun3)))   
   probNVirionsTransmittedPerSexAct_CHRONIC[-1] <- colSums(matrix(unlist(purrr::pmap(.l = list(as.list(g), chronic_prob_fulldist),
                                                                                     .f = myfun4)), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
   
+  
   probNVirionsTransmittedPerSexAct_PRIMARY[1] <- sum(unlist(purrr::map(.x = g,
                                                                        .f = ~(.x*((1-f) + f*primary_prob_fulldist[1])) )))  
-  
   probNVirionsTransmittedPerSexAct_PRIMARY[-1] <- colSums(matrix(unlist(purrr::map(.x = g,
                                                                                    .f = ~(.x*f*primary_prob_fulldist[-1]))), byrow= TRUE, nrow = length(chronic_prob_fulldist)))
+  
+  
   probNVirionsTransmittedPerSexAct_PREAIDS[1] = sum(unlist(purrr::map(.x = g,
                                                                       .f = ~(.x * ((1-f) + f*preaids_prob_fulldist[1])))))
   probNVirionsTransmittedPerSexAct_PREAIDS[-1] <- colSums(matrix(unlist(purrr::map(.x = g,
@@ -294,8 +297,10 @@ populationmodel_acrossVL_Environment <- function(sp_ViralLoad = 10^6, PerVirionP
   
   
   # output the prob of transmission across all infectious period and the chance of multiple lineages
-  output <- cbind.data.frame(probTransmissionPerSexAct,
-                             variant_distribution#,
+  output <- list(variant_distribution,
+                 probTransmissionPerSexAct,
+                 sp_ViralLoad, 
+                 w
                  #multiple_founder_proportion = multiple_founder_proportion,
                  #probTransmissionPerSexAct_primary = 1 - probNVirionsTransmittedPerSexAct_PRIMARY[1],
              # probTransmissionPerSexAct_chronic = 1 - probNVirionsTransmittedPerSexAct_CHRONIC[1],
