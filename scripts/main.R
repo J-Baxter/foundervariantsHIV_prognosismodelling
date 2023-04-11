@@ -32,12 +32,12 @@ source('./scripts/base_models.R')
 
 ################################### Estimate Heritability Under different Assumptions ###############################
 # Fit 
-
 linear_model_uw <- heritability_model # Linear model imported from base_models
 
 concave_model_uw <- lm(recipient_log10SpVL ~  exp(transmitter_log10SpVL), data = pop)
 
 convex_model_uw <-lm(recipient_log10SpVL ~  log(transmitter_log10SpVL), data = pop) 
+
 
 ################################### Simulate Model Populations ###################################
 # Generate donor population of SpVLs - sampled according to the probability that a given SpVL
@@ -116,7 +116,6 @@ convex_uw_pop <-  sim_donor %>%
 
 
 ################################### Run Transmission Models ##################################
-
 shcs_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)%>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) 
 
@@ -219,10 +218,6 @@ convex_uw_virions <- convex_uw_tm %>%
 # Q3: How does the timing of transmission impact observations of the association between the number
 # of founder variants and CD4+ T cell decline?
 
-
-
-
-
 timing_tm <- transmitter_timing  %>%
   lapply(., cbind.data.frame) %>%
   do.call(rbind.data.frame,.) %>%
@@ -234,7 +229,6 @@ timing_tm <- transmitter_timing  %>%
                values_to = 'p') %>%
   mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
            as.numeric()) 
-
 
 
 linear_uw_variants_timing <- linear_uw_tm %>%
