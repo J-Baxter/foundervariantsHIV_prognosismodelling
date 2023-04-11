@@ -1,14 +1,7 @@
 # Leveraging mathematical models to better understand the influence of HIV multiple founder variants on disease progresssion.
 
-The accompanying code explores several hypotheses that seek to explain the observed differences in disease progression between single and multiple founder infections.
-We outline a null hypothesis, in which the observed assocation (Janes et al., 2015) is simply due to a greater probability that an individual recipient is infected by 
-a 'high virulence' genotype. This model population is generated using population estimates of set point viral load from the Rakkai Community Cohort Study, Uganda
-(Hollingsworth et al., 2019) and an implementation of a probabilistic model devised by Thompson et al., 2019.
 
-We then propose and evaluate the following hypotheses:
-1. Stage of infection in donor
-2. Pre-adaptation of variants (HLA match/mis-match)
-3. Within-host viral dynamic factors
+In the absence of effective antiretroviral therapy, almost all cases of HIV-1 infection will result in depletion of CD4+ T cells, such that the body can no longer formulate an adequate defence against opportunistic infection. However, the rate at which CD4+ T cells decline varies significantly across people living with HIV with unsuppressed viral replication, and the onset of AIDS can occur as little as two months to more than two decades post infection. Previous studies indicate that around 33% of the variation in CD4+ T cell decline is attributable to the genomic contribution of the infecting virus. While some studies report that infections that are initiated by multiple variants are associated with a faster CD4+ T cell decline, data are inconsistent and the mechanism through which this might occur is not understood. Here, we consider how variation in the number of variants initiating infection could explain variation in CD4+ T cell decline. Specifically, we use mathematical and statistical models that integrate clinical and epidemiological data to test the hypothesis that we should observe an association between greater genetic diversity at infection and a worse HIV prognosis.
 
-
+./scripts/main will run the analyses. There is the option to export figures to file at the end of this script. 
 
