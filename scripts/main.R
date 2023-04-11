@@ -59,7 +59,7 @@ linear_uw_pop <- sim_donor %>%
   
   # Because A) we are predicting out-of-sample and B) our focus is the population level
   # it is appropriate to incorporate residual standard error into our predictions
-  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = (summary(linear_model_uw)$sigma)/2)) %>%
+  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = (summary(linear_model_uw)$sigma)/10)) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(transmitter_log10SpVL= log10(sim_donor)) %>%
@@ -82,7 +82,7 @@ concave_uw_pop <-  sim_donor %>%
   
   # Because A) we are predicting out-of-sample and B) our focus is the population level
   # it is appropriate to incorporate residual standard error into our predictions
-  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(concave_model_uw)$sigma)/2) %>%
+  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(concave_model_uw)$sigma)/10) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
@@ -105,7 +105,7 @@ convex_uw_pop <-  sim_donor %>%
   
   # Because A) we are predicting out-of-sample and B) our focus is the population level
   # it is appropriate to incorporate residual standard error into our predictions
-  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(convex_model_uw)$sigma)/2) %>%
+  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(convex_model_uw)$sigma)/10) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
