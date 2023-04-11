@@ -26,14 +26,7 @@ pop <- InitPop(N = NPAIRS,
 
 ################################### Fit Heritability Model ###################################
 cat('Fitting heritablity model...\n')
-heritability_model <- brms::brm(
-  # specify what to explain in terms of what
-  #  using the formula syntax
-  formula = recipient_log10SpVL ~ 1 + transmitter_log10SpVL,
-  # which data to use
-  data = pop
-)
-
+heritability_model <- lm(recipient_log10SpVL ~  transmitter_log10SpVL, data = pop) %>% summary()
 
 # Scatter plot of transmitter ~ recipient viral loads
 plt_1a <- ggplot(pop, aes(x = transmitter, recipient)) +
