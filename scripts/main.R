@@ -33,35 +33,11 @@ source('./scripts/base_models.R')
 ################################### Estimate Heritability Under different Assumptions ###############################
 # Fit 
 
-linear_model_uw <- lm(recipient_log10SpVL ~  transmitter_log10SpVL, data = pop)
-
-  heritability_model # Linear model imported from base_models
-
-
-prior2 <- prior(normal(1, 2), nlpar = "b1") +
-  prior(normal(0, 2), nlpar = "b2")
+linear_model_uw <- heritability_model # Linear model imported from base_models
 
 concave_model_uw <- lm(recipient_log10SpVL ~  exp(transmitter_log10SpVL), data = pop)
-  #brms::brm(
- # bf(recipient_log10SpVL ~  b1 * exp(b2 * transmitter_log10SpVL),  
-     #b1 + b2 ~1, 
-    # nl = TRUE),
-#  data = pop,
-#  prior = prior2
-#)
 
-
-prior3 <- prior(normal(1, 2), nlpar = "b1") +
-  prior(normal(0, 2), nlpar = "b2")
-
-convex_model_uw <-lm(recipient_log10SpVL ~  log( transmitter_log10SpVL), data = pop) #brms::brm(
-  #bf(recipient_log10SpVL ~  b1 + b2*log(transmitter_log10SpVL),  
-   #  b1 + b2 ~1, 
-    # nl = TRUE),
-  #data = pop,
-  #prior = prior3
-#)
-
+convex_model_uw <-lm(recipient_log10SpVL ~  log(transmitter_log10SpVL), data = pop) 
 
 ################################### Simulate Model Populations ###################################
 # Generate donor population of SpVLs - sampled according to the probability that a given SpVL
@@ -78,13 +54,15 @@ linear_uw_pop <- sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  #posterior_predict(linear_model_uw, .) %>%
   predict(linear_model_uw, .) %>%
-  #Sample one value from posterior predictions per transmitter
-  #apply(., 2, sample, 1) %>% 
+  cbind.data.frame(recipient_log10SpVL = .) %>%
+  
+  # Because A) we are predicting out-of-sample and B) our focus is the population level
+  # it is appropriate to incorporate residual standard error into our predictions
+  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = (summary(linear_model_uw)$sigma)/2)) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
-  cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL= log10(sim_donor)) %>%
+  cbind.data.frame(transmitter_log10SpVL= log10(sim_donor)) %>%
   mutate(across(.cols = everything(), .fns = ~ 10**.x, .names = "{str_remove(col, '_log10SpVL')}")) %>%
   `colnames<-` (str_remove(colnames(.), 'sim_')) %>% 
   cbind.data.frame(sim_recip_chars) %>%
@@ -99,10 +77,12 @@ concave_uw_pop <-  sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  #posterior_predict(concave_model_uw, .) %>%
   predict(concave_model_uw, .) %>%
-  #Sample one value from posterior predictions per transmitter
-  #apply(., 2, sample, 1) %>% 
+  cbind.data.frame(recipient_log10SpVL = .) %>%
+  
+  # Because A) we are predicting out-of-sample and B) our focus is the population level
+  # it is appropriate to incorporate residual standard error into our predictions
+  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(concave_model_uw)$sigma)/2) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
@@ -120,10 +100,12 @@ convex_uw_pop <-  sim_donor %>%
   cbind.data.frame(sim_recip_chars) %>%
   
   # Predict recipient SpVL according to heritability model
-  #posterior_predict(convex_model_uw, .) %>%
   predict(convex_model_uw, .) %>%
-  #Sample one value from posterior predictions per transmitter
-  #apply(., 2, sample, 1) %>% 
+  cbind.data.frame(recipient_log10SpVL = .) %>%
+  
+  # Because A) we are predicting out-of-sample and B) our focus is the population level
+  # it is appropriate to incorporate residual standard error into our predictions
+  mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(convex_model_uw)$sigma)/2) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
   cbind.data.frame(recipient_log10SpVL = ., transmitter_log10SpVL = log10(sim_donor)) %>%
