@@ -1,3 +1,6 @@
+require(ggdag)
+require(dagitty)
+
 ShortenDagArrows <- function(tidy_dag, proportion){
   # Update underlying ggdag object
   tidy_dag$data <- dplyr::mutate(tidy_dag$data, 
@@ -20,7 +23,7 @@ test_dag <- dagify(
   PMV ~ SpVLt + PAcq,
   PAcq ~ SpVLt) 
 
-coordinates(test_dag) <- coords
+dagitty::coordinates(test_dag) <- coords
 
 model_cols <- c('Heritability' = '#fdbb84', 'Transmission' ='#d7301f', 'Tolerance' = '#7f0000')
 node_labels <- c(expression(P[Acq]), expression(P[MV]), expression(SpVL[R]), expression(SpVL['T']),
