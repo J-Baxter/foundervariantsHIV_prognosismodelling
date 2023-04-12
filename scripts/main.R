@@ -218,7 +218,7 @@ convex_uw_virions <- convex_uw_tm %>%
 # Q3: How does the timing of transmission impact observations of the association between the number
 # of founder variants and CD4+ T cell decline?
 
-timing_tm <- transmitter_timing  %>%
+shcs_timing <- shcs_tm  %>%
   lapply(., cbind.data.frame) %>%
   do.call(rbind.data.frame,.) %>%
   rename_with(function(x) gsub('variant.distribution.', '', x)) %>%
