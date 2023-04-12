@@ -6,21 +6,6 @@ font_add_google("Questrial", "Questrial")
 showtext_auto()
 
 
-# Import data
-pop <- read.csv('./results/08Feb23/base_population.csv') # Make sure you change the date!!!
-transmitterSpVL_variantdist <- read.csv('./results/08Feb23/transmitterSpVL_variantdist.csv')
-recipientSpVL_variantdist <- read.csv('./results/08Feb23/recipientSpVL_variantdist.csv')
-
-
-# Set theme
-my_theme <- theme_classic(base_family = "Questrial")+
-  theme(
-    text = element_text(size=20),
-    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0))
-  )
-
-
 ############################################## Panel 1 ##############################################
 #3 model outputs (tolerance, herit, jp transmission)
 
@@ -74,12 +59,12 @@ plt_1d <- ggplot(joint_probs, aes(y = variants, x = nparticles))+
 
 
 panel_1 <- plot_grid(plt_1a, plt_1b, plt_1c, plt_1d, ncol = 2, labels = 'AUTO')
-
+cat('Panel 1 complete. \n')
 
 
 ############################################## Panel 2 ##############################################
 #Confounder
-plt_2a <- ggplot(pop_tm %>% 
+plt_2a <- ggplot(shcs_transmitters  %>% 
                    filter(variants == 1) %>%
                    filter(w == 1 ), 
                  aes(x = transmitter, 
@@ -100,7 +85,7 @@ plt_2a <- ggplot(pop_tm %>%
   annotation_logticks(sides = 'b') +
   my_theme + theme(legend.position = 'none')
 
-plt_2b <- ggplot(linear_pred_variants %>% 
+plt_2b <- ggplot(linear_uw_variants %>% 
                    filter(variants == 1) %>%
                    filter(w == 1 ), 
                  aes(x = recipient, 
@@ -124,7 +109,7 @@ plt_2b <- ggplot(linear_pred_variants %>%
 
 
 
-plt_2c <- ggplot(aes(x = recipient_rounded, y = nparticles, size = mean_p_virion), data = linear_pred_virions ) + 
+plt_2c <- ggplot(aes(x = recipient_rounded, y = nparticles, size = mean_p_virion), data = linear_uw_virions ) + 
   geom_point(colour = '#ef654a') + 
   scale_size(range = c(0.00001,10), name = 'P(X=x)') + 
   scale_x_log10(limits = c(1, 10**8),
@@ -138,7 +123,7 @@ plt_2c <- ggplot(aes(x = recipient_rounded, y = nparticles, size = mean_p_virion
   #geom_smooth(method='lm', data = linear_pred_virions, aes(x = recipient, y = exp.virions, colour = '#ef654a')) + 
   theme(legend.position = 'none')
 
-plt_2d <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = linear_pred_variants ) + 
+plt_2d <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = linear_uw_variants ) + 
   geom_point(colour = '#ef654a') + 
   scale_size(range = c(0,10), name = 'P(X=x)') +
   scale_x_log10(limits = c(1, 10**8),
@@ -153,8 +138,7 @@ plt_2d <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data 
   theme(legend.position = 'none')
 
 panel_2 <- plot_grid(plt_2a, plt_2b, plt_2c, plt_2d, ncol = 2, labels = 'AUTO')
-ggsave("panel2.jpeg", device =  jpeg , plot =panel_2 , width = 14, height = 14)
-
+cat('Panel 2 complete. \n')
 ############################################## Panel 4 ##############################################
 #Non-Linear
 
@@ -239,7 +223,7 @@ plt_3d <-  ggplot(aes(x = model, y =cd4_decline), data = all_vars) +
 plt_3e <- NA
 
 
-
+cat('Panel 3 complete. \n')
 ############################################## Panel 5 ##############################################
 # Timing
 timing_linearonly_vars <- rbind(linear_uw_variants , concave_uw_variants , convex_uw_variants) %>%
@@ -311,3 +295,5 @@ plt_4c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data 
 # CD4 decline
 
 
+cat('Panel 4 complete. \n')
+cat('All plots complete. \n')
