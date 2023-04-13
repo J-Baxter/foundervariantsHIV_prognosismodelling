@@ -19,7 +19,7 @@ VariantPP <- function(preds, pop){
     # For each SPVL, simulate (sample) the number of variants initiating infection according to 
     # estimated probability distribution
     #mutate(exp.var = apply(test_df [,grepl( "V" , names( test_df ) ) ],1, function(x) sample(1:max(length(x)), 1, replace = T, prob = unlist(x)))) %>%
-    mutate(recipient = rep(pop[['recipient']], each = reps )) %>%
+    mutate(recipient = rep(pop[['recipient']], times = reps )) %>%
 
     #Pivot 
     pivot_longer(cols = starts_with('V'),
@@ -63,7 +63,7 @@ VirionPP <- function(preds, pop){
     # estimated probability distribution
     #mutate(exp.virions = sample(1:maxvirions, 1, replace = T, prob = unlist(p_virion))) %>%
     ungroup() %>%
-    mutate(recipient = rep(pop[['recipient']], each = maxvirions*reps )) %>%
+    mutate(recipient = rep(pop[['recipient']], times = maxvirions*reps )) %>%
     
     # Get probabilities for binned vls
     mutate(recipient_rounded = 10**(round(log10(recipient)/0.5)*0.5))%>%
