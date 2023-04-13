@@ -90,55 +90,52 @@ plt_2a <- ggplot(shcs_transmitters  %>%
 plt_2b <- ggplot(linear_uw_variants %>% 
                    filter(variants == 1) %>%
                    filter(w == 1 ), 
-                 aes(x = recipient, 
-                     y = 1 - p#,
+                 aes(x = 1 - p, 
+                     y = recipient #,
                      #colour = as.factor(w)
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a') +
   #scale_colour_brewer(palette = 'OrRd') +
-  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**2, 10**7),
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**3, 10**6),
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+  scale_x_continuous(name = 'P(Multiple Founder Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +
+  annotation_logticks(sides = 'l') +
   #coord_flip() + 
   my_theme + theme(legend.position = 'none')
 
 
 
-plt_2c <- ggplot(aes(x = recipient_rounded, y = nparticles, size = mean_p_virion, colour = mean_p_virion), data = linear_uw_virions ) + 
-  geom_point() + 
-  scale_color_distiller(palette = 'OrRd') + 
-  scale_size(range = c(0.00001,10), name = 'P(X=x)') + 
-  scale_x_log10(limits = c(10**2, 10**7),
+plt_2c <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion), data = linear_uw_virions ) + 
+  geom_tile()+
+  scale_fill_distiller(palette = 8,  trans = 'exp') + 
+  scale_y_log10(limits = c(10**4, 10**5.5),
                 expand = c(0,0),
                 name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) + 
-  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Virions') + 
+  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Virions') + 
   my_theme + 
-  annotation_logticks(sides = 'b') +
-  #geom_smooth(method='lm', data = linear_pred_virions, aes(x = recipient, y = exp.virions, colour = '#ef654a')) + 
+  annotation_logticks(sides = 'l') +
   theme(legend.position = 'none')
 
-plt_2d <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p, colour = mean_p), data = linear_uw_variants ) + 
-  geom_point() + 
-  scale_color_distiller(palette = 'OrRd') + 
-  scale_size(range = c(0,10), name = 'P(X=x)') +
-  scale_x_log10(limits = c(10**2, 10**7),
+
+plt_2d <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data =  linear_uw_variants ) + 
+  geom_tile()+
+  scale_fill_distiller(palette = 8,  trans = 'exp') + 
+  scale_y_log10(limits = c(10**4, 10**5.5),
                 expand = c(0,0),
                 name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) + 
-  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
+  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
   my_theme + 
-  annotation_logticks(sides = 'b') +
-  #geom_smooth(method= VGAM::vglm , method.args = list(family = "poisson"), data = linear_pred_variants, aes(x = recipient, y = exp.var, colour = '#ef654a')) + # should be truncated poisson
+  annotation_logticks(sides = 'l') +
   theme(legend.position = 'none')
 
 
@@ -250,6 +247,20 @@ plt_3e <-  ggplot(aes(x = model, y =cd4_decline), data = all_vars) +
   my_theme + 
   theme(axis.title.y = element_text(family = 'sans'))
 
+plt_3e <-  ggplot(all_vars %>% 
+                    filter(variants == 1) , 
+                  aes(x = 1 - p, 
+                      y = cd4_decline
+                  )) + 
+  geom_point(colour = '#ef654a') + 
+  scale_x_continuous(limits = c(0, 0.5),
+                     expand = c(0,0),
+                     name = 'P(MV)')+
+ 
+  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4'))) + 
+  my_theme + 
+  theme(axis.title.y = element_text(family = 'sans'))+  
+  facet_wrap(.~model,labeller = label_parsed)
 
 
 
@@ -263,15 +274,15 @@ timing_all_vars <- rbind(linear_uw_variants_timing , concave_uw_variants_timing 
 
 my_palette <- brewer.pal(name="OrRd",n=9)[4:9]
 
-plt_4a <- ggplot(timing_all_vars   %>% 
+plt_4a <- ggplot(timing_all_vars %>% 
                    filter(variants == 1) , 
-                 aes(x = recipient, 
+                 aes(x = transmitter, 
                      y = 1 - p,
                      colour = as.factor(w)
                  ))+
   geom_point(shape= 4, size = 4) +
-  scale_colour_manual(values = my_palette ) +
-  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  scale_x_log10(name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
@@ -281,20 +292,19 @@ plt_4a <- ggplot(timing_all_vars   %>%
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
   annotation_logticks(sides = 'b') +
-  facet_wrap(.~model)+
+  facet_wrap(.~model,labeller = label_parsed) +
   #coord_flip() + 
   my_theme + theme(legend.position = 'none', 
                    panel.spacing = unit(2, "lines"), 
                    strip.background = element_blank())
 
-plt_4b <- ggplot(timing_linearonly_vars  %>% 
-                   filter(variants == 1) , 
+plt_4b <- ggplot(timing_all_vars %>% filter(variants == 1), 
                  aes(x = recipient, 
                      y = 1 - p,
-                     colour = w
+                     colour =  as.factor(w)
                  ))+
   geom_point(shape= 4, size = 4) +
-  scale_colour_brewer(palette = 'OrRd') +
+  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
   scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
@@ -304,11 +314,16 @@ plt_4b <- ggplot(timing_linearonly_vars  %>%
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +  facet_wrap(.~model) +
+  annotation_logticks(sides = 'b') +   facet_wrap(.~model,labeller = label_parsed) +
   #coord_flip() + 
-  my_theme + theme(legend.position = 'none', 
+  my_theme + theme(legend.position = 'bottom',
                    panel.spacing = unit(2, "lines"), 
                    strip.background = element_blank())
+
+panel_5_legend <- cowplot::get_legend(plt_4b)
+
+ppt_panel_5 <- cowplot::plot_grid(plt_4a, plt_4b + theme(legend.position = 'none') , panel_5_legend, nrow = 3, labels = c('A', "B"), align = 'HV', rel_heights = c(1,1,0.1))
+ggsave(plot = ppt_panel_5, filename = paste(figs_dir,sep = '/', "ppt_panel_5.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
 
 
 plt_4c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = timing_all_vars  ) + 
@@ -326,6 +341,22 @@ plt_4c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data 
   theme(legend.position = 'none')
 
 # CD4 decline
+plt_3e <-  ggplot(timing_all_vars  %>% 
+                    filter(variants == 1) , 
+                  aes(x = 1 - p, 
+                      y = cd4_decline,
+                      colour =  as.factor(w)
+                  ))+
+  geom_point(shape= 4, size = 4) +
+  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  scale_x_continuous(limits = c(0, 0.5),
+                     expand = c(0,0),
+                     name = 'P(MV)')+
+  
+  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4'))) + 
+  my_theme + 
+  theme(axis.title.y = element_text(family = 'sans'), legend.position = 'bottom')+  
+  facet_wrap(.~model,labeller = label_parsed) 
 
 
 cat('Panel 4 complete. \n')
