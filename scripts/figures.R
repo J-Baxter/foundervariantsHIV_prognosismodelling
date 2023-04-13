@@ -101,7 +101,7 @@ plt_2b <- ggplot(linear_uw_variants %>%
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_x_continuous(name = 'P(Multiple Founder Recipient)',
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
@@ -138,6 +138,35 @@ plt_2d <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data 
   annotation_logticks(sides = 'l') +
   theme(legend.position = 'none')
 
+plt_2e <- ggplot(linear_uw_variants   %>% 
+                   filter(variants == 1) , 
+                 aes(x = 1 - p, 
+                     y = cd4_decline
+                 )) + 
+  geom_point(shape= 4, size = 3) + 
+  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  scale_x_continuous(limits = c(0, 0.4),
+                     expand = c(0,0),
+                     name = 'P(Multiple Variant Recipient)')+
+  
+  scale_y_continuous(limits = c(-0.4,-0.1), expand = c(0,0.01), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  my_theme + 
+  theme(axis.title.y = element_text(family = 'sans'), panel.spacing = unit(3, "lines"))
+
+ggplot(linear_uw_virions   %>% 
+         filter(nparticles == 1) , 
+       aes(x = 1 - p_virion, 
+           y = cd4_decline
+       )) + 
+  geom_point(shape= 4, size = 3) + 
+  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  scale_x_continuous(limits = c(0.4, 0.8),
+                     expand = c(0,0),
+                     name = 'P(Multiple Virion Recipient)')+
+  
+  scale_y_continuous(limits = c(-0.4,-0.1), expand = c(0,0.01), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  my_theme + 
+  theme(axis.title.y = element_text(family = 'sans'), panel.spacing = unit(3, "lines")) + stat_smooth(method = 'lm')
 
 panel_2 <- plot_grid(plt_2a, plt_2b, plt_2c, plt_2d, ncol = 2, labels = 'AUTO')
 cat('Panel 2 complete. \n')
@@ -182,17 +211,17 @@ plt_3a <- ggplot(all_pops, aes(x = transmitter, recipient)) +
 
 plt_3b <- ggplot(all_vars %>% 
                    filter(variants == 1) , 
-                 aes(x = recipient, 
-                     y = 1 - p
+                 aes(y = recipient, 
+                     x = 1 - p
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a' ) +
   #scale_colour_brewer(palette = 'OrRd') +
-  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(10**2, 10**7),
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
@@ -206,35 +235,36 @@ ppt_panel_3 <- cowplot::plot_grid(plt_3a, plt_3b , nrow = 2, labels = 'AUTO', al
 ggsave(plot = ppt_panel_3, filename = paste(figs_dir,sep = '/', "ppt_panel_3.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
 
 
-plt_3c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p, colour = mean_p), data = all_vars ) + 
-  geom_point() + 
-  scale_color_distiller(palette = 'OrRd') + 
-  scale_size(range = c(0,10), name = 'P(X=x)') +
-  scale_x_log10(limits = c(10**2, 10**7),
+
+plt_3c <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion), data = all_virions) + 
+  geom_tile()+
+  scale_fill_distiller(palette = 8,  trans = 'exp') + 
+  scale_y_log10(limits = c(10**4, 10**5.5),
                 expand = c(0,0),
                 name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) + 
-  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
+  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Virions') + 
   my_theme + 
-  annotation_logticks(sides = 'b') +  
+  annotation_logticks(sides = 'l') +
   facet_wrap(.~model,labeller = label_parsed) +
   theme(legend.position = 'none')
 
-plt_3d <-  ggplot(aes(x = recipient_rounded, y = nparticles, size = mean_p_virion, colour = mean_p_virion), data = all_virions ) + 
-  geom_point() + 
-  scale_color_distiller(palette = 'OrRd') + 
-  scale_size(range = c(0,10), name = 'P(X=x)') +
-  scale_x_log10(limits = c(10**2, 10**7),
+
+plt_3d <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data =  all_vars ) + 
+  geom_tile()+
+  scale_fill_distiller(palette = 8,  trans = 'exp') + 
+  scale_y_log10(limits = c(10**4, 10**5.5),
                 expand = c(0,0),
                 name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) + 
-  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Virions') + 
+  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
   my_theme + 
-  annotation_logticks(sides = 'b') +  
+  annotation_logticks(sides = 'l') +
   facet_wrap(.~model,labeller = label_parsed) +
   theme(legend.position = 'none')
+
 
 ppt_panel_4 <- cowplot::plot_grid(plt_3c, plt_3d , nrow = 2, labels = 'AUTO', align = 'HV')
 ggsave(plot = ppt_panel_4, filename = paste(figs_dir,sep = '/', "ppt_panel_4.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
@@ -243,7 +273,7 @@ plt_3e <-  ggplot(aes(x = model, y =cd4_decline), data = all_vars) +
   geom_boxplot(colour = '#ef654a') + 
   scale_size(range = c(0,10), name = 'P(X=x)') +
   scale_x_discrete(name = 'Model') + 
-  scale_y_continuous(limits = c(-1,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4'))) + 
+  scale_y_continuous(limits = c(-1,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
   my_theme + 
   theme(axis.title.y = element_text(family = 'sans'))
 
@@ -252,16 +282,18 @@ plt_3e <-  ggplot(all_vars %>%
                   aes(x = 1 - p, 
                       y = cd4_decline
                   )) + 
-  geom_point(colour = '#ef654a') + 
-  scale_x_continuous(limits = c(0, 0.5),
+  geom_point(colour = '#ef654a', shape= 4, size = 3) + 
+  scale_x_continuous(limits = c(0.1, 0.4),
                      expand = c(0,0),
-                     name = 'P(MV)')+
+                     name = 'P(Multiple Variant Recipient)')+
  
-  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4'))) + 
+  scale_y_continuous(limits = c(-0.4,-0.1), expand = c(0,0.01), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  facet_wrap(.~model,labeller = label_parsed) + 
   my_theme + 
-  theme(axis.title.y = element_text(family = 'sans'))+  
-  facet_wrap(.~model,labeller = label_parsed)
-
+  theme(axis.title.y = element_text(family = 'sans'),panel.spacing = unit(3, "lines"))
+  
+ppt_panel_5 <- plt_3e
+ggsave(plot = ppt_panel_5, filename = paste(figs_dir,sep = '/', "ppt_panel_5.jpeg"), device = jpeg, width = 14, height = 10)
 
 
 
@@ -287,7 +319,7 @@ plt_4a <- ggplot(timing_all_vars %>%
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+  scale_y_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
@@ -299,18 +331,18 @@ plt_4a <- ggplot(timing_all_vars %>%
                    strip.background = element_blank())
 
 plt_4b <- ggplot(timing_all_vars %>% filter(variants == 1), 
-                 aes(x = recipient, 
-                     y = 1 - p,
+                 aes(y = recipient, 
+                     x = 1 - p,
                      colour =  as.factor(w)
                  ))+
   geom_point(shape= 4, size = 4) +
   scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
-  scale_x_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  scale_y_continuous(name = 'P(Multiple Founder Recipient)',
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
@@ -320,10 +352,10 @@ plt_4b <- ggplot(timing_all_vars %>% filter(variants == 1),
                    panel.spacing = unit(2, "lines"), 
                    strip.background = element_blank())
 
-panel_5_legend <- cowplot::get_legend(plt_4b)
+panel_6_legend <- cowplot::get_legend(plt_4b)
 
-ppt_panel_5 <- cowplot::plot_grid(plt_4a, plt_4b + theme(legend.position = 'none') , panel_5_legend, nrow = 3, labels = c('A', "B"), align = 'HV', rel_heights = c(1,1,0.1))
-ggsave(plot = ppt_panel_5, filename = paste(figs_dir,sep = '/', "ppt_panel_5.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
+ppt_panel_6 <- cowplot::plot_grid(plt_4a, plt_4b + theme(legend.position = 'none') , panel_6_legend, nrow = 3, labels = c('A', "B"), align = 'HV', rel_heights = c(1,1,0.1))
+ggsave(plot = ppt_panel_6, filename = paste(figs_dir,sep = '/', "ppt_panel_6.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
 
 
 plt_4c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = timing_all_vars  ) + 
@@ -341,22 +373,26 @@ plt_4c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data 
   theme(legend.position = 'none')
 
 # CD4 decline
-plt_3e <-  ggplot(timing_all_vars  %>% 
-                    filter(variants == 1) , 
-                  aes(x = 1 - p, 
-                      y = cd4_decline,
-                      colour =  as.factor(w)
-                  ))+
-  geom_point(shape= 4, size = 4) +
+plt_4e <- ggplot(timing_all_vars  %>% 
+                   filter(variants == 1) , 
+                 aes(x = 1 - p, 
+                     y = cd4_decline,
+                     colour =  as.factor(w)
+                 )) + 
+  geom_point(shape= 4, size = 3) + 
   scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
-  scale_x_continuous(limits = c(0, 0.5),
+  scale_x_continuous(limits = c(0, 0.4),
                      expand = c(0,0),
-                     name = 'P(MV)')+
+                     name = 'P(Multiple Variant Recipient)')+
   
-  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4'))) + 
+  scale_y_continuous(limits = c(-0.4,-0.1), expand = c(0,0.01), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  facet_wrap(.~model,labeller = label_parsed) + 
   my_theme + 
-  theme(axis.title.y = element_text(family = 'sans'), legend.position = 'bottom')+  
-  facet_wrap(.~model,labeller = label_parsed) 
+  theme(axis.title.y = element_text(family = 'sans'), panel.spacing = unit(3, "lines"))
+
+ppt_panel_7 <- plt_4e
+ggsave(plot = ppt_panel_7, filename = paste(figs_dir,sep = '/', "ppt_panel_7.jpeg"), device = jpeg, width = 14, height = 10)
+
 
 
 cat('Panel 4 complete. \n')
