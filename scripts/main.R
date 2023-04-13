@@ -120,10 +120,10 @@ shcs_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w=
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) 
 
 
-linear_uw_tm <- c(RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1),
-                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 5),
-                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 10),
-                  RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 20)) %>%
+linear_uw_tm <- c(RunParallel(populationmodel_acrossVL_Environment, linear_uw_pop$transmitter, w= 1),
+                  RunParallel(populationmodel_acrossVL_Environment, linear_uw_pop$transmitter, w= 5),
+                  RunParallel(populationmodel_acrossVL_Environment, linear_uw_pop$transmitter, w= 10),
+                  RunParallel(populationmodel_acrossVL_Environment, linear_uw_pop$transmitter, w= 20)) %>%
   
   # Label
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
