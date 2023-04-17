@@ -31,6 +31,6 @@ plot_var <- ggplot(var_t, aes(x = time, y = P, fill = x_var)) +
   my_theme+
   theme(legend.position = 'none')
 
-panel_s1 <- cowplot::plot_grid( plot_var,plt_tda, nrow = 1, align = 'hv', labels = 'AUTO')
+panel_s1 <- cowplot::plot_grid( plot_var,NA, plt_tda, nrow = 1, align = 'hv', labels = c('A', '', 'B'), rel_widths = c(1,0.2,1))
 
 ## END ##
