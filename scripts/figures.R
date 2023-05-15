@@ -108,7 +108,7 @@ plt_2a <- ggplot(linear_uw_variants %>%
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'l') +
+  annotation_logticks(sides = 'l',axis.title.y = element_text(family = 'sans')) +
   #coord_flip() + 
   my_theme + theme(legend.position = 'none')
 
@@ -129,7 +129,7 @@ plt_2b <- ggplot(linear_uw_variants %>%
                      breaks = seq(0, 0.5, by = 0.1)) +
   annotation_logticks(sides = 'l') +
   #coord_flip() + 
-  my_theme + theme(legend.position = 'none')
+  my_theme + theme(legend.position = 'none', axis.title.y = element_text(family = 'sans'))
 
 
 plt_2c <- ggplot(linear_uw_virions %>% 
@@ -171,7 +171,7 @@ plt_2d <- ggplot(linear_uw_virions %>%
                      breaks = seq(0, 1, by = 0.1)) +
   annotation_logticks(sides = 'l') +
   #coord_flip() + 
-  my_theme + theme(legend.position = 'none')
+  my_theme + theme(legend.position = 'none', axis.title.y = element_text(family = 'sans'))
 
 
 plt_2e <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data =  linear_uw_variants ) + 
@@ -221,7 +221,7 @@ panel_2 <- plot_grid(panel_2_upper, panel2_tile_legend, rel_heights = c(1,0.1),n
 
 
 cat('Panel 2 complete. \n')
-############################################## Panel 4 ##############################################
+############################################## Panel 3 ##############################################
 #Non-Linear
 
 models = c(concave_uw ="e^{X}",
@@ -350,44 +350,22 @@ ggsave(plot = ppt_panel_5, filename = paste(figs_dir,sep = '/', "ppt_panel_5.jpe
 
 
 cat('Panel 3 complete. \n')
-############################################## Panel 5 ##############################################
+############################################## Panel 4 ##############################################
 # Timing
 timing_all_vars <- rbind(linear_uw_variants_timing , concave_uw_variants_timing , convex_uw_variants_timing) %>%
   mutate(model = str_replace_all(model, models ))
 
 my_palette <- brewer.pal(name="OrRd",n=9)[4:9]
 
-plt_4a <- ggplot(timing_all_vars %>% 
+plt_4a <- ggplot(linear_uw_variants_timing %>% 
                    filter(variants == 1) , 
-                 aes(x = transmitter, 
-                     y = 1 - p,
-                     colour = as.factor(w)
+                 aes(x = 1 - p, 
+                     y = recipient,
+                     shape = as.factor(w)
                  ))+
-  geom_point(shape= 4, size = 4) +
-  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
-  scale_x_log10(name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**8),
-                expand = c(0.02,0.02),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_y_continuous(name = 'P(Multiple Variant Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +
-  facet_wrap(.~model,labeller = label_parsed) +
-  #coord_flip() + 
-  my_theme + theme(legend.position = 'none', 
-                   panel.spacing = unit(2, "lines"), 
-                   strip.background = element_blank())
-
-plt_4b <- ggplot(timing_all_vars %>% filter(variants == 1), 
-                 aes(y = recipient, 
-                     x = 1 - p,
-                     colour =  as.factor(w)
-                 ))+
-  geom_point(shape= 4, size = 4) +
-  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  geom_point(size = 3, colour = '#ef654a' ) +
+  scale_shape_manual(values = c(0,1,2,3)) + 
+  #scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
   scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
@@ -397,13 +375,80 @@ plt_4b <- ggplot(timing_all_vars %>% filter(variants == 1),
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +   facet_wrap(.~model,labeller = label_parsed) +
+  annotation_logticks(sides = 'b') +
+  #facet_wrap(.~model,labeller = label_parsed) +
   #coord_flip() + 
-  my_theme + theme(legend.position = 'bottom',
+  my_theme + theme(legend.position = 'none', 
                    panel.spacing = unit(2, "lines"), 
                    strip.background = element_blank())
 
-panel_6_legend <- cowplot::get_legend(plt_4b)
+plt_4b <- ggplot(linear_uw_variants_timing %>% filter(variants == 1), 
+                 aes(y = cd4_decline, 
+                     x = 1 - p,
+                     shape =  as.factor(w)
+                 ))+
+  geom_point(size = 3, colour = '#ef654a' ) +
+  scale_shape_manual(values = c(0,1,2,3)) + 
+  #scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  annotation_logticks(sides = 'b') +   #facet_wrap(.~model,labeller = label_parsed) +
+  #coord_flip() + 
+  my_theme + theme(legend.position = 'none',
+                   panel.spacing = unit(2, "lines"), 
+                   strip.background = element_blank())
+
+
+
+# Mean p calculated over all w - need to adjust to plot these
+plt_4c <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data =  linear_uw_variants_timing) + 
+  geom_tile()+
+  scale_fill_distiller(palette = 8, 
+                       direction = 1, 
+                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85),
+                       limits =c( 0.0005,0.88), 
+                       labels = c(0.001, 0.01, 0.1, 0.5, 0.8),
+                       na.value = "white",
+                       'P(X=X)') + 
+  scale_y_log10(limits = c(10**4, 10**5.5),
+                expand = c(0,0),
+                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) + 
+  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
+  facet_wrap(~w, nrow = 1, scales = "fixed")+
+  my_theme + 
+  annotation_logticks(sides = 'l') +
+  theme(legend.position = 'none')
+
+
+plt_4d <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion), data = linear_uw_virions_timing ) + 
+  geom_tile()+
+  scale_fill_distiller(palette = 8, 
+                       direction = 1, 
+                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85) , 
+                       labels = c(0.001, 0.01, 0.1, 0.5, 0.8),
+                       limits =c( 0.0005,0.88),
+                       na.value = "white",
+                       'P(X=X)') + 
+  scale_y_log10(limits = c(10**4, 10**5.5),
+                expand = c(0,0),
+                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) + 
+  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Particles') + 
+  facet_wrap(~w, nrow = 1, scales = "fixed")+
+  my_theme + 
+  annotation_logticks(sides = 'l') +
+  theme(legend.position = 'none')
+
+panel_4_upper <- plot_grid(plt_4a, plt_4b, align = 'hv', labels = "AUTO", ncol = 2)
+panel_4 <- plot_grid(panel_4_upper, plt_4c, plt_4d, align = 'hv', labels = c(NA, 'C', 'D'), nrow = 3)
+panel_4
+
 
 ppt_panel_6 <- cowplot::plot_grid(plt_4a, plt_4b + theme(legend.position = 'none') , panel_6_legend, nrow = 3, labels = c('A', "B"), align = 'HV', rel_heights = c(1,1,0.1))
 ggsave(plot = ppt_panel_6, filename = paste(figs_dir,sep = '/', "ppt_panel_6.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
