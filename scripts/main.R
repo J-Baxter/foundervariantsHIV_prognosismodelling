@@ -38,6 +38,8 @@ concave_model_uw <- lm(recipient_log10SpVL ~  exp(transmitter_log10SpVL), data =
 
 convex_model_uw <-lm(recipient_log10SpVL ~  log(transmitter_log10SpVL), data = pop) 
 
+#linearweighted_model_uw
+
 
 ################################### Simulate Model Populations ###################################
 # Generate donor population of SpVLs - sampled according to the probability that a given SpVL
@@ -58,7 +60,7 @@ linear_uw_pop <- sim_donor %>%
   cbind.data.frame(recipient_log10SpVL = .) %>%
   
   # Because A) we are predicting out-of-sample and B) our focus is the population level
-  # it is appropriate to incorporate residual standard error into our predictions
+  # we incorporate residual standard error into our predictions
   mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = (summary(linear_model_uw)$sigma)/10)) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
@@ -81,7 +83,7 @@ concave_uw_pop <-  sim_donor %>%
   cbind.data.frame(recipient_log10SpVL = .) %>%
   
   # Because A) we are predicting out-of-sample and B) our focus is the population level
-  # it is appropriate to incorporate residual standard error into our predictions
+  # we incorporate residual standard error into our predictions
   mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(concave_model_uw)$sigma)/10) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
@@ -104,7 +106,7 @@ convex_uw_pop <-  sim_donor %>%
   cbind.data.frame(recipient_log10SpVL = .) %>%
   
   # Because A) we are predicting out-of-sample and B) our focus is the population level
-  # it is appropriate to incorporate residual standard error into our predictions
+  # we incorporate residual standard error into our predictions
   mutate(recipient_log10SpVL = recipient_log10SpVL + rnorm(NSIM, sd = summary(convex_model_uw)$sigma)/10) %>%
   
   # Bind predicted recipient SpVl with transmission pair characteristics
@@ -149,8 +151,8 @@ convex_uw_tm <- c(RunParallel(populationmodel_acrossVL_Environment, convex_uw_po
 
 ################################### Extract Model Outputs ##################################
 
-# Q1: Does SpVL in the transmitting partner confound the relationship between the number of founder 
-# variants and viral load in the recipient?
+# Q1: All else equal, what effect would we expect to observe between P(Multiple Variants
+# and Recipient SpVL?
 
 shcs_transmitters <- shcs_tm  %>%
   lapply(., cbind.data.frame) %>%
@@ -186,7 +188,7 @@ linear_uw_virions <- linear_uw_tm %>%
 
 
 # Q2: Is the SpVL in recipient partner determined by a non-linear relationship with the SpVL in the
-# transmitting partner, and how is this affect by the number of variants initiating infection in 
+# transmitting partner, and how is this affected by the number of variants initiating infection in 
 # the recipient partner?
 
 concave_uw_variants <- concave_uw_tm  %>%
@@ -268,7 +270,7 @@ convex_uw_virions_timing <- convex_uw_tm %>%
 source('./scripts/figures.R')
 
 ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.jpeg"), device = jpeg, width = 14, height = 14) # Model Components - functional
-ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 14) # Confounder - functional 
+ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 18) # Confounder - functional 
 ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
 ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 14) # Timing of transmission
 
