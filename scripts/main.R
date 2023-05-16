@@ -322,6 +322,14 @@ linear_w_virions_timing <- linear_w_tm %>%
   mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient))))
 
 
+################################### Sensitivity Analysis ################################### 
+# Robustness of model system to proportion of standard error incorporated in Heritability
+# Model (linear, unweighted only)
+
+source('./scripts/sa_heritabilityse.R')
+
+
+
 ################################### Write to file ################################### 
 source('./scripts/figures.R')
 
@@ -338,7 +346,7 @@ source('./scripts/mediation_analysis.R')
 ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 18, height = 12) #Within-host dynamics -functional
 ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 18, height = 12) #Simulating transmitter population - functional
 ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting 
-ggsave(plot = panel_s4, filename = paste(figs_dir,sep = '/', "panel_s4.jpeg"), device = jpeg, width = 14, height = 14) #Mediation analysis for SpVL
+ggsave(plot = plt_s4, filename = paste(figs_dir,sep = '/', "panel_s4.jpeg"), device = jpeg, width = 14, height = 14) #Sensitivity Analysis - functional
 
 ###################################################################################################
 
