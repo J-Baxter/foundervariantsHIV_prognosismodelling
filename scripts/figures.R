@@ -9,10 +9,6 @@ showtext_auto()
 
 ############################################## Panel 1 ##############################################
 #3 model framework and individual model outputs (tolerance, herit, jp transmission)
-
-# For Plot 1a, run ./scripts/model_dag.R
-source('./scripts/model_dag.R')
-
 plt_1a <- ggdraw() +
   draw_image("dag.svg")
 
@@ -102,12 +98,14 @@ plt_2b <- ggplot(linear_uw_variants %>%
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a') +
   #scale_colour_brewer(palette = 'OrRd') +
-  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  scale_y_continuous(limits = c(-0.5,0), 
+                     expand = c(0,0.01), 
+                     breaks = seq(-0.5, 0, by = 0.1),
+                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'l') +
   #coord_flip() + 
   my_theme + theme(legend.position = 'none', axis.title.y = element_text(family = 'sans'))
 
@@ -144,7 +142,10 @@ plt_2d <- ggplot(linear_uw_virions %>%
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a') +
   #scale_colour_brewer(palette = 'OrRd') +
-  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  scale_y_continuous(limits = c(-0.5,0), 
+                     expand = c(0,0.01), 
+                     breaks = seq(-0.5, 0, by = 0.1),
+                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
   scale_x_continuous(name = 'P(Multiple Particle Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,1),
@@ -206,17 +207,17 @@ cat('Panel 2 complete. \n')
 
 models = c(concave_uw ="e^{X}",
            convex_uw = 'ln(X)',
-           linear_uw = 'X')
+           linear_w = 'X+P(MV)')
 
-all_pops <- rbind(linear_uw_pop, concave_uw_pop, convex_uw_pop) %>%
+all_pops <- rbind(linear_w_pop, concave_uw_pop, convex_uw_pop) %>%
   mutate(model = str_replace_all(model, models ))
 
 
-all_vars <- rbind(linear_uw_variants , concave_uw_variants , convex_uw_variants) %>%
+all_vars <- rbind(linear_w_variants , concave_uw_variants , convex_uw_variants) %>%
   filter(w == 1) %>%
   mutate(model = str_replace_all(model, models ))
 
-all_virions <- rbind(linear_uw_virions , concave_uw_virions, convex_uw_virions) %>%
+all_virions <- rbind(linear_w_virions , concave_uw_virions, convex_uw_virions) %>%
   filter(w == 1) %>%
   mutate(model = str_replace_all(model, models ))
 
@@ -256,80 +257,34 @@ plt_3b <- ggplot(all_vars %>%
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +  facet_wrap(.~model, labeller = label_parsed) +
-  #coord_flip() + 
+  annotation_logticks(sides = 'l') +
+  facet_wrap(.~model, labeller = label_parsed) +
   my_theme + theme(legend.position = 'none', 
                    panel.spacing = unit(2, "lines"), 
                    strip.background = element_blank())
 
-ppt_panel_3 <- cowplot::plot_grid(plt_3a, plt_3b , nrow = 2, labels = 'AUTO', align = 'HV')
-ggsave(plot = ppt_panel_3, filename = paste(figs_dir,sep = '/', "ppt_panel_3.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
-
-
-
-plt_3c <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion), data = all_virions) + 
-  geom_tile()+
-  scale_fill_distiller(palette = 8,  trans = 'exp') + 
-  scale_y_log10(limits = c(10**4, 10**5.5),
-                expand = c(0,0),
-                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) + 
-  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Virions') + 
-  my_theme + 
-  annotation_logticks(sides = 'l') +
-  facet_wrap(.~model,labeller = label_parsed) +
-  theme(legend.position = 'none')
-
-
-plt_3d <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data =  all_vars ) + 
-  geom_tile()+
-  scale_fill_distiller(palette = 8,  trans = 'exp') + 
-  scale_y_log10(limits = c(10**4, 10**5.5),
-                expand = c(0,0),
-                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) + 
-  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
-  my_theme + 
-  annotation_logticks(sides = 'l') +
-  facet_wrap(.~model,labeller = label_parsed) +
-  theme(legend.position = 'none')
-
-
-ppt_panel_4 <- cowplot::plot_grid(plt_3c, plt_3d , nrow = 2, labels = 'AUTO', align = 'HV')
-ggsave(plot = ppt_panel_4, filename = paste(figs_dir,sep = '/', "ppt_panel_4.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
-
-plt_3e <-  ggplot(aes(x = model, y =cd4_decline), data = all_vars) + 
-  geom_boxplot(colour = '#ef654a') + 
-  scale_size(range = c(0,10), name = 'P(X=x)') +
-  scale_x_discrete(name = 'Model') + 
-  scale_y_continuous(limits = c(-1,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
-  my_theme + 
-  theme(axis.title.y = element_text(family = 'sans'))
-
-plt_3e <-  ggplot(all_vars %>% 
+plt_3c <-  ggplot(all_vars %>% 
                     filter(variants == 1) , 
                   aes(x = 1 - p, 
                       y = cd4_decline
                   )) + 
   geom_point(colour = '#ef654a', shape= 4, size = 3) + 
-  scale_x_continuous(limits = c(0.1, 0.4),
+  scale_x_continuous(limits = c(0.1, 0.5),
                      expand = c(0,0),
                      name = 'P(Multiple Variant Recipient)')+
- 
-  scale_y_continuous(limits = c(-0.4,-0.1), expand = c(0,0.01), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  
+  scale_y_continuous(limits = c(-0.5,0), 
+                     expand = c(0,0.01), 
+                     breaks = seq(-0.5, 0, by = 0.1),
+                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
   facet_wrap(.~model,labeller = label_parsed) + 
   my_theme + 
   theme(axis.title.y = element_text(family = 'sans'),panel.spacing = unit(3, "lines"))
-  
-ppt_panel_5 <- plt_3e
-ggsave(plot = ppt_panel_5, filename = paste(figs_dir,sep = '/', "ppt_panel_5.jpeg"), device = jpeg, width = 14, height = 10)
 
-
-
-
+panel_3 <- cowplot::plot_grid(plt_3a, plt_3b , plt_3c,  nrow = 3, labels = 'AUTO', align = 'HV')
 cat('Panel 3 complete. \n')
+
+
 ############################################## Panel 4 ##############################################
 # Timing
 my_palette <- brewer.pal(name="OrRd",n=9)[4:9]
@@ -352,9 +307,6 @@ plt_4a <- ggplot(linear_uw_variants_timing %>%
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +
-  #facet_wrap(.~model,labeller = label_parsed) +
-  #coord_flip() + 
   my_theme + theme(legend.position = 'none', 
                    panel.spacing = unit(2, "lines"), 
                    strip.background = element_blank())
@@ -367,13 +319,14 @@ plt_4b <- ggplot(linear_uw_variants_timing %>% filter(variants == 1),
   geom_point(size = 3, shape = 4  ) + #colour = '#ef654a'
   #scale_shape_manual(values = c(0,1,2,3)) + 
   scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
-  scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
+  scale_y_continuous(limits = c(-0.5,0), 
+                     expand = c(0,0.01), 
+                     breaks = seq(-0.5, 0, by = 0.1),
+                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)))  + 
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'b') +   #facet_wrap(.~model,labeller = label_parsed) +
-  #coord_flip() + 
   my_theme + theme(legend.position = 'none',
                    panel.spacing = unit(2, "lines"), 
                    strip.background = element_blank(),
