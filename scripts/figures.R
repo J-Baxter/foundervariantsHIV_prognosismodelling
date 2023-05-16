@@ -8,7 +8,7 @@ showtext_auto()
 
 
 ############################################## Panel 1 ##############################################
-#3 model outputs (tolerance, herit, jp transmission)
+#3 model framework and individual model outputs (tolerance, herit, jp transmission)
 
 # For Plot 1a, run ./scripts/model_dag.R
 source('./scripts/model_dag.R')
@@ -68,27 +68,7 @@ cat('Panel 1 complete. \n')
 
 
 ############################################## Panel 2 ##############################################
-#Confounder
-#plt_2a <- ggplot(shcs_transmitters  %>% 
-                  # filter(variants == 1) %>%
-                  # filter(w == 1 ), 
-               #  aes(x = transmitter, 
-                  #   y = 1 - p#,
-                     #colour = as.factor(w)
-                 ))+
-  #geom_point(shape= 4, size = 4, colour = '#ef654a') +
-  #scale_colour_brewer(palette = 'OrRd') +
- # scale_x_log10(name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-              #  limits = c(10**2, 10**7),
-             #   expand = c(0.02,0.02),
-             #   breaks = trans_breaks("log10", function(x) 10**x),
-              #  labels = trans_format("log10", math_format(.x))) +
- # scale_y_continuous(name = 'P(Multiple Founder Recipient)',
-                     #expand = c(0.02,0.02),
-                     #limits = c(0,0.5),
-                     #breaks = seq(0, 0.5, by = 0.1)) +
- # annotation_logticks(sides = 'b') +
-  #my_theme + theme(legend.position = 'none')
+# What do we expect to observe?
 
 plt_2a <- ggplot(linear_uw_variants %>% 
                    filter(variants == 1) %>%
@@ -451,47 +431,6 @@ panel_4 <- plot_grid(panel_4_upper,panel4_upper_legend , plt_4c, plt_4d, panel4_
                      align = 'hv', labels = c(NA, NA, 'C', 'D', NA), nrow = 5,
                      rel_heights = c(1,0.1,1,1,0.1))
 panel_4
-
-
-ppt_panel_6 <- cowplot::plot_grid(plt_4a, plt_4b + theme(legend.position = 'none') , panel_6_legend, nrow = 3, labels = c('A', "B"), align = 'HV', rel_heights = c(1,1,0.1))
-ggsave(plot = ppt_panel_6, filename = paste(figs_dir,sep = '/', "ppt_panel_6.jpeg"), device = jpeg, width = 14, height = 14) # Non - Linear
-
-
-plt_4c <-  ggplot(aes(x = recipient_rounded, y = variants, size = mean_p), data = timing_all_vars  ) + 
-  geom_point(colour = '#ef654a') + 
-  scale_size(range = c(0,10), name = 'P(X=x)') +
-  scale_x_log10(limits = c(1, 10**8),
-                expand = c(0,0),
-                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) + 
-  scale_y_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
-  my_theme + 
-  annotation_logticks(sides = 'b') +  
-  facet_wrap(.~w) +
-  theme(legend.position = 'none')
-
-# CD4 decline
-plt_4e <- ggplot(timing_all_vars  %>% 
-                   filter(variants == 1) , 
-                 aes(x = 1 - p, 
-                     y = cd4_decline,
-                     colour =  as.factor(w)
-                 )) + 
-  geom_point(shape= 4, size = 3) + 
-  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
-  scale_x_continuous(limits = c(0, 0.4),
-                     expand = c(0,0),
-                     name = 'P(Multiple Variant Recipient)')+
-  
-  scale_y_continuous(limits = c(-0.4,-0.1), expand = c(0,0.01), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
-  facet_wrap(.~model,labeller = label_parsed) + 
-  my_theme + 
-  theme(axis.title.y = element_text(family = 'sans'), panel.spacing = unit(3, "lines"))
-
-ppt_panel_7 <- plt_4e
-ggsave(plot = ppt_panel_7, filename = paste(figs_dir,sep = '/', "ppt_panel_7.jpeg"), device = jpeg, width = 14, height = 10)
-
 
 
 cat('Panel 4 complete. \n')
