@@ -352,20 +352,17 @@ ggsave(plot = ppt_panel_5, filename = paste(figs_dir,sep = '/', "ppt_panel_5.jpe
 cat('Panel 3 complete. \n')
 ############################################## Panel 4 ##############################################
 # Timing
-timing_all_vars <- rbind(linear_uw_variants_timing , concave_uw_variants_timing , convex_uw_variants_timing) %>%
-  mutate(model = str_replace_all(model, models ))
-
 my_palette <- brewer.pal(name="OrRd",n=9)[4:9]
 
 plt_4a <- ggplot(linear_uw_variants_timing %>% 
                    filter(variants == 1) , 
                  aes(x = 1 - p, 
                      y = recipient,
-                     shape = as.factor(w)
+                     colour = as.factor(w)
                  ))+
-  geom_point(size = 3, colour = '#ef654a' ) +
-  scale_shape_manual(values = c(0,1,2,3)) + 
-  #scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  geom_point(size = 3, shape = 4 ) +
+  #scale_shape_manual(values = c(0,1,2,3)) + 
+  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
   scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(1, 10**8),
                 expand = c(0.02,0.02),
@@ -385,11 +382,11 @@ plt_4a <- ggplot(linear_uw_variants_timing %>%
 plt_4b <- ggplot(linear_uw_variants_timing %>% filter(variants == 1), 
                  aes(y = cd4_decline, 
                      x = 1 - p,
-                     shape =  as.factor(w)
+                     colour =  as.factor(w)
                  ))+
-  geom_point(size = 3, colour = '#ef654a' ) +
-  scale_shape_manual(values = c(0,1,2,3)) + 
-  #scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+  geom_point(size = 3, shape = 4  ) + #colour = '#ef654a'
+  #scale_shape_manual(values = c(0,1,2,3)) + 
+  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
   scale_y_continuous(limits = c(-0.5,0), expand = c(0,0.1), name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
@@ -399,7 +396,8 @@ plt_4b <- ggplot(linear_uw_variants_timing %>% filter(variants == 1),
   #coord_flip() + 
   my_theme + theme(legend.position = 'none',
                    panel.spacing = unit(2, "lines"), 
-                   strip.background = element_blank())
+                   strip.background = element_blank(),
+                   axis.title.y = element_text(family = 'sans'))
 
 
 
@@ -408,9 +406,9 @@ plt_4c <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data 
   geom_tile()+
   scale_fill_distiller(palette = 8, 
                        direction = 1, 
-                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85),
-                       limits =c( 0.0005,0.88), 
-                       labels = c(0.001, 0.01, 0.1, 0.5, 0.8),
+                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85, 0.9, 1) , 
+                       labels = c(0.001, 0.01, 0.1, 0.5, 0.99),
+                       limits =c( 0.0005,1),
                        na.value = "white",
                        'P(X=X)') + 
   scale_y_log10(limits = c(10**4, 10**5.5),
@@ -429,11 +427,11 @@ plt_4d <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion
   geom_tile()+
   scale_fill_distiller(palette = 8, 
                        direction = 1, 
-                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85) , 
-                       labels = c(0.001, 0.01, 0.1, 0.5, 0.8),
-                       limits =c( 0.0005,0.88),
+                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85, 0.9, 1) , 
+                       labels = c(0.001, 0.01, 0.1, 0.5, 0.99),
+                       limits =c( 0.0005,1),
                        na.value = "white",
-                       'P(X=X)') + 
+                       'P(X=X)')  + 
   scale_y_log10(limits = c(10**4, 10**5.5),
                 expand = c(0,0),
                 name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
@@ -445,8 +443,13 @@ plt_4d <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion
   annotation_logticks(sides = 'l') +
   theme(legend.position = 'none')
 
+panel4_bottom_legend <-  get_legend(plt_4d + theme(legend.position = 'bottom', legend.key.width=unit(2,"cm"))) 
+panel4_upper_legend <-  get_legend(plt_4a+ theme(legend.position = 'bottom')) 
+
 panel_4_upper <- plot_grid(plt_4a, plt_4b, align = 'hv', labels = "AUTO", ncol = 2)
-panel_4 <- plot_grid(panel_4_upper, plt_4c, plt_4d, align = 'hv', labels = c(NA, 'C', 'D'), nrow = 3)
+panel_4 <- plot_grid(panel_4_upper,panel4_upper_legend , plt_4c, plt_4d, panel4_bottom_legend,
+                     align = 'hv', labels = c(NA, NA, 'C', 'D', NA), nrow = 5,
+                     rel_heights = c(1,0.1,1,1,0.1))
 panel_4
 
 
