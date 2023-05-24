@@ -322,6 +322,16 @@ linear_w_virions_timing <- linear_w_tm %>%
   mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient))))
 
 
+# Q4: Do we expect epidemic characteristics to impact the observation of the assocation between 
+# multiple variant infection and CD4+ T Cell decline?
+
+# Baseline population; characteristics sampled at random. Re-simulate with characteristics extracted
+# from RV144 and HVTN502 (STEP) (representing a HSX and MSM epidemic)
+
+rv144_chars
+hvtn502_chars
+
+
 ################################### Sensitivity Analysis ################################### 
 # Robustness of model system to proportion of standard error incorporated in Heritability
 # Model (linear, unweighted only)
