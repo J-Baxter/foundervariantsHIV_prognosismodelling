@@ -26,30 +26,24 @@ pop <- InitPop(N = NPAIRS,
 
 ################################### Fit Heritability Model ###################################
 cat('Fitting heritablity model...\n')
-heritability_model <- brms::brm(
-  # specify what to explain in terms of what
-  #  using the formula syntax
-  formula = recipient_log10SpVL ~ 1 + transmitter_log10SpVL,
-  # which data to use
-  data = pop
-)
-
+heritability_model <- lm(recipient_log10SpVL ~  transmitter_log10SpVL, data = pop)
 
 # Scatter plot of transmitter ~ recipient viral loads
 plt_1a <- ggplot(pop, aes(x = transmitter, recipient)) +
   geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
     colour = '#ef654a',
     shape = 4, size = 3) +
-  scale_x_log10(limits = c(1, 10**10),
-                expand = c(0,0),
+  scale_x_log10(limits = c(10**2, 10**7),
+                expand = c(0.05,0),
                 name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**10),
-                expand = c(0,0),
+                limits = c(10**2, 10**7),
+                expand = c(0.05,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
+  geom_smooth(method = 'lm', colour = '#ef654a' ) + 
   #geom_function() + Incorporate lm with fixed effects (with #Add 95% CIs to lines (geom_ribbon))
   annotation_logticks() +
   my_theme + 

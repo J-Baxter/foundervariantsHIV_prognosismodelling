@@ -2,17 +2,22 @@
 source('./scripts/SimPop.R')
 
 ################## Simulate transmitter population stage-by-stage ################## 
+n = 1000
 SpVL_vec <- SpVL_vec <- seq(2, 7, length.out = 10000) %>% raise_to_power(10,.)
 
+# Probablity that a given SpVL is present in the population at any given time
 p_SpVL <- sapply(SpVL_vec, function(x) WeightSerocons(x)/sum(WeightSerocons(SpVL_vec)))
 
+# Probability of observing a transmission for a given SpVL (Transmission potential x P(Observed))
 p_obs <- Obs(SpVL_vec)
 
+# Sample uniform vector according to joint probability p_SpVL x p_obs
 sim_SpVL <- sample(SpVL_vec, size = n, prob = p_SpVL*p_obs, replace = F) 
 
 
 ############### Plot probability distirbution at each stage ###################
 cols <- c("Seroconverter" = "#fdd49e", 'Transmission Potential' = '#fc8d59', "P(Observed)" = "#b30000")
+
 a <- ggplot()+
   geom_line(aes(x = SpVL_vec, y = p_SpVL, colour = 'Seroconverter'), linejoin = "round",  size = 2)+
   scale_colour_manual(values = cols)+
@@ -66,7 +71,7 @@ v <- ggplot()+
 
 x <- ggplot()+
   geom_histogram(aes(x = sim_serocons , y = after_stat(count / sum(count))), fill = '#ef654a')+
-  scale_y_continuous(expand = c(0,0), limit = c(0, 0.07), breaks = seq(0, 0.07, by = 0.01))+
+  scale_y_continuous(expand = c(0,0), limit = c(0, 0.07), breaks = seq(0, 0.07, by = 0.01), name = 'Frequency')+
   scale_x_log10(name = expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(10**2, 10**7),
                 expand = c(0.02,0.02),
@@ -76,7 +81,7 @@ x <- ggplot()+
 
 y <- ggplot()+
   geom_histogram(aes(x = sim_observed , y = after_stat(count / sum(count))), fill = '#ef654a')+
-  scale_y_continuous(expand = c(0,0), limit = c(0, 0.07), breaks = seq(0, 0.07, by = 0.01))+
+  scale_y_continuous(expand = c(0,0), limit = c(0, 0.07), breaks = seq(0, 0.07, by = 0.01), name = 'Frequency')+
   scale_x_log10(name = expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(10**2, 10**7),
                 expand = c(0.02,0.02),
@@ -86,7 +91,7 @@ y <- ggplot()+
 
 z <- ggplot()+
   geom_histogram(aes(x = sim_both, y = after_stat(count / sum(count))), fill = '#ef654a')+
-  scale_y_continuous(expand = c(0,0), limit = c(0, 0.07), breaks = seq(0, 0.07, by = 0.01))+
+  scale_y_continuous(expand = c(0,0), limit = c(0, 0.07), breaks = seq(0, 0.07, by = 0.01), name = 'Frequency')+
   scale_x_log10(name = expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(10**2, 10**7),
                 expand = c(0.02,0.02),
@@ -96,4 +101,6 @@ z <- ggplot()+
 
 panel_s2b <- plot_grid(plot_grid(x,y,z,nrow = 1))
 panel_s2 <- plot_grid(panel_s2a,NULL, panel_s2b, nrow = 3, rel_heights= c(1,0.05,1))
+
+
 ## END ##
