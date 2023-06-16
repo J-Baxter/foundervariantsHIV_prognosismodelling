@@ -207,6 +207,7 @@ plt_3b <- ggplot(all_vars %>%
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
   annotation_logticks(sides = 'b') +  facet_wrap(.~model) +
+  facet_wrap(.~model, labeller = label_parsed) +
   #coord_flip() + 
   my_theme + theme(legend.position = 'none', 
                    panel.spacing = unit(2, "lines"), 
