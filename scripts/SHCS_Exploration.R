@@ -1,7 +1,6 @@
 #Swiss Cohort Analysis
 source('./scripts/dependencies.R')
 
-
 shcs_data <- read_csv("data/shcs_data.csv") %>% 
   rowid_to_column( "ID.pair") %>%
   mutate(across(contains('spVL'), ~ raise_to_power(10,.x)))
@@ -23,3 +22,6 @@ ggplot(shcs_data , aes(x = spVL.1, spVL.2)) +
    annotation_logticks() +
   my_theme + 
   theme(legend.position = 'none')
+
+## test models
+lm(spVL.2 ~ spVL.1 + sex.2 + riskgroup.2 + age.inf.2 , data = shcs_data) %>% summary()
