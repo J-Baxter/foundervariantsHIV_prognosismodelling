@@ -1,6 +1,7 @@
 #Swiss Cohort Analysis
 source('./scripts/dependencies.R')
 
+
 shcs_data <- read_csv("data/shcs_data.csv") %>% 
   rowid_to_column( "ID.pair") %>%
   mutate(across(contains('spVL'), ~ raise_to_power(10,.x)))
