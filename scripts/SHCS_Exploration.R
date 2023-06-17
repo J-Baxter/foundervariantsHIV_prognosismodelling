@@ -9,8 +9,12 @@ shcs_data <- read_csv("data/shcs_data.csv") %>%
 
 
 # Transform to long-format data table
-data_model <- shcs_data %>% 
-  pivot_longer(cols = -c(ID_pair), names_to = c(".value", "partner"), names_sep = "_" )
+shcs_data_long <- shcs_data %>% 
+  pivot_longer(cols = -c(ID_pair), names_to = c(".value", "partner"), names_sep = "_" ) %>%
+  group_by(ID_pair) %>%
+  mutate(SpVL_mean = mean(SpVL)) %>%
+  ungroup() %>% 
+  mutate(across(contains('SpVL'), .fns = ~log10(.x), .names = "log10_{.col}"))
 
 
 shcs_plt1a <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
@@ -59,3 +63,19 @@ shcs_plt1c <- ggplot(data_model) +
 
 shcs_panel <- plot_grid(shcs_plt1a, shcs_plt1b, shcs_plt1c, align = 'hv', labels = 'AUTO', nrow = 1)
 ggsave(plot = shcs_panel, filename = paste(figs_dir,sep = '/', "shcs_panel.jpeg"), device = jpeg, width = 14, height = 6) #Within-host dynamics -functional
+
+# Linear Models
+
+# Null Model: one coefficient, the overall mean for all individuals
+null_model <- lmer() #?
+
+# Unadjusted Model: each viral load is predicted by the coefficient for the couple
+unadjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_mean), data = shcs_data_long) 
+
+# Adjusted Model
+adjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_mean) + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
+
+# Adjusted Model - No couple effect
+adjustednocouple_model <- lm(log10_SpVL ~ 1 + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
+
+
