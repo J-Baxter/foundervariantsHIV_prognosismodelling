@@ -100,30 +100,33 @@ performance::r2(adjusted_model)
 # how couple intercept acheived without this.
 
 # Simulated data
-t <- shcs_data_long %>%
-  fastDummies::dummy_cols(remove_selected_columns = T) %>%
-  select(-starts_with('ID'), -starts_with('SpVL'), -contains('cohortmean')) 
+shcs_data_int <- shcs_data_long %>%
+  select(-starts_with('ID'), -starts_with('SpVL'), -contains('cohortmean'), -log10_SpVL) %>%
+  mutate(across(where(is.factor), .fns = ~ match(.x, unique(.x))))
 
-probs <- t %>% 
+cum_probs <- shcs_data_int %>% 
   select(where(is.integer)) %>% 
-  colMeans()
+  apply(.,2, function(x) cumsum(table(x))/length(x))
 
-sim_data_b <- mvtnorm::rmvnorm(n = 100, mean = as.vector(colMeans(t)), sigma = cov(t)) %>%
+sim_data <- mvtnorm::rmvnorm(n = 100, mean = as.vector(colMeans(shcs_data_int)), sigma = cov(shcs_data_int)) %>%
   as_tibble(name_repair = NULL) %>%
-  setNames(colnames(t)) %>%
-  mutate(across(partner_1:riskgroup_UNKNOWN, .fns = ~cut(.x,
-                                                         right = T,
-                                                         include.lowest = T,
-                                                         breaks = as.vector(c(min(.x), quantile(.x,probs[[cur_column()]]))),
-                                                         labels = 1,
-                                                         dig.lab = 0) %>% #Appears to be some threshold problem for risk group
-                  as.integer() %>%
-                  replace_na(0)))  %>%
-  pivot_longer(cols = partner_1:riskgroup_UNKNOWN, 
-               names_to = c('variable', 'level'),
-               names_sep = '_'
-               ) %>% 
+  setNames(colnames(shcs_data_int)) %>%
+  mutate(across(c(partner,riskgroup,sex), 
+                .fns = ~cut(.x,
+                            right = T,
+                            include.lowest = T,
+                            breaks = as.vector(c(min(.x), quantile(.x,cum_probs[[cur_column()]]))),
+                            labels = 1:length(cum_probs[[cur_column()]])))) %>%
+  mutate(sex = case_when(sex == 1 ~ 'M',
+                         sex == 2 ~ 'F')) %>%
+  mutate(riskgroup = case_when(riskgroup == 1 ~ "HET",
+                               riskgroup == 2 ~ "MSM",
+                               riskgroup == 3 ~ "PWID",
+                               riskgroup == 4 ~ "UNKNOWN",
+                               riskgroup == 5 ~ "OTHER")) %>%
+  mutate(across(where(is.character), .fns = ~as.factor(.x))) %>%
+  mutate(sex = relevel(sex, 'M')) %>%
+  mutate(riskgroup = factor(riskgroup, levels = c('PWID', 'HET', 'MSM', 'OTHER', 'UNKNOWN')))
 
-  filter(value == 1) %>%
-  pivot_wider(names_from = variable, 
-              values_from = level) 
+preds <- predict(adjusted_model, newdata = sim_data) #newlevels detected in data
+
