@@ -1,26 +1,34 @@
 #Swiss Cohort Analysis
 source('./scripts/dependencies.R')
+library(performance)
+library(stringi)
+library(lme4)
 
 shcs_data <-read_csv("data/shcs_data.csv", 
-                     col_types = cols(sex.1 = col_factor(levels = c("M", "F")), 
-                                      sex.2 = col_factor(levels = c("M", "F")), 
-                                      riskgroup.1 = col_factor(levels = c("HET", "MSM", "IDU", "OTHER", "UNKNOWN")), 
-                                      riskgroup.2 = col_factor(levels = c("HET", "MSM", "IDU", "OTHER", "UNKNOWN"))))%>%
+                     col_types = cols(sex.1 = readr::col_factor(levels = c("M", "F")), 
+                                      sex.2 = readr::col_factor(levels = c("M", "F")), 
+                                      riskgroup.1 = readr::col_factor(levels = c("HET", "MSM", "IDU", "OTHER", "UNKNOWN")), 
+                                      riskgroup.2 = readr::col_factor(levels = c("HET", "MSM", "IDU", "OTHER", "UNKNOWN"))))%>%
+  select(-contains('ID')) %>%
   rowid_to_column( "ID.pair") %>%
-  mutate(across(contains('riskgroup'), .fns = ~ recode_factor(.x, 'IDU' = "PWID"))) %>%
-  mutate(across(contains('spVL'), ~ raise_to_power(10,.x))) %>%
-  rename_with( ~ stri_replace_last_fixed(.x, '.', '_')) %>%
-  rename_with( ~ stri_replace_last_fixed(.x, 'spVL', 'SpVL')) 
+  mutate(across(contains('riskgroup'), .fns = ~ fct_recode(.x, PWID = "IDU"))) %>%
+  rename_with( ~ stri_replace_last_fixed(.x, 'spVL', 'SpVL')) %>%
+  mutate(across(contains('SpVL'), ~ raise_to_power(10,.x))) %>%
+  mutate(SpVL.couplemean = rowMeans(across(contains('SpVL')))) %>%
+  mutate(across(contains('SpVL'), .fns = ~log10(.x), .names = "log10_{.col}")) %>%
+  rename_with( ~ stri_replace_last_fixed(.x, '.', '_')) 
+  
 
 # Transform to long-format data table
 shcs_data_long <- shcs_data %>% 
-  pivot_longer(cols = -c(ID_pair), names_to = c(".value", "partner"), names_sep = "_" ) %>%
-  group_by(ID_pair) %>%
-  mutate(SpVL_couplemean = mean(SpVL)) %>%
-  ungroup() %>% 
-  mutate(SpVL_cohortmean = mean(SpVL)) %>%
-  mutate(across(contains('SpVL'), .fns = ~log10(.x), .names = "log10_{.col}")) %>%
-  mutate(partner = factor(partner, levels = c("1", "2")))
+  pivot_longer(cols = -c(ID_pair, contains('couplemean')), names_to = c(".value", "partner"), names_pattern  = "^(.*)_([0-9])$") %>%
+  mutate(across(ends_with('SpVL'), .fns = ~ mean(.x), .names = "{.col}_cohortmean")) %>%
+  mutate(partner = factor(partner, levels = c("1", "2"))) %>%
+  relocate(ID_pair) %>%
+  relocate(age.inf, .after = sex) %>%
+  relocate(ends_with('SpVL'), .after = riskgroup) %>%
+  relocate(ends_with('couplemean'), .after = log10_SpVL) 
+
 
 
 shcs_plt1a <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
@@ -86,10 +94,6 @@ unadjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_couplemean), data = shcs_dat
 # Adjusted Model
 adjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_couplemean) + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
 
-
-# Adjusted Model (but one that might work within the context of our framework)
-adjusted_direct_model <- lm(log10_SpVL_1 ~ log10_SpVL_2 + sex_1 + age.inf_1 + riskgroup_1, data = shcs_data) 
- 
 # Adjusted Model - No couple effect
 adjustednocouple_model <- lm(log10_SpVL ~ 1 + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
 
