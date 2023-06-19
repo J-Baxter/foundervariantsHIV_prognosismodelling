@@ -129,5 +129,7 @@ sim_data <- mvtnorm::rmvnorm(n = 100, mean = as.vector(colMeans(shcs_data_int)),
   mutate(riskgroup = factor(riskgroup, levels = c('PWID', 'HET', 'MSM', 'OTHER', 'UNKNOWN'))) %>%
   filter(min(shcs_data_long$log10_SpVL_couplemean)<log10_SpVL_couplemean && log10_SpVL_couplemean<max(shcs_data_long$log10_SpVL_couplemean))
 
-preds <- predict(adjusted_model, newdata = sim_data) #newlevels detected in data - current suspicion is random effects?
-ranef(adjusted_model)
+preds <-predict(adjusted_model, newdata = sim_data, re.form = ~(1|log10_SpVL_couplemean)) #newlevels detected in data - current suspicion is random effects?
+summary(adjusted_model)$coefficients[, 1]
+
+
