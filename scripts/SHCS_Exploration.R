@@ -21,7 +21,7 @@ shcs_data <-read_csv("data/shcs_data.csv",
 
 # Transform to long-format data table
 shcs_data_long <- shcs_data %>% 
-  pivot_longer(cols = -c(ID_pair, contains('couplemean')), names_to = c(".value", "partner"), names_pattern  = "^(.*)_([0-9])$") %>%
+  pivot_longer(cols = -c(ID_pair, contains('couplemean')), names_to = c(".value", "partner"), names_pattern  = "^(.*)_([0-9])$") %>% #matches('SpVL_[[:digit:]]')
   mutate(across(ends_with('SpVL'), .fns = ~ mean(.x), .names = "{.col}_cohortmean")) %>%
   mutate(partner = factor(partner, levels = c("1", "2"))) %>%
   relocate(ID_pair) %>%
@@ -83,57 +83,40 @@ shcs_plt1c <- ggplot(data_model) +
 shcs_panel <- plot_grid(shcs_plt1a, shcs_plt1b, shcs_plt1c, align = 'hv', labels = 'AUTO', nrow = 1)
 ggsave(plot = shcs_panel, filename = paste(figs_dir,sep = '/', "shcs_panel.jpeg"), device = jpeg, width = 14, height = 6) #Within-host dynamics -functional
 
-# Linear Models
+# SpVL ~ Riskgroup/Sex
 
-# Null Model: one coefficient, the overall mean for all individuals
-null_model <- lm(log10_SpVL ~ log10_SpVL_cohortmean, data = shcs_data_long)
+shsc_plt2a <- ggplot(shcs_data_long,aes(x = riskgroup, y = SpVL_couplemean)) +
+  geom_boxplot(fill = '#ef654a') + 
+  scale_y_log10(name = expression(paste("SpVL Partner 2", ' (', Log[10], " copies ", ml**-1, ')')),
+                #limits = c(10**2, 10**7),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x)) + 
+  stat_compare_means(method = "kruskal.test",label.x = 2.5, label.y = 6) +
+  theme_classic(base_family = "Questrial")+
+  theme(
+    text = element_text(size=16),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    legend.position = 'none', 
+    panel.spacing = unit(2, "lines")
+  )
 
-# Unadjusted Model: each viral load is predicted by the coefficient for the couple
-unadjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_couplemean), data = shcs_data_long) 
+shsc_plt2b <- ggplot(shcs_data_long, aes(x = sex, y = SpVL_couplemean)) +
+  geom_boxplot(fill = '#ef654a') + 
+  scale_y_log10(name = expression(paste("SpVL Partner 2", ' (', Log[10], " copies ", ml**-1, ')')),
+                #limits = c(10**2, 10**7),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x)) + 
+  stat_compare_means(method = "wilcox.test",   label.x = 1.5, label.y = 6) + 
+  
+  theme_classic(base_family = "Questrial")+
+  theme(
+    text = element_text(size=16),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    legend.position = 'none', 
+    panel.spacing = unit(2, "lines")
+  )
 
-# Adjusted Model
-adjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_couplemean) + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
-
-# Adjusted Model - No couple effect
-adjustednocouple_model <- lm(log10_SpVL ~ 1 + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
-
-performance::r2(adjusted_model)
-
-# Adjusted -  adjustednocouple
-# Q: not coming up with adjusted/unadjustd R2 - suspect this is lmm vs lm. Not clear 
-# how couple intercept acheived without this.
-
-# Simulated data
-shcs_data_int <- shcs_data_long %>%
-  select(-starts_with('ID'), -starts_with('SpVL'), -contains('cohortmean'), -log10_SpVL) %>%
-  mutate(across(where(is.factor), .fns = ~ match(.x, unique(.x))))
-
-cum_probs <- shcs_data_int %>% 
-  select(where(is.integer)) %>% 
-  apply(.,2, function(x) cumsum(table(x))/length(x))
-
-sim_data <- mvtnorm::rmvnorm(n = 100, mean = as.vector(colMeans(shcs_data_int)), sigma = cov(shcs_data_int)) %>%
-  as_tibble(name_repair = NULL) %>%
-  setNames(colnames(shcs_data_int)) %>%
-  mutate(across(c(partner,riskgroup,sex), 
-                .fns = ~cut(.x,
-                            right = T,
-                            include.lowest = T,
-                            breaks = as.vector(c(min(.x), quantile(.x,cum_probs[[cur_column()]]))),
-                            labels = 1:length(cum_probs[[cur_column()]])))) %>%
-  mutate(sex = case_when(sex == 1 ~ 'M',
-                         sex == 2 ~ 'F')) %>%
-  mutate(riskgroup = case_when(riskgroup == 1 ~ "HET",
-                               riskgroup == 2 ~ "MSM",
-                               riskgroup == 3 ~ "PWID",
-                               riskgroup == 4 ~ "UNKNOWN",
-                               riskgroup == 5 ~ "OTHER")) %>%
-  mutate(across(where(is.character), .fns = ~as.factor(.x))) %>%
-  mutate(sex = relevel(sex, 'M')) %>%
-  mutate(riskgroup = factor(riskgroup, levels = c('PWID', 'HET', 'MSM', 'OTHER', 'UNKNOWN'))) %>%
-  filter(min(shcs_data_long$log10_SpVL_couplemean)<log10_SpVL_couplemean && log10_SpVL_couplemean<max(shcs_data_long$log10_SpVL_couplemean))
-
-preds <-predict(adjusted_model, newdata = sim_data, re.form = ~(1|log10_SpVL_couplemean)) #newlevels detected in data - current suspicion is random effects?
-summary(adjusted_model)$coefficients[, 1]
-
-
+shcs_panel2 <- plot_grid(shcs_plt2a, shcs_plt2b, align = 'hv', labels = 'AUTO', nrow = 1)
+ggsave(plot = shcs_panel2, filename = paste(figs_dir,sep = '/', "shcs_panel2.jpeg"), device = jpeg, width = 14, height = 6) #Within-host dynamics -functional
