@@ -14,12 +14,26 @@ model_priors <- c(set_prior(coef = 'age.inf', group = 'log10_SpVL_couplemean', c
 
 p <- get_prior(formula = log10_SpVL ~  + partner + sex + age.inf + riskgroup + 1|log10_SpVL_couplemean, 
           data = shcs_data_long, family = gaussian())
-b_model <- brm(formula = log10_SpVL ~  + partner + sex + age.inf + riskgroup + 1|log10_SpVL_couplemean, 
+
+
+
+
+b2_model <- brm(bf (log10_SpVL ~  + partner + sex + age.inf + riskgroup + (1|log10_SpVL_couplemean), 
+                sigma ~ (1|log10_SpVL_couplemean)),
                data = shcs_data_long,
-               prior = NULL,
                chains = 4,
                iter = 8000,
-               cores = 4
+               cores = 4,
+               control = list(adapt_delta = 0.9)
                )
 
+ppe <- posterior_predict(b_model)
+str(ppe)
+ppe_simdata <- posterior_predict(b2_model, newdata = sim_data, allow_new_levels = TRUE, sample_new_levels = "gaussian", re_formula = (1|log10_SpVL_couplemean))
+str(ppe_simdata)
+
 fit_params <- MASS::fitdistr(shcs_data_long$age.inf,"lognormal")
+
+tidy_pred <- b2_model %>%
+  epred_draws() %>% 
+  summarise(mean.pred = mean(.epred), .groups = c(log10_SpVL_couplemean, partner))

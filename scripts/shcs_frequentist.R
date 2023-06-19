@@ -4,22 +4,42 @@
 # Null Model: one coefficient, the overall mean for all individuals
 null_model <- lm(log10_SpVL ~ log10_SpVL_cohortmean, data = shcs_data_long)
 
+
 # Unadjusted Model: each viral load is predicted by the coefficient for the couple
 unadjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_couplemean), data = shcs_data_long) 
 
-# Adjusted Model
-adjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_couplemean) + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
-
-
-# Adjusted Model (but one that might work within the context of our framework)
-adjusted_direct_model <- lm(log10_SpVL_1 ~ log10_SpVL_2 + sex_1 + age.inf_1 + riskgroup_1, data = shcs_data) 
 
 # Adjusted Model - No couple effect
 adjustednocouple_model <- lm(log10_SpVL ~ 1 + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
 
-performance::r2(adjusted_model)
 
-# Adjusted -  adjustednocouple
+# Adjusted Model
+# Baseline covariates: partner 1, sex M, riskgroup HET
+adjusted_model <- lmer(log10_SpVL ~ (1|log10_SpVL_couplemean) + partner + sex + age.inf + riskgroup, data = shcs_data_long) 
+adjusted_model <- lmer(log10_SpVL_1 ~ (log10_SpVL_2|ID_pair) +  sex_1 + age.inf_1 + riskgroup_1, data = shcs_data) 
+
+
+adjusted_model %>%
+  tidy("fixed") %>% 
+  mutate(p_value = 2*(1 - pnorm(abs(statistic))))
+
+adjusted_model.performance <- performance(adjusted_model)
+
+adjusted_model.fixed <- adjusted_model %>%
+  tidy("fixed") %>% 
+  mutate(p_value = 2*(1 - pnorm(abs(statistic))))
+
+adjusted_model.ranef <- adjusted_model %>%
+  tidy("ran_coefs")
+
+
+
+
+# AOV (Log10SpVL_CoupleMean ~ Riskgroup and Sex)
+
+
+
+
 # Q: not coming up with adjusted/unadjustd R2 - suspect this is lmm vs lm. Not clear 
 # how couple intercept acheived without this.
 
@@ -50,7 +70,7 @@ sim_data <- mvtnorm::rmvnorm(n = 100, mean = as.vector(colMeans(shcs_data_int)),
                                riskgroup == 5 ~ "OTHER")) %>%
   mutate(across(where(is.character), .fns = ~as.factor(.x))) %>%
   mutate(sex = relevel(sex, 'M')) %>%
-  mutate(riskgroup = factor(riskgroup, levels = c('PWID', 'HET', 'MSM', 'OTHER', 'UNKNOWN'))) %>%
+  mutate(riskgroup = factor(riskgroup, levels = c('HET', 'MSM', 'PWID', 'OTHER', 'UNKNOWN'))) %>%
   filter(min(shcs_data_long$log10_SpVL_couplemean)<log10_SpVL_couplemean && log10_SpVL_couplemean<max(shcs_data_long$log10_SpVL_couplemean))
 
 preds <-predict(adjusted_model, newdata = sim_data, re.form = ~(1|log10_SpVL_couplemean)) #newlevels detected in data - current suspicion is random effects?
