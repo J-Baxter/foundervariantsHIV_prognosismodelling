@@ -19,7 +19,7 @@ p <- get_prior(formula = log10_SpVL ~  + partner + sex + age.inf + riskgroup + 1
 
 
 b2_model <- brm(bf (log10_SpVL ~  + partner + sex + age.inf + riskgroup + (1|log10_SpVL_couplemean), 
-                sigma ~ (1|log10_SpVL_couplemean)), vg
+
                data = shcs_data_long,
                chains = 4,
                iter = 8000,
