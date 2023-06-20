@@ -28,7 +28,7 @@ shcs_data %>%
   stat_compare_means(method = "kruskal.test",label.x = 1.7, label.y = 7) +
   geom_jitter()
 
-
+# Encode categorical levels as integers, then split dataframe by riskgroup
 shcs_data_int_list <- shcs_data %>%
   rowwise() %>%
   filter(riskgroup_1 == riskgroup_2) %>%
@@ -40,9 +40,12 @@ shcs_data_int_list <- shcs_data %>%
   group_split() %>%
   lapply(., function(x) x %>% select(where(~n_distinct(.) > 1)))
 
-  
+# infer cumulative probabilites of discrete variables (within each riskgroup)
 cum_probs_list <- lapply(shcs_data_int_list, function(x) x %>% select(where(is.integer)) %>% apply(2, function(i) cumsum(table(i))/length(i), simplify = FALSE))
 
+# Function to simulate new data from a multivariate normal distribution, parametersied by 
+# the variance - covariance matrix for each group. categorical variables represented as integers
+# and re-factored according to cumulative probability distributions calculated. 
 TestFunc <- function(dataframe,probs) {
   out <- mvtnorm::rmvnorm(n = 200, mean = as.vector(colMeans(dataframe)), sigma = cov(dataframe)) %>%
     as_tibble(name_repair = NULL) %>%
@@ -65,7 +68,8 @@ sim_data_int_list <- mapply(TestFunc ,
                             probs = cum_probs_list,
                             SIMPLIFY = F) %>%
   setNames(., c('HET', 'MSM', 'PWID')) %>%
-  bind_rows(., .id = "riskgroup") 
+  bind_rows(., .id = "riskgroup") #maybe need some kind of truncation on the age 
+#(or also make this categorical to reflect the granularity of the data provided)
   
   
 # Plot covariance matrices
