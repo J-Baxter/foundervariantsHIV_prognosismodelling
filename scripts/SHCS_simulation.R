@@ -53,22 +53,20 @@ TestFunc <- function(dataframe,probs) {
                               include.lowest = T,
                               breaks = as.vector(c(min(.x), quantile(.x, probs[[cur_column()]]))),
                               labels = 1:length(probs[[cur_column()]])))) %>%
+    add_column(., !!!c(sex_1 = 1, sex_2 = 1)[setdiff(c('sex_1', 'sex_2'), colnames(.))]) %>%
     mutate(across(starts_with('sex'), .fns = ~ case_when(.x == 1 ~ 'M',
-                                                         .x == 2 ~ 'F'))) %>%
-    mutate(across(starts_with('riskgroup'), .fns = ~ case_when(.x == 1 ~ "HET",
-                                                               .x == 2 ~ "MSM",
-                                                               .x == 3 ~ "PWID",
-                                                               .x == 4 ~ "UNKNOWN",
-                                                               .x == 5 ~ "OTHER")))
+                                                         .x == 2 ~ 'F'))) 
+
   return(out)}
 
 
 sim_data_int_list <- mapply(TestFunc ,
-  data = shcs_data_int_list,
-  probs = cum_probs_list,
-  SIMPLIFY = F)
-
-# Rejoing other levels (transmission route, sex for msm)
-
+                            data = shcs_data_int_list,
+                            probs = cum_probs_list,
+                            SIMPLIFY = F) %>%
+  setNames(., c('HET', 'MSM', 'PWID')) %>%
+  bind_rows(., .id = "riskgroup") 
+  
+  
 # Plot covariance matrices
 
