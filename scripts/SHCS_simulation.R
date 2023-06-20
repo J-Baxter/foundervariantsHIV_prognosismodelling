@@ -68,9 +68,14 @@ sim_data_int_list <- mapply(TestFunc ,
                             probs = cum_probs_list,
                             SIMPLIFY = F) %>%
   setNames(., c('HET', 'MSM', 'PWID')) %>%
-  bind_rows(., .id = "riskgroup") #maybe need some kind of truncation on the age 
-#(or also make this categorical to reflect the granularity of the data provided)
-  
-  
+  bind_rows(., .id = "riskgroup") %>% #maybe need some kind of truncation on the age 
+  #(or also make this categorical to reflect the granularity of the data provided)
+  pivot_longer(cols = - c(contains('couplemean'), riskgroup), 
+               names_to = c(".value", "partner"), 
+               names_pattern  = "^(.*)_([0-9])$") %>% 
+  mutate(partner = factor(partner, levels = c("1", "2"))) %>%
+  relocate(c(partner, sex), .before = riskgroup) %>%
+  relocate(ends_with('couplemean'), .after = last_col()) 
+
 # Plot covariance matrices
 
