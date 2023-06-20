@@ -35,5 +35,11 @@ str(ppe_simdata)
 fit_params <- MASS::fitdistr(shcs_data_long$age.inf,"lognormal")
 
 tidy_pred <- b2_model %>%
-  epred_draws( newdata = sim_data, allow_new_levels = TRUE, sample_new_levels = "gaussian", re_formula = NULL) %>% 
-  summarise(mean.pred = mode(.epred), .groups = c(log10_SpVL_couplemean, partner))
+  epred_draws( newdata = shcs_data_, allow_new_levels = TRUE, sample_new_levels = "gaussian", re_formula = NULL) %>% 
+  group_by(log10_SpVL_couplemean, partner) %>%
+  summarise(mean.pred = mean(.epred))
+
+
+
+shcs_data_x <- shcs_data_long %>% mutate(log10_SpVL_couplemean = sort(log10_SpVL_couplemean))
+
