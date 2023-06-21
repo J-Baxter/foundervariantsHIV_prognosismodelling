@@ -22,16 +22,132 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 
 
 ################################### Import Data ###################################
-data <- read_delim('./data/pbio.1001951.s006.tsv', delim = '\t') %>%
-  rename(SpVL = spVL) #Post processing
+# Paired set point viral load (SpVL), age, riskgroup and sex data provided on request
+# by the Swiss HIV Cohort Study. These data were used in the analysis of Bertels et. al
+# 2018 https://academic.oup.com/mbe/article/35/1/27/4210012
 
-NSIM <- 100
-################################### Run Base Models ###################################
-source('./scripts/base_models.R')
+# NB: partner number is allocated randomly and does not assign transmitter/recipient status
+shcs_data <-read_csv("data/shcs_data.csv", 
+                     col_types = cols(sex.1 = readr::col_factor(levels = c("M", "F")), 
+                                      sex.2 = readr::col_factor(levels = c("M", "F")), 
+                                      riskgroup.1 = readr::col_factor(levels = c("HET", "MSM",
+                                                                                 "IDU", "OTHER",
+                                                                                 "UNKNOWN")), 
+                                      riskgroup.2 = readr::col_factor(levels = c("HET", "MSM", 
+                                                                                 "IDU", "OTHER", 
+                                                                                 "UNKNOWN"))))%>%
+  select(-contains('ID')) %>%
+  rowid_to_column( "ID.pair") %>%
+  mutate(across(contains('riskgroup'), 
+                .fns = ~ fct_recode(.x, PWID = "IDU"))) %>%
+  rename_with( ~ stri_replace_last_fixed(.x, 'spVL', 'SpVL')) %>%
+  mutate(across(contains('SpVL'), 
+                .fns = ~ raise_to_power(10, .x))) %>%
+  mutate(SpVL.couplemean = rowMeans(across(contains('SpVL')))) %>%
+  mutate(across(contains('SpVL'),
+                .fns = ~log10(.x), .names = "log10_{.col}")) %>%
+  rename_with( ~ stri_replace_last_fixed(.x, '.', '_')) 
 
-# Transmission model on SHCS transmitters (provides weightings for lm,)
-shcs_tm <- RunParallel(populationmodel_acrossVL_Environment, pop$transmitter, w= 1)%>%
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w')) 
+
+# Transform to long-format data table
+shcs_data_long <- shcs_data %>% 
+  pivot_longer(cols = -c(ID_pair, contains('couplemean')), 
+               names_to = c(".value", "partner"),
+               names_pattern  = "^(.*)_([0-9])$") %>% #matches('SpVL_[[:digit:]]')
+  mutate(across(ends_with('SpVL'),
+                .fns = ~ mean(.x), .names = "{.col}_cohortmean")) %>%
+  mutate(partner = factor(partner, levels = c("1", "2"))) %>%
+  relocate(ID_pair) %>%
+  relocate(age.inf, .after = sex) %>%
+  relocate(ends_with('SpVL'), .after = riskgroup) %>%
+  relocate(ends_with('couplemean'), .after = log10_SpVL) 
+
+
+################################### Fit/Import Base Models ###################################
+# Import fitted model
+source('./scripts/transmission_model.R')
+source('./scripts/tolerance_model.R')
+
+# Fit Bayesian linear mixed model to SHCS data
+source('./scripts/heritability_model.R')
+#source('./scripts/heritability_extra_model.R') # vary assumptions of heritability
+
+
+################################### Simulate Stratified Cohorts ###################################
+# Simulate riskgroup stratified cohorts according to covariance matrices from SHCS, calculated from
+# grouped data. Covariance and bias analysis at ./scripts/SHCS_simulation_misc.R
+
+# Filter data and enumerate remaining categorical levels
+shcs_data_int_list <- shcs_data %>%
+  rowwise() %>%
+  filter(riskgroup_1 == riskgroup_2) %>% # Only include pairs where both individuals share the same riskgroup
+  filter(!if_any(starts_with('riskgroup'), ~ . %in% c('UNKNOWN', 'OTHER'))) %>%
+  EnumerateLevels(.) #NB will drop any column with only 1 level
+
+
+# Infer cumulative probabilities for each categorical level
+cum_probs_list <- lapply(shcs_data_int_list, function(x) x %>%
+                           select(where(is.integer)) %>% 
+                           apply(2, function(i) cumsum(table(i)) / length(i), simplify = FALSE))
+
+
+# Run SimCohorts - see ./scripts/SHCS_simulation.R for details
+sim_data <- mapply(SimCohorts,
+                   data = shcs_data_int_list,
+                   probs = cum_probs_list,
+                   SIMPLIFY = F) %>%
+  setNames(., c('HET', 'MSM', 'PWID')) %>%
+  
+  # Re-organising simulated data
+  bind_rows(., .id = "riskgroup") %>% 
+  rowid_to_column( "ID_pair") %>%
+  pivot_longer(cols = - c(contains('couplemean'), riskgroup, ID_pair), 
+               names_to = c(".value", "partner"), 
+               names_pattern  = "^(.*)_([0-9])$") %>% 
+  mutate(partner = factor(partner, levels = c("1", "2"))) %>%
+  relocate(c(partner, sex), .before = riskgroup) %>%
+  relocate(ends_with('couplemean'), .after = last_col()) 
+
+
+################################### Predict SpVLs ###################################
+#Bind all datasets and label?
+
+shcs_pred <- epred_draws(heritability_model,
+                         newdata = shcs_data_long,
+                         allow_new_levels = TRUE, # allow new random effects levels
+                         sample_new_levels = "old_levels", #
+                         re_formula = ~ (1|log10_SpVL_couplemean),
+                         value = 'predicted_log10_SpVL') %>% # NULL retains the random effects formula in the model
+  select(-c(.chain, .iteration, .draw)) %>%
+  group_by(ID_pair, partner) %>%
+  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
+  select(-.row) %>%
+  distinct()
+
+segregated_pred <- epred_draws(heritability_model,
+                              newdata = sim_data,
+                              allow_new_levels = TRUE, # allow new random effects levels
+                              sample_new_levels = "old_levels", #
+                              re_formula = ~ (1|log10_SpVL_couplemean),
+                              ndraws = 4000,
+                              value = 'predicted_log10_SpVL') %>% # NULL retains the random effects formula in the model
+  select(-c(.chain, .iteration, .draw)) %>%
+  group_by(ID_pair, partner) %>%
+  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
+  select(-.row) %>%
+  distinct()
+
+
+################################### Predict CD4 decline ###################################
+shcs_pred$delta_CD4 <- ToleranceModel(shcs_pred$log10_SpVL_couplemean, shcs_pred$age.inf, shcs_pred$sex)
+
+segregated_pred$delta_CD4 <- ToleranceModel(segregated_pred$log10_SpVL_couplemean, segregated_pred$age.inf, segregated_pred$sex)
+
+
+
+################################### Calculate Joint Probability Dist MV/MP ###################################
+
+
 
 ################################### Estimate Heritability Under different Assumptions ###############################
 # Fit 
