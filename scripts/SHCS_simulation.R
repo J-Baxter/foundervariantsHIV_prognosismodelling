@@ -38,7 +38,8 @@ shcs_data_int_list <- shcs_data %>%
   mutate(across(starts_with('riskgroup'), .fns = ~ match(.x, c('HET', 'MSM', 'PWID')))) %>%
   group_by(riskgroup_1) %>%
   group_split() %>%
-  lapply(., function(x) x %>% select(where(~n_distinct(.) > 1)))
+  lapply(., function(x) x %>% select(where(~n_distinct(.) > 1))) %>%
+  setNames(c('HET', 'MSM', 'PWID'))
 
 # infer cumulative probabilites of discrete variables (within each riskgroup)
 cum_probs_list <- lapply(shcs_data_int_list, function(x) x %>% select(where(is.integer)) %>% apply(2, function(i) cumsum(table(i))/length(i), simplify = FALSE))
@@ -69,10 +70,10 @@ TestFunc <- function(dataframe,probs) {
   return(out)}
 
 
-sim_data_list <- mapply(TestFunc ,
-                            data = shcs_data_int_list,
-                            probs = cum_probs_list,
-                            SIMPLIFY = F) %>%
+sim_data <- mapply(TestFunc,
+                   data = shcs_data_int_list,
+                   probs = cum_probs_list,
+                   SIMPLIFY = F) %>%
   setNames(., c('HET', 'MSM', 'PWID')) %>%
   bind_rows(., .id = "riskgroup") %>% 
   pivot_longer(cols = - c(contains('couplemean'), riskgroup), 
@@ -82,5 +83,60 @@ sim_data_list <- mapply(TestFunc ,
   relocate(c(partner, sex), .before = riskgroup) %>%
   relocate(ends_with('couplemean'), .after = last_col()) 
 
-# Plot covariance matrices
+sim_data_int_list <- sim_data %>%
+  pivot_wider(names_from = partner, values_from = c(sex, age.inf)) %>%
+  mutate(across(starts_with('sex'), .fns = ~ match(.x, c('M', 'F')))) %>% 
+  mutate(across(starts_with('riskgroup'), .fns = ~ match(.x, c('HET', 'MSM', 'PWID')))) %>%
+  relocate(ends_with('couplemean'), .after = last_col())  %>%
+  group_by(riskgroup) %>%
+  group_split() %>%
+  lapply(., function(x) x %>% select(where(~n_distinct(.) > 1))) %>%
+  setNames(c('HET', 'MSM', 'PWID'))
+
+
+# Estimate cov-var matrices
+sim_data_covmats <- lapply(sim_data_int_list, cov)
+shcs_data_covmats <- lapply(shcs_data_int_list, cov)
+
+# Calculate normalise
+min_max_norm <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+sim_data_means <- lapply(sim_data_int_list, function(x) x %>% mutate(across(everything(), .fns = ~min_max_norm(.x)))) %>%
+  lapply(., colMeans)
+
+shcs_data_means <- lapply(shcs_data_int_list, function(x) x %>% mutate(across(everything(), .fns = ~min_max_norm(.x)))) %>%
+  lapply(., colMeans)
+
+# Calculate bias (x_sim - x)
+bias_means <- mapply(function(x_sim, x_emp) (x_sim - x_emp), x_sim = sim_data_means, x_emp = shcs_data_means, SIMPLIFY = F) %>%
+  lapply(., bind_rows) %>%
+  lapply(., function(x) add_column(x, !!!c(sex_1 = 0, sex_2 = 0)[setdiff(c('sex_1', 'sex_2'), colnames(x))])) %>%
+  bind_rows() %>%
+  add_column(riskgroup = c('HET', 'MSM', 'PWID')) %>%
+  pivot_longer(cols = -riskgroup, names_to = 'variable', values_to = 'bias')
+
+
+ggplot(bias_means) +
+  geom_col(aes(x = variable, y = bias))+ 
+  facet_wrap(.~riskgroup) +
+  my_theme + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+# Plot bias of new data vs original swiss data
+bias_covmats <- mapply(function(x_sim, x_emp) x_sim - x_emp, x_sim = sim_data_covmats, x_emp = shcs_data_covmats, SIMPLIFY = F) %>%
+  reshape2::melt() %>% 
+  tibble() %>%
+  rename(riskgroup = L1)
+
+ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) + 
+  geom_text(aes(label = signif(value, 3)), color = "black", size = 3) +
+  scale_fill_distiller(palette = 'OrRd') + 
+  facet_wrap(.~riskgroup) +
+  my_theme+ 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
