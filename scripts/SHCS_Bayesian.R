@@ -55,7 +55,8 @@ b2_model <- brm(log10_SpVL ~  + partner + sex + age.inf + riskgroup + (1|log10_S
                 prior = model_priors,
                 data = shcs_data_long,
                 chains = 4,
-                iter = 4000,
+                iter = 10000,
+                warmup = 1000, # 10% burn in 
                 cores = 4,
                 control = list(adapt_delta = 0.95)
                 )
