@@ -34,6 +34,22 @@ shcs_data %>%
 
 
 # Encode categorical levels as integers, then split dataframe by riskgroup
+EnumerateLevels <- function(x){
+  
+  out <- x  %>%
+    select(contains(c('sex', 'age', 'riskgroup', 'log10_SpVL_couplemean'))) %>%
+    mutate(across(starts_with('sex'), .fns = ~ match(.x, c('M', 'F')))) %>% 
+    mutate(across(starts_with('riskgroup'), .fns = ~ match(.x, c('HET', 'MSM', 'PWID')))) %>%
+    group_by(riskgroup_1) %>%
+    group_split() %>%
+    # Remove columns where there is only one variable
+    lapply(., function(x) x %>% select(where(~n_distinct(.) > 1))) %>%
+    setNames(c('HET', 'MSM', 'PWID'))
+  
+  return(out)
+  
+}
+
 shcs_data_int_list <- shcs_data %>%
   rowwise() %>%
   filter(riskgroup_1 == riskgroup_2) %>%
@@ -54,7 +70,7 @@ cum_probs_list <- lapply(shcs_data_int_list, function(x) x %>% select(where(is.i
 # Function to simulate new data from a multivariate normal distribution, parametersied by 
 # the variance - covariance matrix for each group. categorical variables represented as integers
 # and re-factored according to cumulative probability distributions calculated. 
-TestFunc <- function(dataframe,probs) {
+SimCohorts <- function(dataframe,probs) {
   lb <- ifelse(grepl("age.inf", names(dataframe)), 16, -Inf)
   
   out <- tmvtnorm::rtmvnorm(n = 200, 
