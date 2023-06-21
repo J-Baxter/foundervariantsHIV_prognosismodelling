@@ -47,7 +47,13 @@ cum_probs_list <- lapply(shcs_data_int_list, function(x) x %>% select(where(is.i
 # the variance - covariance matrix for each group. categorical variables represented as integers
 # and re-factored according to cumulative probability distributions calculated. 
 TestFunc <- function(dataframe,probs) {
-  out <- mvtnorm::rmvnorm(n = 200, mean = as.vector(colMeans(dataframe)), sigma = cov(dataframe)) %>%
+  lb <- ifelse(grepl("age.inf", names(dataframe)), 16, -Inf)
+  
+  out <- tmvtnorm::rtmvnorm(n = 200, 
+                          mean = as.vector(colMeans(dataframe)), 
+                          sigma = cov(dataframe),
+                          lower = lb,
+                          upper = rep(Inf, length = ncol(dataframe))) %>%
     as_tibble(name_repair = NULL) %>%
     setNames(colnames(dataframe)) %>%
     mutate(across(starts_with(c('sex', 'riskgroup')), 
@@ -63,13 +69,12 @@ TestFunc <- function(dataframe,probs) {
   return(out)}
 
 
-sim_data_int_list <- mapply(TestFunc ,
+sim_data_list <- mapply(TestFunc ,
                             data = shcs_data_int_list,
                             probs = cum_probs_list,
                             SIMPLIFY = F) %>%
   setNames(., c('HET', 'MSM', 'PWID')) %>%
-  bind_rows(., .id = "riskgroup") %>% #maybe need some kind of truncation on the age 
-  #(or also make this categorical to reflect the granularity of the data provided)
+  bind_rows(., .id = "riskgroup") %>% 
   pivot_longer(cols = - c(contains('couplemean'), riskgroup), 
                names_to = c(".value", "partner"), 
                names_pattern  = "^(.*)_([0-9])$") %>% 
