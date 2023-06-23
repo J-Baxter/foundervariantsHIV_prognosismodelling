@@ -86,7 +86,7 @@ shcs_data_int_list <- shcs_data %>%
 
 
 # Infer cumulative probabilities for each categorical level
-cum_probs_list <- lapply(shcs_data_int_list, function(x) x %>%
+cumulativeprobs_list <- lapply(shcs_data_int_list, function(x) x %>%
                            select(where(is.integer)) %>% 
                            apply(2, function(i) cumsum(table(i)) / length(i), simplify = FALSE))
 
@@ -94,7 +94,7 @@ cum_probs_list <- lapply(shcs_data_int_list, function(x) x %>%
 # Run SimCohorts - see ./scripts/SHCS_simulation.R for details
 sim_data <- mapply(SimCohorts,
                    data = shcs_data_int_list,
-                   probs = cum_probs_list,
+                   probs = cumulativeprobs_list,
                    SIMPLIFY = F) %>%
   setNames(., c('HET', 'MSM', 'PWID')) %>%
   
@@ -124,7 +124,8 @@ shcs_pred <- epred_draws(heritability_model,
   select(-.row) %>%
   distinct()
 
-segregated_pred <- epred_draws(heritability_model,
+
+stratified_pred <- epred_draws(heritability_model,
                               newdata = sim_data,
                               allow_new_levels = TRUE, # allow new random effects levels
                               sample_new_levels = "old_levels", #
@@ -139,14 +140,33 @@ segregated_pred <- epred_draws(heritability_model,
 
 
 ################################### Predict CD4 decline ###################################
-shcs_pred$delta_CD4 <- ToleranceModel(shcs_pred$log10_SpVL_couplemean, shcs_pred$age.inf, shcs_pred$sex)
+shcs_empirical$delta_CD4 <- ToleranceModel(shcs_data_long$log10_SpVL_couplemean, 
+                                           shcs_data_long$age.inf, 
+                                           shcs_data_long$sex)
 
-segregated_pred$delta_CD4 <- ToleranceModel(segregated_pred$log10_SpVL_couplemean, segregated_pred$age.inf, segregated_pred$sex)
+shcs_pred$delta_CD4 <- ToleranceModel(shcs_pred$log10_SpVL_couplemean, 
+                                      shcs_pred$age.inf, 
+                                      shcs_pred$sex)
 
+stratified_pred$delta_CD4 <- ToleranceModel(stratified_pred$log10_SpVL_couplemean,
+                                            stratified_pred$age.inf, 
+                                            stratified_pred$sex)
 
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
 
+# For transmitter = partner 1
+# One iteration each for: 1) Empirical data 2) Predicted SHCS 3)Stratified SHCS
+baseline_tm_partner1 <- c(RunParallel(TransmissionModel, shcs_pred %>% filter(partner == 1) %>% select(predicted_SpVL), w= 1),
+                        RunParallel(TransmissionModel, linear_uw_pop$transmitter, w= 5),
+                        RunParallel(TransmissionModel, linear_uw_pop$transmitter, w= 10),
+                        RunParallel(TransmissionModel, linear_uw_pop$transmitter, w= 20)) %>%
+  
+  # Label
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+
+
+# For transmitter = partner 2
 
 
 ################################### Estimate Heritability Under different Assumptions ###############################
