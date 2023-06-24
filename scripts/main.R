@@ -87,13 +87,16 @@ shcs_data_int_list <- shcs_data %>%
   dplyr::filter(!(riskgroup_1 == 'HET' & sex_1 == sex_2)) %>% # currently makes het cov matrix not positive definitive (ie singular)
   EnumerateLevels(.) #NB will drop any column with only 1 level
 
+# Sanity Check
+stopifnot(all(lapply(shcs_data_int_list, function(x) cov(x) %>% is.positive.definite())))
+
 
 # Infer cumulative probabilities for each categorical level
 cumulativeprobs_list <- lapply(shcs_data_int_list, function(x) x %>%
                            select(where(is.integer)) %>% 
                            apply(2, function(i) cumsum(table(i)) / length(i), simplify = FALSE))
 
-SimCohorts(shcs_data_int_list[[3]], cumulativeprobs_list[[3]])
+
 # Run SimCohorts - see ./scripts/SHCS_simulation.R for details
 stratified_data <- mapply(SimCohorts,
                    data = shcs_data_int_list,
@@ -104,6 +107,7 @@ stratified_data <- mapply(SimCohorts,
   # Re-organising simulated data
   bind_rows(., .id = "riskgroup") %>% 
   rowid_to_column( "ID_pair") %>%
+  separate_wider_position(cols = sex, widths = c(sex_1 = 1, sex_2 = 1)) %>%
   pivot_longer(cols = - c(contains('couplemean'), riskgroup, ID_pair), 
                names_to = c(".value", "partner"), 
                names_pattern  = "^(.*)_([0-9])$") %>% 
