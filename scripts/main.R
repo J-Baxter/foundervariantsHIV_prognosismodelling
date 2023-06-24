@@ -57,6 +57,9 @@ shcs_data_long <- shcs_data %>%
   mutate(across(ends_with('SpVL'),
                 .fns = ~ mean(.x), .names = "{.col}_cohortmean")) %>%
   mutate(partner = factor(partner, levels = c("1", "2"))) %>%
+  mutate(age.inf_category = cut(age.inf, 
+                              breaks = c(15,24,29,39,80), 
+                              labels = c('15-24', '25-29', '30-39','40-80'))) %>% # cut by default is exclusive of the lower bound
   relocate(ID_pair) %>%
   relocate(age.inf, .after = sex) %>%
   relocate(ends_with('SpVL'), .after = riskgroup) %>%
@@ -105,6 +108,9 @@ sim_data <- mapply(SimCohorts,
                names_to = c(".value", "partner"), 
                names_pattern  = "^(.*)_([0-9])$") %>% 
   mutate(partner = factor(partner, levels = c("1", "2"))) %>%
+  mutate(age.inf_category = cut(age.inf, 
+                                breaks = c(15,24,29,39,80), 
+                                labels = c('15-24', '25-29', '30-39','40-80'))) %>%
   relocate(c(partner, sex), .before = riskgroup) %>%
   relocate(ends_with('couplemean'), .after = last_col()) 
 
