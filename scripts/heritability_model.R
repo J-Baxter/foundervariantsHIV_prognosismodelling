@@ -19,19 +19,15 @@ require(performance)
 # Link to Hollingsworth et al.:
 # https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
-model_priors <- c(set_prior(coef = 'age.inf16-24', 
-                            class = 'b', 
-                            prior = 'normal(0.15, 2)'), # from Hollingsworth et al. 2010
-                  
-                  set_prior(coef = 'age.inf25-29', 
+model_priors <- c( set_prior(coef = 'age.inf_category25M29', 
                             class = 'b', 
                             prior = 'normal(0.32, 2)'), # from Hollingsworth et al. 2010
                   
-                  set_prior(coef = 'age.inf30-39', 
+                  set_prior(coef = 'age.inf_category30M39', 
                             class = 'b', 
                             prior = 'normal(0.35, 2)'), # from Hollingsworth et al. 2010
                   
-                  set_prior(coef = 'age.inf40-80', 
+                  set_prior(coef = 'age.inf_category40M80', 
                             class = 'b', 
                             prior = 'normal(0.73, 2)'), # from Hollingsworth et al. 2010
                   
@@ -94,7 +90,7 @@ model_priors <- c(set_prior(coef = 'age.inf16-24',
 # R-hat (compares the between- and within-chain estimates for model parameters) should
 # be less than 1.05 (our run == 1)
 
-heritability_model <- brm(log10_SpVL ~  + partner + sex + age.inf + riskgroup + (1|log10_SpVL_couplemean), 
+heritability_model <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
                           prior = model_priors,
                           data = shcs_data_long,
                           chains = 4,
