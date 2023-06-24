@@ -15,9 +15,21 @@ require(performance)
 # Partner2 and SexF informed from Hollingsworth et al 2010 linear model with random intercept for
 # mean pair log10 SpVL. Mean intercept informed from summary statistics of the SHCS data. 
 
-model_priors <- c(set_prior(coef = 'age.inf', 
+model_priors <- c(set_prior(coef = 'age.inf16-24', 
                             class = 'b', 
-                            prior = 'normal(0, 3)'), # Relatively uninformative
+                            prior = 'normal(0.15, 2)'), # from Hollingsworth et al. 2010
+                  
+                  set_prior(coef = 'age.inf25-29', 
+                            class = 'b', 
+                            prior = 'normal(0.32, 2)'), # from Hollingsworth et al. 2010
+                  
+                  set_prior(coef = 'age.inf30-39', 
+                            class = 'b', 
+                            prior = 'normal(0.35, 2)'), # from Hollingsworth et al. 2010
+                  
+                  set_prior(coef = 'age.inf40-80', 
+                            class = 'b', 
+                            prior = 'normal(0.73, 2)'), # from Hollingsworth et al. 2010
                   
                   set_prior(coef = 'partner2', 
                             class = 'b', 
@@ -29,15 +41,15 @@ model_priors <- c(set_prior(coef = 'age.inf',
                   
                   set_prior(coef = 'riskgroupPWID',
                             class = 'b', 
-                            prior = "normal(0,3)"), # Relatively uninformative
+                            prior = "normal(0,4)"), # Relatively uninformative
                   
                   set_prior(coef = 'riskgroupOTHER', 
                             class = 'b', 
-                            prior = "normal(0, 3)"), # Relatively uninformative
+                            prior = "normal(0, 4)"), # Relatively uninformative
                   
                   set_prior(coef = 'riskgroupUNKNOWN', 
                             class = 'b', 
-                            prior = "normal(0, 3)"), # Relatively uninformative
+                            prior = "normal(0, 4)"), # Relatively uninformative
                   
                   set_prior(coef = 'sexF', 
                             class = 'b', 
@@ -49,7 +61,7 @@ model_priors <- c(set_prior(coef = 'age.inf',
                   
                   set_prior(coef = '', # left intentionally blank
                             class = 'sd', 
-                            prior = "normal(0, 6)"), # Relatively uninformative
+                            prior = "normal(0, 4)"), # Relatively uninformative
                 
                  # set_prior(group = 'log10_SpVL_couplemean', 
                            # class = "sd",
@@ -58,11 +70,11 @@ model_priors <- c(set_prior(coef = 'age.inf',
                   set_prior(coef = 'Intercept',
                             class = "sd",
                             group = 'log10_SpVL_couplemean', 
-                            prior = "normal(0, 6)"), # Relatively uninformative
+                            prior = "normal(0, 4)"), # Relatively uninformative
                   
                   set_prior(coef = '', # left intentionally blank
                             class = 'sigma',
-                            prior = "normal(0, 6)") # Relatively uninformative
+                            prior = "normal(0, 4)") # Relatively uninformative
                   )
 
 
