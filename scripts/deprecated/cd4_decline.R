@@ -11,8 +11,10 @@ cd4_model <- lm(CD4.decline ~ spVL + I(spVL**2), data = cd4_data )
 #why does this fit differently to Poly(spVL, 2)?
 summary(cd4_model)
 confint(cd4_model, level = 0.95)
-
-
+CD4Decline <- function(log10SPVL){
+  deltaCD4 <- -0.1 + 0.051*log10SPVL - 0.017*(log10SPVL)**2
+  return(deltaCD4)
+} 
 CD4Decline <- function(log10SPVL,age){
   
   ##################################################
