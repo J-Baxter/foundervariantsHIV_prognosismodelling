@@ -10,7 +10,6 @@
 
 ################################### Dependencies ###################################
 source('./scripts/dependencies.R')
-source('./scripts/populationdata_acrossVL_models.R')
 source('./scripts/SimPop.R')
 source('./scripts/global_theme.R')
 source('./scripts/postprocessingfuncs.R')
@@ -85,6 +84,7 @@ shcs_data_int_list <- shcs_data %>%
   rowwise() %>%
   filter(riskgroup_1 == riskgroup_2) %>% # Only include pairs where both individuals share the same riskgroup
   filter(!if_any(starts_with('riskgroup'), ~ . %in% c('UNKNOWN', 'OTHER'))) %>%
+  dplyr::filter(!(riskgroup_1 == 'HET' & sex_1 == sex_2)) %>% # currently makes het cov matrix not positive definitive (ie singular)
   EnumerateLevels(.) #NB will drop any column with only 1 level
 
 
@@ -93,9 +93,9 @@ cumulativeprobs_list <- lapply(shcs_data_int_list, function(x) x %>%
                            select(where(is.integer)) %>% 
                            apply(2, function(i) cumsum(table(i)) / length(i), simplify = FALSE))
 
-
+SimCohorts(shcs_data_int_list[[3]], cumulativeprobs_list[[3]])
 # Run SimCohorts - see ./scripts/SHCS_simulation.R for details
-sim_data <- mapply(SimCohorts,
+stratified_data <- mapply(SimCohorts,
                    data = shcs_data_int_list,
                    probs = cumulativeprobs_list,
                    SIMPLIFY = F) %>%
@@ -112,13 +112,15 @@ sim_data <- mapply(SimCohorts,
                                 breaks = c(15,24,29,39,80), 
                                 labels = c('15-24', '25-29', '30-39','40-80'))) %>%
   relocate(c(partner, sex), .before = riskgroup) %>%
-  relocate(ends_with('couplemean'), .after = last_col()) 
+  relocate(ends_with('couplemean'), .after = last_col()) %>%
+  mutate(SpVL_couplemean = raise_to_power(10, log10_SpVL_couplemean)) %>%
+  mutate(dataset = paste('stratified', riskgroup, sep = '_'))
 
 
 ################################### Predict SpVLs ###################################
 #Bind all datasets and label?
 
-shcs_pred <- epred_draws(heritability_model,
+shcs_h2preds <- epred_draws(heritability_model,
                          newdata = shcs_data_long,
                          allow_new_levels = TRUE, # allow new random effects levels
                          sample_new_levels = "old_levels", #
@@ -132,7 +134,7 @@ shcs_pred <- epred_draws(heritability_model,
 
 
 stratified_pred <- epred_draws(heritability_model,
-                              newdata = sim_data,
+                              newdata = stratified_data,
                               allow_new_levels = TRUE, # allow new random effects levels
                               sample_new_levels = "old_levels", #
                               re_formula = ~ (1|log10_SpVL_couplemean),
@@ -144,6 +146,24 @@ stratified_pred <- epred_draws(heritability_model,
   select(-.row) %>%
   distinct()
 
+
+################################### Separate DFs ###################################
+combined_data <- list(
+  shcs_empirical = shcs_data_long %>%
+    select(-contains('cohortmean')),
+  
+  shcs_predicted = shcs_h2preds %>%
+    select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL')),
+  
+  stratified_het = stratified_pred  %>%
+    filter(dataset = stratified_HET),
+  
+  stratified_msm = stratified_pred  %>%
+    filter(dataset = stratified_MSM),
+  
+  stratified_pwid = stratified_pred  %>%
+    filter(dataset = stratified_PWID)
+)
 
 ################################### Predict CD4 decline ###################################
 shcs_empirical$delta_CD4 <- ToleranceModel(shcs_data_long$log10_SpVL_couplemean, 
