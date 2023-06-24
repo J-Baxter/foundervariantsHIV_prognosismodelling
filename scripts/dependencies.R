@@ -7,7 +7,10 @@
 ############################# Check necessary packages are available and install; import if not.
 pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'scales',
           'sysfonts', 'showtext', 'showtextdb', 'ggExtra', 'ggdag', 'brms', 'magrittr',
-          'RColorBrewer') 
+          'RColorBrewer', 'tmvtnorm') 
+
+# NB: package tmvtnorm will require gfortranand gcc to be installed and present in your system path
+# /usr/local/lib/
 
 for (pkg in pkgs){
   
