@@ -12,8 +12,12 @@ require(performance)
 
 
 ################################### Set Model Priors ###################################
-# Partner2 and SexF informed from Hollingsworth et al 2010 linear model with random intercept for
-# mean pair log10 SpVL. Mean intercept informed from summary statistics of the SHCS data. 
+# Partner2, SexF and age categories informed from Hollingsworth et al 2010 linear model 
+# with random intercept for mean pair log10 SpVL. Mean intercept informed from summary 
+# statistics of the SHCS data. 
+
+# Link to Hollingsworth et al.:
+# https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1000876
 
 model_priors <- c(set_prior(coef = 'age.inf16-24', 
                             class = 'b', 
