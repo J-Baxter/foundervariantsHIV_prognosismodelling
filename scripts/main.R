@@ -13,7 +13,7 @@ source('./scripts/dependencies.R')
 source('./scripts/SimPop.R')
 source('./scripts/global_theme.R')
 source('./scripts/postprocessingfuncs.R')
-
+source('./scripts/simulate_cohorts_funcs.R')
 
 # Set Seed
 set.seed(4472)
@@ -129,12 +129,14 @@ shcs_h2preds <- epred_draws(heritability_model,
                          allow_new_levels = TRUE, # allow new random effects levels
                          sample_new_levels = "old_levels", #
                          re_formula = ~ (1|log10_SpVL_couplemean),
-                         value = 'predicted_log10_SpVL') %>% # NULL retains the random effects formula in the model
+                         value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
   mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
+  mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
-  distinct()
+  distinct() %>%
+  ungroup()
 
 
 stratified_pred <- epred_draws(heritability_model,
@@ -143,60 +145,64 @@ stratified_pred <- epred_draws(heritability_model,
                               sample_new_levels = "old_levels", #
                               re_formula = ~ (1|log10_SpVL_couplemean),
                               ndraws = 4000,
-                              value = 'predicted_log10_SpVL') %>% # NULL retains the random effects formula in the model
+                              value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
   mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
+  mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
-  distinct()
+  distinct() %>%
+  ungroup()
 
 
 ################################### Separate DFs ###################################
 combined_data <- list(
   shcs_empirical = shcs_data_long %>%
-    select(-contains('cohortmean')),
+    select(-contains('cohortmean')) %>%
+    mutate(dataset = 'shcs_empirical'),
   
   shcs_predicted = shcs_h2preds %>%
-    select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL')),
+    select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
+    mutate(dataset = 'shcs_predicted') %>%
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
   
   stratified_het = stratified_pred  %>%
-    filter(dataset = stratified_HET),
+    filter(dataset == 'stratified_HET') %>%
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
   
   stratified_msm = stratified_pred  %>%
-    filter(dataset = stratified_MSM),
+    filter(dataset == 'stratified_MSM') %>%
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
   
   stratified_pwid = stratified_pred  %>%
-    filter(dataset = stratified_PWID)
-)
+    filter(dataset == 'stratified_PWID') %>%
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))
+) %>%
+  bind_rows()
 
 ################################### Predict CD4 decline ###################################
-shcs_empirical$delta_CD4 <- ToleranceModel(shcs_data_long$log10_SpVL_couplemean, 
-                                           shcs_data_long$age.inf, 
-                                           shcs_data_long$sex)
 
-shcs_pred$delta_CD4 <- ToleranceModel(shcs_pred$log10_SpVL_couplemean, 
-                                      shcs_pred$age.inf, 
-                                      shcs_pred$sex)
-
-stratified_pred$delta_CD4 <- ToleranceModel(stratified_pred$log10_SpVL_couplemean,
-                                            stratified_pred$age.inf, 
-                                            stratified_pred$sex)
+combined_data_CD4 <- combined_data  %>%
+  mutate(delta_CD4 = ToleranceModel(log10_SpVL,
+                                    age.inf,
+                                    sex))
 
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
 
 # For transmitter = partner 1
 # One iteration each for: 1) Empirical data 2) Predicted SHCS 3)Stratified SHCS
-baseline_tm_partner1 <- c(RunParallel(TransmissionModel, shcs_pred %>% filter(partner == 1) %>% select(predicted_SpVL), w= 1),
-                        RunParallel(TransmissionModel, linear_uw_pop$transmitter, w= 5),
-                        RunParallel(TransmissionModel, linear_uw_pop$transmitter, w= 10),
-                        RunParallel(TransmissionModel, linear_uw_pop$transmitter, w= 20)) %>%
+combined_data_CD4_PMV <- c(RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 1),
+                        RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 5),
+                        RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 10),
+                        RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 20)) %>%
   
   # Label
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','transmitter',  'w'))
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL',  'w'))
 
 
-# For transmitter = partner 2
+################################### Format Model Outputs ###################################
+
 
 
 ################################### Estimate Heritability Under different Assumptions ###############################
@@ -488,14 +494,7 @@ linear_w_virions_timing <- linear_w_tm %>%
   mutate(cd4_decline = predict(tolerance_model, newdata = data.frame(SpVL = log10(recipient))))
 
 
-# Q4: Do we expect epidemic characteristics to impact the observation of the assocation between 
-# multiple variant infection and CD4+ T Cell decline?
 
-# Baseline population; characteristics sampled at random. Re-simulate with characteristics extracted
-# from RV144 and HVTN502 (STEP) (representing a HSX and MSM epidemic)
-
-rv144_chars
-hvtn502_chars
 
 
 ################################### Sensitivity Analysis ################################### 
