@@ -4,11 +4,11 @@
 # Import and format data
 
 
-# Step 1: Regress the dependent variable on the independent variable to confirm that the
+# Step 1: Regress the dependent variable (CD4) on the independent variable (MV) to confirm that the
 # independent variable is a significant predictor of the dependent variable.
 
 
-# Step 2: Regress the mediator on the independent variable to confirm that the independent 
+# Step 2: Regress the mediator (SpVL) on the independent variable (MV) to confirm that the independent 
 # variable is a significant predictor of the mediator. If the mediator is not associated with
 # the independent variable, then it couldn’t possibly mediate anything.
 
