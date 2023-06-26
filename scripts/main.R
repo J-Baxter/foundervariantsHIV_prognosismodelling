@@ -164,21 +164,26 @@ combined_data <- list(
   shcs_predicted = shcs_h2preds %>%
     select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
     mutate(dataset = 'shcs_predicted') %>%
+    mutate(ID_pair = ID_pair + 196) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
   
   stratified_het = stratified_pred  %>%
     filter(dataset == 'stratified_HET') %>%
+    mutate(ID_pair = ID_pair + 196*2) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
   
   stratified_msm = stratified_pred  %>%
     filter(dataset == 'stratified_MSM') %>%
+    mutate(ID_pair = ID_pair + 196*2) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
   
   stratified_pwid = stratified_pred  %>%
     filter(dataset == 'stratified_PWID') %>%
+    mutate(ID_pair = ID_pair + 196*2) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+
 
 ################################### Predict CD4 decline ###################################
 
@@ -192,18 +197,37 @@ combined_data_CD4 <- combined_data  %>%
 
 # For transmitter = partner 1
 # One iteration each for: 1) Empirical data 2) Predicted SHCS 3)Stratified SHCS
-combined_data_CD4_PMV <- c(RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 1),
+# Each weighting runs for 1.5 hrs approx
+combined_data_PMV <- c(RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 1),
                         RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 5),
                         RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 10),
                         RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 20)) %>%
   
   # Label
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL',  'w'))
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL',  'w')) %>%
+  mapply(function(x,y) c(x, y ),
+         x= ., 
+         y = combined_data_CD4 %>% group_split(ID_pair, SpVL), 
+         SIMPLIFY = F)
 
 
 ################################### Format Model Outputs ###################################
-
-
+combined_data_CD4_PMV <- combined_data_PMV %>%
+  lapply(., function(x) c(x, list('p_particles' = rowSums(x[['variant_distribution']] %>%
+                                                            select(-nparticles) %>% 
+                                                            as.vector())))) %>%
+  lapply(., function(x) c(x, list('p_variants' = colSums(x[['variant_distribution']] %>% 
+                                                           select(-c(nparticles, prob_nparticles)))))) %>%
+  lapply(., function(x) bind_cols(bind_cols(x[-c(1,2,3, 17,18)]), 
+                                  bind_cols(particles = 1:33, x[17]) %>% 
+                                    pivot_wider(names_from = particles, values_from = p_particles, names_prefix = 'p_particles_'), 
+                                  bind_cols(variants = 1:33, x[18]) %>%
+                                    pivot_wider(names_from = variants, values_from = p_variants, names_prefix = 'p_variants_'))) %>%
+  bind_rows() %>%
+  select(-ends_with(as.character(13:33)))
+  
+  
+  
 
 ################################### Estimate Heritability Under different Assumptions ###############################
 # Fit 
