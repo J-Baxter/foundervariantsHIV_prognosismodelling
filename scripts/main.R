@@ -240,7 +240,12 @@ combined_data_CD4_PMV <- combined_data_PMV %>%
 stopifnot(dim(combined_data_CD4_PMV) == c(7936, 37))
   
   
-  
+# Save to file (so you don't have to run again!)
+write.csv(combined_data_CD4_PMV, paste0(results_dir, '/combined_results_CD4_PM.csv'))
+
+
+################################### Format Model Outputs ###################################
+
 
 ################################### Estimate Heritability Under different Assumptions ###############################
 # Fit 
