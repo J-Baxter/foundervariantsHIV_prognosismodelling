@@ -212,19 +212,32 @@ combined_data_PMV <- c(RunParallel(TransmissionModel, combined_data_CD4$SpVL, w=
 
 
 ################################### Format Model Outputs ###################################
+# Warning: this will take some time to run
+
 combined_data_CD4_PMV <- combined_data_PMV %>%
+  # Sum joint probabilities to estimate marginal probabilities of the number of variants and 
+  # virus particles initiating infection
+  
   lapply(., function(x) c(x, list('p_particles' = rowSums(x[['variant_distribution']] %>%
                                                             select(-nparticles) %>% 
                                                             as.vector())))) %>%
   lapply(., function(x) c(x, list('p_variants' = colSums(x[['variant_distribution']] %>% 
                                                            select(-c(nparticles, prob_nparticles)))))) %>%
+  
+  # Process model outputs to form dataframe where each row contains all results for one participant
   lapply(., function(x) bind_cols(bind_cols(x[-c(1,2,3, 17,18)]), 
                                   bind_cols(particles = 1:33, x[17]) %>% 
                                     pivot_wider(names_from = particles, values_from = p_particles, names_prefix = 'p_particles_'), 
                                   bind_cols(variants = 1:33, x[18]) %>%
                                     pivot_wider(names_from = variants, values_from = p_variants, names_prefix = 'p_variants_'))) %>%
   bind_rows() %>%
+  
+  # Remove high number variants/virions (probability of these events is approximately equivalent to 0)
   select(-ends_with(as.character(13:33)))
+
+
+# Confirm output is a dataframe of dimensions 
+stopifnot(dim(combined_data_CD4_PMV) == c(7936, 37))
   
   
   
