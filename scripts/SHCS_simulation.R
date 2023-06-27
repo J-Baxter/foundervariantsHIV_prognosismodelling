@@ -33,23 +33,7 @@ shcs_data %>%
   geom_jitter()
 
 
-# Encode categorical levels as integers, then split dataframe by riskgroup
-EnumerateLevels <- function(x){
-  
-  out <- x  %>%
-    select(contains(c('sex', 'age', 'riskgroup', 'log10_SpVL_couplemean'))) %>%
-    unite(sex ,c(sex_1, sex_2), sep = '') %>%
-    mutate(across(starts_with('sex'), .fns = ~ match(.x, c('MF', 'FM', 'MM', 'FF')))) %>% 
-    mutate(across(starts_with('riskgroup'), .fns = ~ match(.x, c('HET', 'MSM', 'PWID')))) %>%
-    group_by(riskgroup_1) %>%
-    group_split() %>%
-    # Remove columns where there is only one variable
-    lapply(., function(x) x %>% select(where(~n_distinct(.) > 1))) %>%
-    setNames(c('HET', 'MSM', 'PWID'))
-  
-  return(out)
-  
-}
+
 
 shcs_data_int_list <- shcs_data %>%
   rowwise() %>%
