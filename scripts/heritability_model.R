@@ -109,5 +109,27 @@ heritability_model <- brm(log10_SpVL ~  + partner + sex + age.inf_category + ris
 
 # prior_summary(b2_model) obtain dataframe of priors used in model.
                 
+# Check Residuals
+# Plot residuals with associated uncertainty
+plt_residuals <- shcs_data_long %>%
+  add_residual_draws(heritability_model) %>%
+  ggplot(aes(x = .row, y = .residual)) + 
+  stat_pointinterval() + 
+  my_theme
+
+# QQ plot
+plt_qq <- shcs_data_long %>%
+  add_residual_draws(heritability_model) %>%
+  median_qi() %>%
+  ggplot(aes(sample = .residual)) + 
+  geom_qq() + 
+  geom_qq_line()+ 
+  my_theme
+
+# Plot Prior ~ Posterior distributions
+
+# Plot Joint posterior chain
+
+
 
 ################################### END ###################################
