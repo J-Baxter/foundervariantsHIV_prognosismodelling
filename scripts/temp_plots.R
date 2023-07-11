@@ -4,6 +4,41 @@ combined_data_CD4_PMV_wide_long <- combined_data_CD4_PMV %>%
   pivot_longer(cols = starts_with('p_'), names_to = 'x', values_to = 'probability') %>%
   separate(x, sep = '_', c(NA, 'type', 'x', 'partner'))
 
+ggplot(combined_data_CD4_PMV_wide %>% filter(dataset == 'shcs_predicted'), 
+      aes(x = 1 - p_variants_1_1, 
+          y = SpVL_2 #,
+          #colour = as.factor(w)
+      ))+
+  geom_point(shape= 4, size = 4, colour = '#ef654a') +
+  #scale_colour_brewer(palette = 'OrRd') +
+  scale_y_log10(name = expression(paste("Partner 2 SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**2, 10**6),
+                expand = c(0.02,0.02),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_x_continuous(name = 'P(Multiple Variant Partner 1)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  annotation_logticks(sides = 'l') +
+  my_theme
+
+ggplot(combined_data_CD4_PMV_wide %>% filter(dataset == 'shcs_predicted'), 
+       aes(x = 1 - p_variants_1_2, 
+           y = delta_CD4_1 #,
+           #colour = as.factor(w)
+       ))+
+  geom_point(shape= 4, size = 4, colour = '#ef654a') +
+  #scale_colour_brewer(palette = 'OrRd') +
+  scale_y_continuous(name = expression(paste('Partner 1', Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),
+                     expand = c(0,0),
+                     limits = c(-0.6,0)) +
+  scale_x_continuous(name = 'P(Multiple Variants Partner 2)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.5),
+                     breaks = seq(0, 0.5, by = 0.1)) +
+  geom_smooth(method = 'lm')+
+  my_theme
 
 
 plt_2e <-  ggplot(combined_data_CD4_PMV_wide_long %>% filter(type == 'variants'), aes(y = SpVL_1, x = x, fill = probability), data =  linear_uw_variants ) + 
