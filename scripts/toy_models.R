@@ -1,54 +1,71 @@
-# Simulating Model Pop (Transmitters)
-source('./scripts/SimPop.R')
+# Under what conditions might we expect to observe an association between multiple variant infection and SpVL
+#
+# This script follows the linear equations set out by Bonhoeffer et al. 2015 that describes the 
+# changes of the distribution of set point viral load in the HIV carrier population over a full 
+# cycle of transmission
+# https://doi.org/10.1371/journal.ppat.1004634
+#
+# We extend the linear equations to decompose the recipient distribution of SpVL into distributions for
+# single and multple variant infections, leveraging the effect sizes and means calculated by Janes et al. 
+# 2015 
+# https://doi.org/10.1038/nm.3932 
 
-##########################
-# Gaussian approximation of Transmission Potential
-u_0 <- 4.46 #TP 
-v_0 <- 0.96 #TP
 
-# Distribution of environmental effects 
-mu_e <- 3 #env
-v_e <- 1 #env
+################################### Dependencies ###################################
 
-# Change of the viral genotype due to intrahost evolution 
-mu_i <- 0.2 # genetic change in the virus that affects log spVL across all patients in the same wa
-v_i <- 0.15 # genetic changes that affect log spVL in a manner that is specific to the patient
+BonhoefferEqns <- function(MC, VC){
+  
+  # Variables
+  # MC <- Carrier phenotype
+  # VC <- Carrier variance
+  u_0 <- 4.46  # Gaussian approximation of Transmission Potential
+  v_0 <- 0.96  # Gaussian approximation of Transmission Potential
+  mu_e <- 3  # Distribution of environmental effects 
+  v_e <- 1  # Distribution of environmental effects 
+  v_t <- 0.15 # variance asssociated with sampling at transmission
+  
+  # Subtract environmental effects to calculate genotypic distribution
+  m_c <- MC - mu_e
+  v_c <- VC - v_e
+  
+  # Apply transmission potential to infer donor genotype
+  m_d <- (m_c*(v_e + v_0) + (mu_0 - mu_e)*v_c)/(v_c + v_e + v_0)
+  v_d <- (v_c*(v_e + v_0))/(v_c + v_e + v_0)
+  
+  # Infer donor phenotype
+  MD <- (MC*v_0 + mu_0*VC)/(v_0 + VC)
+  VD <- (VC*v_0)/(v_0 + VC)
+  
+  # sample from donor genotypes for recipient genotypes
+  m_r <- m_d 
+  v_r <- v_d + v_t
+  
+  # Re-distribute environmental variance for recipient phenotype
+  MR <- m_r + mu_e
+  VR <- v_r + v_e
+  
+  out <- c('mean' = MR,
+           'variance' = VR)
+  
+  return(out)
+}
 
-# variance asssociated with sampling at transmission
-v_t <- 0.15
 
-# SpVL distribution from Zambia Cohort
-VC <- 0.61 
-MC <- 4.74 
+################################### Calculate Recipient Dist ###################################
+zambia_variance <- 0.61 
+zambia_mean <- 4.74 
 
-# Subtract environmental effects
-m_c <- MC - mu_e
-v_c <- VC - v_e
+recipient_dist <- BonhoefferEqns(zambia_mean, 
+                                 zambia_variance)
 
-# Infer donor genotype
-m_d <- (m_c*(v_e + v_0) + (mu_0 - mu_e)*v_c)/(v_c + v_e + v_0)
-v_d <- (v_c*(v_e + v_0))/(v_c + v_e + v_0)
 
-# Infer donor phenotype
-MD <- (MC*v_0 + mu_0*VC)/(v_0 + VC)
-VD <- (VC*v_0)/(v_0 + VC)
+################################### Decompose Recipient Distribution ###################################
 
-# sample from donor genotypes for recipient genotypes
-m_r <- m_d #(m_d)*0.7 + (m_d+0.3)*0.3
-v_r <- v_d + v_t
 
-# Re-distribute environmental variance for recipient phenotype
-MR <- m_r + mu_e
-VR <- v_r + v_e       
 
-n <- 200
-vls <- tibble(donor = rnorm(n, MD, sqrt(VD)), 
-              carrier = rnorm(n, MC, VC),
-              recipient = rnorm(n, MR, VR)) %>%
-  pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
 
-ggplot(vls ) + 
-  geom_density(aes(x = vl ,fill = stage), alpha = 0.5)
+################################### Simulate proportion of significant observations ###################################
+
 
 
 
@@ -88,7 +105,10 @@ test_tibble <- test %>%
   mutate(effect_size = rep(effect_size,  60)) %>%
   select(-contains('Var'))
 
-ggplot(test_tibble) +
+
+################################### Export to file ###################################
+
+plt1a <- ggplot(test_tibble) +
   geom_tile(aes(x = p_mv, y = effect_size, fill = value))+    
   geom_point(x = 0.32, y = 0.293, shape = 4, colour = 'white') + 
   annotate("text", label = "Janes et al. RV144",
@@ -113,5 +133,23 @@ ggplot(test_tibble) +
   scale_y_continuous('SpVL Effect Size of Multiple Variants', expand= c(0,0)) +
   scale_x_continuous('Cohort P(Multiple Variants)', expand= c(0,0))+
   scale_fill_distiller(palette = 'OrRd', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
-  my_theme + theme(legend.position = 'bottom')
+  my_theme 
 
+
+vls <- tibble(recipient_mean = rnorm(10000, MR, sqrt(VR)), 
+              recipient_mv = rnorm(10000, MR+0.3, sqrt(VR)),
+              recipient_sv = rnorm(10000, MR-0.7, sqrt(VR))) %>%
+  pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
+
+plt1b <- ggplot(vls ) + 
+  geom_density(aes(x = vl ,fill = stage), alpha = 0.5)+
+  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0))+
+  scale_y_continuous('Density', expand= c(0,0))+
+  scale_fill_brewer(palette = 'OrRd')+
+  geom_vline(xintercept = MR+0.3,  linetype = 2)+
+  geom_vline(xintercept = MR-0.7,  linetype = 2)+
+  geom_vline(xintercept = MR, linetype = 2)+
+  facet_wrap(.~stage, nrow = 3)+
+  my_theme
+
+cowplot::plot_grid(plt1b, plt1a, align = 'hv', nrow = 1, labels = 'AUTO')
