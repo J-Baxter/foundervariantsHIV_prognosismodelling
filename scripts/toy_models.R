@@ -59,6 +59,46 @@ recipient_dist <- BonhoefferEqns(zambia_mean,
                                  zambia_variance)
 
 
+DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effect_size){
+  
+  # recipient_mean = (1 - p_mv)*x + p_mv*(x + effect_size)
+  # Because weights of finite mixture must sum to 1; rearranges to:
+  sv_mean <- recipient_mean - p_mv*effect_size  
+  mv_mean <- sv_mean + effect_size
+
+ 
+  #recipient_var <- p_m*(y + mv_mean^2) + (1-p_mv)*(y + sv_mean^2) - recipient_mean^2
+  # Rearranges for the same reasons
+  decomposed_var <- recipient_var + recipient_mean^2 - p_mv * mv_mean^2 - (1 - p_mv) * sv_mean^2
+  
+  out <- list('sv' = c('mean' = sv_mean, 'var' = decomposed_var),
+              'mv' = c('mean' = mv_mean, 'var' = decomposed_var))
+  
+  return(out)
+}
+
+decomp_vl <- DecomposeRecipientSpVL(4.74, 0.61, 0.3, 0.3)
+
+# Assumption of equal variances justified by Janes et al.
+vls <- tibble(recipient_mean = rnorm(100000, 4.74, sqrt(0.61)), 
+              recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
+              recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
+  pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
+
+facet.labs <- c("Recipient Population", "Multiple Variant Recipients", "Single Variant Recipients")
+names(facet.labs) <- c('recipient_mean', 'recipient_mv', 'recipient_sv')
+
+plt1b <- ggplot(vls ) + 
+  geom_density(aes(x = vl ,fill = stage), alpha = 0.5, colour = 'white')+
+  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0))+
+  scale_y_continuous('Density', expand= c(0,0))+
+  scale_fill_brewer(palette = 'OrRd')+
+  geom_vline(xintercept = decomp_vl$mv['mean'],  linetype = 2, colour = '#fdbb84')+
+  geom_vline(xintercept = 4.74 ,  linetype = 2, colour = '#fee8c8')+
+  geom_vline(xintercept = decomp_vl$sv['mean'], linetype = 2, colour = '#e34a33')+
+  facet_wrap(.~stage, nrow = 3,labeller = labeller(stage = facet.labs))+
+  my_theme
+
 ################################### Decompose Recipient Distribution ###################################
 
 
@@ -73,31 +113,37 @@ recipient_dist <- BonhoefferEqns(zambia_mean,
 effect_size <- seq(0.01, 1, by = 0.01)
 p_mv <- seq(0.01, 0.6, by = 0.01)
 
-test <- matrix(data = NA, nrow = 100, ncol = 60)
 
 
-for (i in 1:length(effect_size)){
+SimEffectSizePMV <- function(n){
+  test <- matrix(data = NA, nrow = 100, ncol = 60)
   
-  MR_sv <- m_d + mu_e
-  MR_mv <- m_d + effect_size[i] + mu_e 
-  
-  for(j in 1:length(p_mv)){
-    n <- 200
-    sig.count <- 0
-
-    for (z in 1:100){
-      sv <- rnorm(n*(1-p_mv[j]), mean = MR_sv, sd = sqrt(VR))
-      mv <- rnorm(n*p_mv[j], mean = MR_mv, sd = sqrt(VR))
+  for (i in 1:length(effect_size)){
+    
+    MR_sv <- m_d + mu_e
+    MR_mv <- m_d + effect_size[i] + mu_e 
+    
+    for(j in 1:length(p_mv)){
       
-      if(t.test(sv, mv)$p.value <= 0.05){
-        sig.count = sig.count + 1
+      
+      n <- 200
+      sig.count <- 0
+      
+      for (z in 1:100){
+        sv <- rnorm(n*(1-p_mv[j]), mean = MR_sv, sd = sqrt(VR))
+        mv <- rnorm(n*p_mv[j], mean = MR_mv, sd = sqrt(VR))
+        
+        if(t.test(sv, mv)$p.value <= 0.05){
+          sig.count = sig.count + 1
+        }
+        
+        test[i,j] <- sig.count/100
       }
       
-      test[i,j] <- sig.count/100
     }
-   
   }
 }
+
 
 test_tibble <- test %>%
   reshape2::melt() %>%
