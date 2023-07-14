@@ -88,7 +88,9 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effect_s
 # For a specified effect and sample size, calculate the expected proportion of times we would 
 # observe a significant difference between single and multiple founder variant infections
 SimEffectSizePMV <- function(n, e = effect_size){
-  p <-  (2:(n-2))/n
+  p_mv <- (2:(n-2))/n
+  p <- p_mv[p_mv<=0.6]
+  
   m <- matrix(data = NA, nrow = 100, ncol = length(p))
   
   for (i in 1:length(e)){
