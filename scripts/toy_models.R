@@ -12,7 +12,19 @@
 
 
 ################################### Dependencies ###################################
+require(tidyverse)
+require(parallel)
 
+
+# Set CPU cluster size
+cl <- detectCores() %>% `-` (3)
+
+
+# Set seed
+seed(4472)
+
+
+# Linear equations from Bonhoeffer et al. 2015
 BonhoefferEqns <- function(MC, VC){
   
   # Variables
@@ -33,8 +45,8 @@ BonhoefferEqns <- function(MC, VC){
   v_d <- (v_c*(v_e + v_0))/(v_c + v_e + v_0)
   
   # Infer donor phenotype
-  MD <- (MC*v_0 + mu_0*VC)/(v_0 + VC)
-  VD <- (VC*v_0)/(v_0 + VC)
+  #MD <- (MC*v_0 + mu_0*VC)/(v_0 + VC)
+  #VD <- (VC*v_0)/(v_0 + VC)
   
   # sample from donor genotypes for recipient genotypes
   m_r <- m_d 
@@ -73,31 +85,37 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effect_s
 }
 
 
-
-SimEffectSizePMV <- function(n, e = effect_size, p = p_mv){
-  # Change P_mv to fraction of n
-  m <- matrix(data = NA, nrow = 100, ncol = 60)
+# For a specified effect and sample size, calculate the expected proportion of times we would 
+# observe a significant difference between single and multiple founder variant infections
+SimEffectSizePMV <- function(n, e = effect_size){
+  p <-  (2:(n-2))/n
+  m <- matrix(data = NA, nrow = 100, ncol = length(p))
+  
   for (i in 1:length(e)){
+    
     for(j in 1:length(p)){
       spvls <- DecomposeRecipientSpVL(effect_size = e[i],
                                       p_mv = p[j],
                                       recipient_mean = 4.74,
                                       recipient_var = 0.61)
       sig.count <- 0
+      
       for (z in 1:100){
         sv <- rnorm(n*(1-p[j]), mean = spvls$sv['mean'], sd = sqrt(spvls$sv['var']))
         mv <- rnorm(n*p[j], mean = spvls$mv['mean'], sd = sqrt(spvls$mv['var']))
-        if(t.test(sv, mv)$p.value <= 0.05){
+        
+        if(t.test(sv, mv, var.equal = T)$p.value <= 0.05){
           sig.count = sig.count + 1
         }
         m[i,j] <- sig.count/100
       }
     }
   }
+  
   out <- m %>%
     reshape2::melt() %>%
-    mutate(p_mv = rep(p_mv, each = 100)) %>%
-    mutate(effect_size = rep(effect_size,  60)) %>%
+    mutate(p_mv = rep(p, each = 100)) %>%
+    mutate(effect_size = rep(effect_size,  length(p))) %>%
     select(-contains('Var')) %>%
     mutate(sample_size = n)
   return(out)
@@ -113,8 +131,8 @@ recipient_dist <- BonhoefferEqns(zambia_mean,
 
 
 ################################### Decompose Recipient Distribution ###################################
-decomp_vl <- DecomposeRecipientSpVL(recipient_mean = 4.74, 
-                                    recipient_var = 0.61,
+decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist['mean'], 
+                                    recipient_var = recipient_dist['var'],
                                     p_mv =  0.3, 
                                     effect_size = 0.3)
 
@@ -124,10 +142,25 @@ vls <- tibble(recipient_mean = rnorm(100000, 4.74, sqrt(0.61)),
               recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
   pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
 
-facet.labs <- c("Recipient Population", "Multiple Variant Recipients", "Single Variant Recipients")
-names(facet.labs) <- c('recipient_mean', 'recipient_mv', 'recipient_sv')
 
-plt1b <- ggplot(vls ) + 
+################################### Simulate proportion of significant observations ###################################
+# Vector of effect and sample sizes
+effect_size <- seq(0.01, 1, by = 0.01)
+sample_size <- c(25,50,100,200)
+
+simsignificances <- mclapply(sample_size , SimEffectSizePMV, 
+                             mc.cores = cl,
+                             mc.set.seed = FALSE) %>%
+  bind_rows()
+
+
+################################### Visualise ###################################
+
+# Normal distributions of recipient phenotype, multiple variant and single variant
+facet.labs <- c("Recipient Population", "Multiple Variant Recipients", "Single Variant Recipients") %>%
+  setNames(c('recipient_mean', 'recipient_mv', 'recipient_sv'))
+
+plt1a <- ggplot(vls ) + 
   geom_density(aes(x = vl ,fill = stage), alpha = 0.5, colour = 'white')+
   scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0))+
   scale_y_continuous('Density', expand= c(0,0))+
@@ -139,27 +172,9 @@ plt1b <- ggplot(vls ) +
   my_theme
 
 
-
-
-
-
-################################### Simulate proportion of significant observations ###################################
-
-# Vectors of effect size and probability that infection is initiated by multiple variants
-effect_size <- seq(0.01, 1, by = 0.01)
-p_mv <- seq(0.02, 0.6, by = 0.01)
-
-cl <- detectCores() %>% `-` (3) 
-
-simsignificances <- mclapply(c(25,50,100,200), SimEffectSizePMV, 
-                             mc.cores = cl,
-                             mc.set.seed = FALSE) %>%
-  bind_rows()
-
-simsignificances <- SimEffectSizePMV(50)
-################################### Export to file ###################################
-
-plt1a <- ggplot(simsignificances ) +
+# Plotting the proportion of tests where a significant result is returned under different 
+# conditions of effect size, sample size and p(mv)
+plt1b <- ggplot(simsignificances ) +
   geom_tile(aes(x = p_mv, y = effect_size, fill = value))+    
   geom_point(x = 0.32, y = 0.293, shape = 2, colour = 'white') + 
   
@@ -184,20 +199,6 @@ plt1a <- ggplot(simsignificances ) +
   my_theme 
 
 
-vls <- tibble(recipient_mean = rnorm(10000, MR, sqrt(VR)), 
-              recipient_mv = rnorm(10000, MR+0.3, sqrt(VR)),
-              recipient_sv = rnorm(10000, MR-0.7, sqrt(VR))) %>%
-  pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
 
-plt1b <- ggplot(vls ) + 
-  geom_density(aes(x = vl ,fill = stage), alpha = 0.5)+
-  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0))+
-  scale_y_continuous('Density', expand= c(0,0))+
-  scale_fill_brewer(palette = 'OrRd')+
-  geom_vline(xintercept = MR+0.3,  linetype = 2)+
-  geom_vline(xintercept = MR-0.7,  linetype = 2)+
-  geom_vline(xintercept = MR, linetype = 2)+
-  facet_wrap(.~stage, nrow = 3)+
-  my_theme
 
-cowplot::plot_grid(plt1b, plt1a, align = 'hv', nrow = 1, labels = 'AUTO')
+cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO')
