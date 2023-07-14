@@ -51,24 +51,19 @@ BonhoefferEqns <- function(MC, VC){
 }
 
 
-################################### Calculate Recipient Dist ###################################
-zambia_variance <- 0.61 
-zambia_mean <- 4.74 
-
-recipient_dist <- BonhoefferEqns(zambia_mean, 
-                                 zambia_variance)
-
-
+# Assume recipient phenotype distribution is a mixture of two gaussian components where
+# the difference in means is set by an empirically determined effect size
 DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effect_size){
   
   # recipient_mean = (1 - p_mv)*x + p_mv*(x + effect_size)
   # Because weights of finite mixture must sum to 1; rearranges to:
   sv_mean <- recipient_mean - p_mv*effect_size  
   mv_mean <- sv_mean + effect_size
-
- 
+  
+  
   #recipient_var <- p_m*(y + mv_mean^2) + (1-p_mv)*(y + sv_mean^2) - recipient_mean^2
   # Rearranges for the same reasons
+  # Assumption of equal variances justified by Janes et al.
   decomposed_var <- recipient_var + recipient_mean^2 - p_mv * mv_mean^2 - (1 - p_mv) * sv_mean^2
   
   out <- list('sv' = c('mean' = sv_mean, 'var' = decomposed_var),
@@ -77,9 +72,53 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effect_s
   return(out)
 }
 
-decomp_vl <- DecomposeRecipientSpVL(4.74, 0.61, 0.3, 0.3)
 
-# Assumption of equal variances justified by Janes et al.
+
+SimEffectSizePMV <- function(n, e = effect_size, p = p_mv){
+  # Change P_mv to fraction of n
+  m <- matrix(data = NA, nrow = 100, ncol = 60)
+  for (i in 1:length(e)){
+    for(j in 1:length(p)){
+      spvls <- DecomposeRecipientSpVL(effect_size = e[i],
+                                      p_mv = p[j],
+                                      recipient_mean = 4.74,
+                                      recipient_var = 0.61)
+      sig.count <- 0
+      for (z in 1:100){
+        sv <- rnorm(n*(1-p[j]), mean = spvls$sv['mean'], sd = sqrt(spvls$sv['var']))
+        mv <- rnorm(n*p[j], mean = spvls$mv['mean'], sd = sqrt(spvls$mv['var']))
+        if(t.test(sv, mv)$p.value <= 0.05){
+          sig.count = sig.count + 1
+        }
+        m[i,j] <- sig.count/100
+      }
+    }
+  }
+  out <- m %>%
+    reshape2::melt() %>%
+    mutate(p_mv = rep(p_mv, each = 100)) %>%
+    mutate(effect_size = rep(effect_size,  60)) %>%
+    select(-contains('Var')) %>%
+    mutate(sample_size = n)
+  return(out)
+}
+
+
+################################### Calculate Recipient Dist ###################################
+zambia_variance <- 0.61 
+zambia_mean <- 4.74 
+
+recipient_dist <- BonhoefferEqns(zambia_mean, 
+                                 zambia_variance)
+
+
+################################### Decompose Recipient Distribution ###################################
+decomp_vl <- DecomposeRecipientSpVL(recipient_mean = 4.74, 
+                                    recipient_var = 0.61,
+                                    p_mv =  0.3, 
+                                    effect_size = 0.3)
+
+
 vls <- tibble(recipient_mean = rnorm(100000, 4.74, sqrt(0.61)), 
               recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
               recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
@@ -99,71 +138,33 @@ plt1b <- ggplot(vls ) +
   facet_wrap(.~stage, nrow = 3,labeller = labeller(stage = facet.labs))+
   my_theme
 
-################################### Decompose Recipient Distribution ###################################
+
 
 
 
 
 ################################### Simulate proportion of significant observations ###################################
 
-
-
-
-# Simulate for different effect sizes and p(MVs)
+# Vectors of effect size and probability that infection is initiated by multiple variants
 effect_size <- seq(0.01, 1, by = 0.01)
-p_mv <- seq(0.01, 0.6, by = 0.01)
+p_mv <- seq(0.02, 0.6, by = 0.01)
 
+cl <- detectCores() %>% `-` (3) 
 
+simsignificances <- mclapply(c(25,50,100,200), SimEffectSizePMV, 
+                             mc.cores = cl,
+                             mc.set.seed = FALSE) %>%
+  bind_rows()
 
-SimEffectSizePMV <- function(n){
-  test <- matrix(data = NA, nrow = 100, ncol = 60)
-  
-  for (i in 1:length(effect_size)){
-    
-    MR_sv <- m_d + mu_e
-    MR_mv <- m_d + effect_size[i] + mu_e 
-    
-    for(j in 1:length(p_mv)){
-      
-      
-      n <- 200
-      sig.count <- 0
-      
-      for (z in 1:100){
-        sv <- rnorm(n*(1-p_mv[j]), mean = MR_sv, sd = sqrt(VR))
-        mv <- rnorm(n*p_mv[j], mean = MR_mv, sd = sqrt(VR))
-        
-        if(t.test(sv, mv)$p.value <= 0.05){
-          sig.count = sig.count + 1
-        }
-        
-        test[i,j] <- sig.count/100
-      }
-      
-    }
-  }
-}
-
-
-test_tibble <- test %>%
-  reshape2::melt() %>%
-  mutate(p_mv = rep(p_mv, each = 100)) %>%
-  mutate(effect_size = rep(effect_size,  60)) %>%
-  select(-contains('Var'))
-
-
+simsignificances <- SimEffectSizePMV(50)
 ################################### Export to file ###################################
 
-plt1a <- ggplot(test_tibble) +
+plt1a <- ggplot(simsignificances ) +
   geom_tile(aes(x = p_mv, y = effect_size, fill = value))+    
-  geom_point(x = 0.32, y = 0.293, shape = 4, colour = 'white') + 
-  annotate("text", label = "Janes et al. RV144",
-    x = 0.4, y = 0.32, size = 8, colour = "white"
-  )+
-  geom_point(x = 0.25, y = 0.372, shape = 4, colour = 'white') + 
-  annotate("text", label = "Janes et al. STEP",
-           x = 0.32, y = 0.4, size = 8, colour = "white"
-  )+
+  geom_point(x = 0.32, y = 0.293, shape = 2, colour = 'white') + 
+  
+  geom_point(x = 0.25, y = 0.372, shape = 5, colour = 'white') + 
+ 
   geom_vline(xintercept = 0.21, colour = "white", linetype = 2) + 
   annotate("text", label = "MF",
            x = 0.23, y = 0.95, size = 8, colour = "white"
@@ -176,6 +177,7 @@ plt1a <- ggplot(test_tibble) +
   annotate("text", label = "MM",
            x = 0.32, y = 0.95, size = 8, colour = "white"
   )+
+  facet_wrap(.~sample_size) + 
   scale_y_continuous('SpVL Effect Size of Multiple Variants', expand= c(0,0)) +
   scale_x_continuous('Cohort P(Multiple Variants)', expand= c(0,0))+
   scale_fill_distiller(palette = 'OrRd', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
