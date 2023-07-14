@@ -177,25 +177,25 @@ plt1a <- ggplot(vls ) +
 # Plotting the proportion of tests where a significant result is returned under different 
 # conditions of effect size, sample size and p(mv)
 plt1b <- ggplot(simsignificances ) +
-  geom_tile(aes(x = p_mv, y = effect_size, fill = value))+    
+  geom_raster(aes(x = p_mv, y = effect_size, fill = value))+    
   geom_point(x = 0.32, y = 0.293, shape = 2, colour = 'white') + 
   
   geom_point(x = 0.25, y = 0.372, shape = 5, colour = 'white') + 
  
   geom_vline(xintercept = 0.21, colour = "white", linetype = 2) + 
   annotate("text", label = "MF",
-           x = 0.23, y = 0.95, size = 8, colour = "white"
+           x = 0.23, y = 0.95, size = 4, colour = "white"
   )+
   geom_vline(xintercept = 0.13, colour = "white", linetype = 2)+
   annotate("text", label = "FM",
-           x = 0.15, y = 0.95, size = 8, colour = "white"
+           x = 0.15, y = 0.95, size = 4, colour = "white"
   )+
   geom_vline(xintercept = 0.3, colour = "white", linetype = 2) + 
   annotate("text", label = "MM",
-           x = 0.32, y = 0.95, size = 8, colour = "white"
+           x = 0.32, y = 0.95, size = 4, colour = "white"
   )+
-  facet_wrap(.~sample_size) + 
-  scale_y_continuous('SpVL Effect Size of Multiple Variants', expand= c(0,0)) +
+  facet_wrap(.~sample_size, scales = "free_x") + 
+  scale_y_continuous('Increase in SpVL due to Multiple Variants', expand= c(0,0)) +
   scale_x_continuous('Cohort P(Multiple Variants)', expand= c(0,0))+
   scale_fill_distiller(palette = 'OrRd', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
   my_theme 
@@ -203,4 +203,4 @@ plt1b <- ggplot(simsignificances ) +
 
 
 
-cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO')
+cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO', rel_widths = c(0.4,0.6))
