@@ -21,7 +21,7 @@ cl <- detectCores() %>% `-` (3)
 
 
 # Set seed
-seed(4472)
+set.seed(4472)
 
 
 # Linear equations from Bonhoeffer et al. 2015
@@ -57,7 +57,7 @@ BonhoefferEqns <- function(MC, VC){
   VR <- v_r + v_e
   
   out <- c('mean' = MR,
-           'variance' = VR)
+           'var' = VR)
   
   return(out)
 }
@@ -125,7 +125,7 @@ SimEffectSizePMV <- function(n, e = effect_size){
 
 
 ################################### Calculate Recipient Dist ###################################
-zambia_variance <- 0.61 
+zambia_variance <- 0.61**2 #0.61 is the standard deviation
 zambia_mean <- 4.74 
 
 recipient_dist <- BonhoefferEqns(zambia_mean, 
@@ -133,13 +133,13 @@ recipient_dist <- BonhoefferEqns(zambia_mean,
 
 
 ################################### Decompose Recipient Distribution ###################################
-decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist['mean'], 
-                                    recipient_var = recipient_dist['var'],
+decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist[['mean']], 
+                                    recipient_var = recipient_dist[['var']],
                                     p_mv =  0.3, 
                                     effect_size = 0.3)
 
 
-vls <- tibble(recipient_mean = rnorm(100000, 4.74, sqrt(0.61)), 
+vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.61), 
               recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
               recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
   pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
