@@ -30,7 +30,7 @@ BonhoefferEqns <- function(MC, VC){
   # Variables
   # MC <- Carrier phenotype
   # VC <- Carrier variance
-  u_0 <- 4.46  # Gaussian approximation of Transmission Potential
+  mu_0 <- 4.46  # Gaussian approximation of Transmission Potential
   v_0 <- 0.96  # Gaussian approximation of Transmission Potential
   mu_e <- 3  # Distribution of environmental effects 
   v_e <- 1  # Distribution of environmental effects 
