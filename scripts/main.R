@@ -83,6 +83,10 @@ stratified_data <- mapply(SimCohorts,
   mutate(dataset = paste('stratified', riskgroup, sep = '_'))
 
 
+# Validate composition of simulated cohorts
+source('./scripts/validate_simcohorts.R')
+
+
 ################################### Predict SpVLs ###################################
 #Bind all datasets and label?
 
