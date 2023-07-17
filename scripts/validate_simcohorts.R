@@ -61,21 +61,21 @@ bias_covmats <- mapply(function(x_sim, x_emp) x_sim - x_emp, x_sim = sim_data_co
 
 
 # Sample Plots
-ggplot(bias_means) +
-  geom_col(aes(x = variable, y = bias))+ 
-  facet_wrap(.~riskgroup) +
-  my_theme + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+#ggplot(bias_means) +
+  #geom_col(aes(x = variable, y = bias))+ 
+  #facet_wrap(.~riskgroup) +
+  #my_theme + 
+  #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
-ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = value)) +
-  geom_tile(color = "white",
-            lwd = 1.5,
-            linetype = 1) + 
-  geom_text(aes(label = signif(value, 3)), color = "black", size = 3) +
-  scale_fill_distiller(palette = 'OrRd') + 
-  facet_wrap(.~riskgroup) +
-  my_theme+ 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+#ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = value)) +
+  #geom_tile(color = "white",
+            #lwd = 1.5,
+            #linetype = 1) + 
+  #geom_text(aes(label = signif(value, 3)), color = "black", size = 3) +
+  #scale_fill_distiller(palette = 'OrRd') + 
+  #facet_wrap(.~riskgroup) +
+  #my_theme+ 
+  #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 
 # END #
