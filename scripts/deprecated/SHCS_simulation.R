@@ -89,7 +89,7 @@ SimCohorts <- function(dataframe,probs) {
   return(out)}
 
 # Simulate TP dataset, segregated by riskgroup
-sim_data <- mapply(TestFunc,
+sim_data <- mapply(SimCohorts,
                    data = shcs_data_int_list,
                    probs = cum_probs_list,
                    SIMPLIFY = F) %>%
