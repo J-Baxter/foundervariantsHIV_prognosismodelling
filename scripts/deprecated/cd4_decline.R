@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+SimCD4Decline <- function(delta_cd4, init_cd4, threshold = 200){
+  z <- init_cd4
+  i <-  1
+=======
 # CD4 decline model
 # from Disentangling Human Tolerance and Resistance Against HIV
 # Regoes et al. PLoS Biology 2014
@@ -16,17 +21,19 @@ CD4Decline <- function(log10SPVL){
   return(deltaCD4)
 } 
 CD4Decline <- function(log10SPVL,age){
+>>>>>>> main
   
-  ##################################################
-  # parameters from Regoes et al. PLoS Biology 2014
-  ##################################################
+  while(z[i]>threshold){
+    z[i+1] = z[i] - abs(delta_cd4)*365.25
+    i = i + 1 
+    
+  }
   
-  alpha_0 = -5.6e-3
-  c = -1.6e-4
+  return(i-1)
   
-  deltaCD4 <- (alpha_0 + c*age)*(log10SPVL)**2
-  
-  return(deltaCD4)
-} 
+}
 
-## END ##
+
+          
+          
+          

@@ -66,11 +66,21 @@ cat('Panel 1 complete. \n')
 ############################################## Panel 2 ##############################################
 # What do we expect to observe?
 
-plt_2a <- ggplot(linear_uw_variants %>% 
-                   filter(variants == 1) %>%
-                   filter(w == 1 ), 
-                 aes(x = 1 - p, 
-                     y = recipient #,
+combined_data_CD4_PMV_wide <- combined_data_CD4_PMV %>%
+  filter(w == 1) %>%
+  pivot_wider(names_from = partner, values_from = c(sex, age.inf, riskgroup, SpVL, log10_SpVL, age.inf_category, delta_CD4, starts_with('p_')), names_sep = '_') 
+
+combined_data_CD4_PMV_wide_long <- combined_data_CD4_PMV %>%
+  filter(w == 1) %>%
+  pivot_wider(names_from = partner, values_from = c(sex, age.inf, riskgroup, SpVL, log10_SpVL, age.inf_category, delta_CD4, starts_with('p_')), names_sep = '_') %>%
+  pivot_longer(cols = starts_with('p_'), names_to = 'x', values_to = 'probability') %>%
+  separate(x, sep = '_', c(NA, 'type', 'x', 'partner')) #Incorrect output - need partner status separated for transmitter/recipient roles
+
+
+
+plt_2a <- ggplot(combined_data_CD4_PMV_wide %>% filter(dataset == 'shcs_empirical'), 
+                 aes(x = 1 - p_variants_1_1, 
+                     y = SpVL_2 #,
                      #colour = as.factor(w)
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a') +
@@ -89,12 +99,9 @@ plt_2a <- ggplot(linear_uw_variants %>%
   my_theme + theme(legend.position = 'none')
 
 
-plt_2b <- ggplot(linear_uw_variants %>% 
-                   filter(variants == 1) %>%
-                   filter(w == 1 ), 
-                 aes(x = 1 - p, 
-                     y = cd4_decline #,
-                     #colour = as.factor(w)
+plt_2b <- ggplot(combined_data_CD4_PMV_wide %>% filter(dataset %in% c('shcs_empirical',  'shcs_predicted')), #c('stratified_HET',  'stratified_MSM', 'stratified_PWID')
+                 aes(x = 1 - p_variants_1_1, 
+                     y = delta_CD4_2
                  ))+
   geom_point(shape= 4, size = 4, colour = '#ef654a') +
   #scale_colour_brewer(palette = 'OrRd') +
@@ -107,7 +114,9 @@ plt_2b <- ggplot(linear_uw_variants %>%
                      limits = c(0,0.5),
                      breaks = seq(0, 0.5, by = 0.1)) +
   #coord_flip() + 
-  my_theme + theme(legend.position = 'none', axis.title.y = element_text(family = 'sans'))
+  my_theme + theme(legend.position = 'none', axis.title.y = element_text(family = 'sans')) +
+  facet_wrap(.~dataset)
+  #stat_smooth(method = 'lm')
 
 
 plt_2c <- ggplot(linear_uw_virions %>% 
