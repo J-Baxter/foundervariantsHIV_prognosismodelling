@@ -63,3 +63,6 @@ SimCohorts <- function(dataframe,probs) {
   
   return(out)
   }
+
+
+#END
