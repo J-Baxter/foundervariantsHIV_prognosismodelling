@@ -78,6 +78,20 @@ model_priors <- c( set_prior(coef = 'age.inf_category25M29',
                   )
 
 
+
+################################### Prior Predictive Checks ###################################
+
+priorpreditivesim <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
+                         prior = model_priors,
+                         data = shcs_data_long,
+                         chains = 4,
+                         iter = 10000,
+                         warmup = 1000, # 10% burn in 
+                         cores = 4,
+                         control = list(adapt_delta = 0.95),
+                         sample_prior = 'only')
+
+pp_check(priorpreditivesim, ndraws = 1000)
 ################################### Fit Model ###################################
 # Fit model to SHCS data (long format). This 'should' run relatively quickly.
 # NB: User should set 'cores' parameter as appropriate for their device: recommend 
