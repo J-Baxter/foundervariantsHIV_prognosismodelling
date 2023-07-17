@@ -10,10 +10,9 @@
 
 ################################### Dependencies ###################################
 source('./scripts/dependencies.R')
-source('./scripts/SimPop.R')
-source('./scripts/global_theme.R')
-source('./scripts/postprocessingfuncs.R')
 source('./scripts/simulate_cohorts_funcs.R')
+source('./scripts/global_theme.R')
+
 
 # Set Seed
 set.seed(4472)
@@ -25,44 +24,7 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 # by the Swiss HIV Cohort Study. These data were used in the analysis of Bertels et. al
 # 2018 https://academic.oup.com/mbe/article/35/1/27/4210012
 
-# NB: partner number is allocated randomly and does not assign transmitter/recipient status
-shcs_data <-read_csv("data/shcs_data.csv", 
-                     col_types = cols(sex.1 = readr::col_factor(levels = c("M", "F")), 
-                                      sex.2 = readr::col_factor(levels = c("M", "F")), 
-                                      riskgroup.1 = readr::col_factor(levels = c("HET", "MSM",
-                                                                                 "IDU", "OTHER",
-                                                                                 "UNKNOWN")), 
-                                      riskgroup.2 = readr::col_factor(levels = c("HET", "MSM", 
-                                                                                 "IDU", "OTHER", 
-                                                                                 "UNKNOWN"))))%>%
-  select(-contains('ID')) %>%
-  rowid_to_column( "ID.pair") %>%
-  mutate(across(contains('riskgroup'), 
-                .fns = ~ fct_recode(.x, PWID = "IDU"))) %>%
-  rename_with( ~ stri_replace_last_fixed(.x, 'spVL', 'SpVL')) %>%
-  mutate(across(contains('SpVL'), 
-                .fns = ~ raise_to_power(10, .x))) %>%
-  mutate(SpVL.couplemean = rowMeans(across(contains('SpVL')))) %>%
-  mutate(across(contains('SpVL'),
-                .fns = ~log10(.x), .names = "log10_{.col}")) %>%
-  rename_with( ~ stri_replace_last_fixed(.x, '.', '_')) 
-
-
-# Transform to long-format data table
-shcs_data_long <- shcs_data %>% 
-  pivot_longer(cols = -c(ID_pair, contains('couplemean')), 
-               names_to = c(".value", "partner"),
-               names_pattern  = "^(.*)_([0-9])$") %>% #matches('SpVL_[[:digit:]]')
-  mutate(across(ends_with('SpVL'),
-                .fns = ~ mean(.x), .names = "{.col}_cohortmean")) %>%
-  mutate(partner = factor(partner, levels = c("1", "2"))) %>%
-  mutate(age.inf_category = cut(age.inf, 
-                              breaks = c(15,24,29,39,80), 
-                              labels = c('15-24', '25-29', '30-39','40-80'))) %>% # cut by default is exclusive of the lower bound
-  relocate(ID_pair) %>%
-  relocate(age.inf, .after = sex) %>%
-  relocate(ends_with('SpVL'), .after = riskgroup) %>%
-  relocate(ends_with('couplemean'), .after = log10_SpVL) 
+source('./scripts/import_data.R')
 
 
 ################################### Fit/Import Base Models ###################################
@@ -70,7 +32,7 @@ shcs_data_long <- shcs_data %>%
 source('./scripts/transmission_model.R')
 source('./scripts/tolerance_model.R')
 
-# Fit Bayesian linear mixed model to SHCS data
+# Fit Bayesian linear mixed model to SHCS data (<2 mins to fit)
 source('./scripts/heritability_model.R')
 #source('./scripts/heritability_extra_model.R') # vary assumptions of heritability
 
@@ -265,9 +227,12 @@ ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), dev
 ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 18) # Timing of transmission
 
 # Supplementary plots
+# SHCS summary plots
+# Simulation Bias Checks
+# H2 model plots
+# SA ?
 source('./scripts/tm_withinhostprocesses.R') 
-source('./scripts/transmitter_simulation.R') 
-source('./scripts/mediation_analysis.R') 
+
 
 ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 18, height = 12) #Within-host dynamics -functional
 ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 18, height = 12) #Simulating transmitter population - functional
