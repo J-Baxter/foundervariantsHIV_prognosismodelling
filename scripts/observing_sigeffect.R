@@ -65,12 +65,12 @@ BonhoefferEqns <- function(MC, VC){
 
 # Assume recipient phenotype distribution is a mixture of two gaussian components where
 # the difference in means is set by an empirically determined effect size
-DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effect_size){
+DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effectsize){
   
   # recipient_mean = (1 - p_mv)*x + p_mv*(x + effect_size)
   # Because weights of finite mixture must sum to 1; rearranges to:
-  sv_mean <- recipient_mean - p_mv*effect_size  
-  mv_mean <- sv_mean + effect_size
+  sv_mean <- recipient_mean - p_mv*effectsize  
+  mv_mean <- sv_mean + effectsize
   
   
   #recipient_var <- p_m*(y + mv_mean^2) + (1-p_mv)*(y + sv_mean^2) - recipient_mean^2
@@ -87,16 +87,21 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effect_s
 
 # For a specified effect and sample size, calculate the expected proportion of times we would 
 # observe a significant difference between single and multiple founder variant infections
-SimEffectSizePMV <- function(n, e = effect_size){
-  p_mv <- (2:(n-2))/n
-  p <- p_mv[p_mv<=0.6]
+SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
   
-  m <- matrix(data = NA, nrow = 100, ncol = length(p))
+  if (all(is.logical(specifyPMV))){
+    p_mv <- (2:(n-2))/n
+    p <- p_mv[p_mv<=0.6]
+  }else{
+    p <- specifyPMV
+  }
+ 
+  m <- matrix(data = NA, nrow = length(e), ncol = length(p))
   
   for (i in 1:length(e)){
     
     for(j in 1:length(p)){
-      spvls <- DecomposeRecipientSpVL(effect_size = e[i],
+      spvls <- DecomposeRecipientSpVL(effectsize = e[i],
                                       p_mv = p[j],
                                       recipient_mean = 4.74,
                                       recipient_var = 0.61)
@@ -116,8 +121,8 @@ SimEffectSizePMV <- function(n, e = effect_size){
   
   out <- m %>%
     reshape2::melt() %>%
-    mutate(p_mv = rep(p, each = 100)) %>%
-    mutate(effect_size = rep(effect_size,  length(p))) %>%
+    mutate(p_mv = rep(p, each = length(e))) %>%
+    mutate(effect_size = rep(e,  length(p))) %>%
     select(-contains('Var')) %>%
     mutate(sample_size = n)
   return(out)
@@ -150,10 +155,19 @@ vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.61),
 effect_size <- seq(0.01, 1, by = 0.01)
 sample_size <- c(25,50,100,200)
 
-simsignificances <- mclapply(sample_size , SimEffectSizePMV, 
+simsignificances <- mclapply(sample_size,
+                             SimEffectSizePMV, 
+                             e = effect_size,
                              mc.cores = cl,
                              mc.set.seed = FALSE) %>%
   bind_rows()
+
+
+################################### Compare Riskgroups ###################################
+
+p_mv <- c(0.13, 0.21, 0.30)
+
+comparesignificances <- SimEffectSizePMV(50, 0.3, specifyPMV = p_mv) #Too variable
 
 
 ################################### Visualise ###################################
