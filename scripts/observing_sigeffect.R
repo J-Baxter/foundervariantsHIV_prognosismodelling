@@ -14,6 +14,7 @@
 ################################### Dependencies ###################################
 require(tidyverse)
 require(parallel)
+require(epitools)
 
 
 # Set CPU cluster size
@@ -107,14 +108,14 @@ SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
                                       recipient_var = 0.61)
       sig.count <- 0
       
-      for (z in 1:100){
+      for (z in 1:100000){
         sv <- rnorm(n*(1-p[j]), mean = spvls$sv['mean'], sd = sqrt(spvls$sv['var']))
         mv <- rnorm(n*p[j], mean = spvls$mv['mean'], sd = sqrt(spvls$mv['var']))
         
         if(t.test(sv, mv, var.equal = T)$p.value <= 0.05){
           sig.count = sig.count + 1
         }
-        m[i,j] <- sig.count/100
+        m[i,j] <- sig.count/100000
       }
     }
   }
@@ -165,11 +166,20 @@ simsignificances <- mclapply(sample_size,
 
 ################################### Compare Riskgroups ###################################
 
-p_mv <- c(0.13, 0.21, 0.30)
+p_mv <- c(0.21, 0.13, 0.30)
 
-comparesignificances <- SimEffectSizePMV(50, 0.3, specifyPMV = p_mv) #Too variable
+comparesignificances <- SimEffectSizePMV(66, 0.3, specifyPMV = p_mv) %>%
+  rowwise() %>%
+  mutate(ci.lower = prop.test(value*100000, 100000, conf.level = .95, correct = F)$conf.int[1])%>%
+  mutate(ci.upper = prop.test(value*100000, 100000, conf.level = .95, correct = F)$conf.int[2])
 
+or_matrix <- matrix(c(1-comparesignificances$p_mv,comparesignificances$p_mv), nrow = 3) *100000
 
+outcome <- c('single', 'multiple')
+riskgroup <- c('MF', 'FM', 'MM')
+dimnames(or_matrix) <- list('riskgroup' = riskgroup, 'outcome' = outcome)
+
+epitools::oddsratio(or_matrix)
 ################################### Visualise ###################################
 
 # Normal distributions of recipient phenotype, multiple variant and single variant
