@@ -101,7 +101,6 @@ shcs_h2preds_randomallocation <- predicted_draws(heritability_model_randomalloca
                          value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
-  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
   distinct() %>%
@@ -117,7 +116,6 @@ stratified_pred_randomallocation <- predicted_draws(heritability_model_randomall
                               value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
-  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
   distinct() %>%
@@ -134,7 +132,6 @@ shcs_h2preds_transmittermax <- predicted_draws(heritability_model_transmittermax
                                                value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
-  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
   distinct() %>%
@@ -150,7 +147,6 @@ stratified_pred_transmittermax <- predicted_draws(heritability_model_transmitter
                                                   value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
-  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
   distinct() %>%
@@ -164,7 +160,7 @@ combined_data <- list(
   shcs_empirical = shcs_data_long %>%
     select(-contains('cohortmean')) %>%
     mutate(dataset = 'shcs_empirical') %>%
-    mutate(transmitterallocation = 'empirical'),
+    mutate(transmitterallocation = 'random'),
   
   # Empirical SpVL means, individual SpVL predicted using H2 model
   # Random allocation of transmitter
@@ -236,12 +232,14 @@ combined_data <- list(
   bind_rows() 
 
 
-################################### Predict CD4 decline ###################################
+################################### Predict CD4 decline and format ###################################
 
 combined_data_CD4 <- combined_data  %>%
   mutate(delta_CD4 = ToleranceModel(log10_SpVL,
                                     age.inf,
-                                    sex))
+                                    sex)) %>%
+  select(ID_pair, partner, riskgroup,  SpVL, delta_CD4, transmitterallocation, dataset) %>%
+  group_split(riskgroup)
 
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
@@ -249,10 +247,12 @@ combined_data_CD4 <- combined_data  %>%
 # For transmitter = partner 1
 # One iteration each for: 1) Empirical data 2) Predicted SHCS 3)Stratified SHCS
 # Each weighting runs for 1.5 hrs approx
-combined_data_PMV <- c(RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 1),
-                        RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 5),
-                        RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 10),
-                        RunParallel(TransmissionModel, combined_data_CD4$SpVL, w= 20)) %>%
+
+combined_data_PMV <- c(RunParallel(TransmissionModel, combined_data_CD4$HET$deltaCD4),
+                        RunParallel(TransmissionModel, combined_data_CD4$MSM$deltaCD4),
+                        RunParallel(TransmissionModel, combined_data_CD4$OTHER$deltaCD4),
+                        RunParallel(TransmissionModel, combined_data_CD4$PWID$deltaCD4), 
+                       RunParallel(TransmissionModel, combined_data_CD4$UNKNOWN$deltaCD4)) %>%
   
   # Label
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL',  'w')) %>%
