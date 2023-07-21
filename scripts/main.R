@@ -159,32 +159,81 @@ stratified_pred_transmittermax <- predicted_draws(heritability_model_transmitter
 
 ################################### Separate DFs ###################################
 combined_data <- list(
+  
+  # Empirical SpVL, not adjustment from H2 model
   shcs_empirical = shcs_data_long %>%
     select(-contains('cohortmean')) %>%
-    mutate(dataset = 'shcs_empirical'),
+    mutate(dataset = 'shcs_empirical') %>%
+    mutate(transmitterallocation = 'empirical'),
   
-  shcs_predicted = shcs_h2preds %>%
+  # Empirical SpVL means, individual SpVL predicted using H2 model
+  # Random allocation of transmitter
+  shcs_predicted = shcs_h2preds_randomallocation %>%
     select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
     mutate(dataset = 'shcs_predicted') %>%
     mutate(ID_pair = ID_pair + 196) %>% 
-    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
+    mutate(transmitterallocation = 'random'),
   
-  stratified_het = stratified_pred  %>%
+  # Simulated SpVL means for Heterosexuals, individual SpVL predicted using H2 model
+  # Random allocation of transmitter
+  stratified_het = stratified_pred_randomallocation  %>%
     filter(dataset == 'stratified_HET') %>%
     mutate(ID_pair = ID_pair + 196*2) %>% 
-    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
+    mutate(transmitterallocation = 'random'),
   
-  stratified_msm = stratified_pred  %>%
+  # Simulated SpVL means for MSM, individual SpVL predicted using H2 model
+  # Random allocation of transmitter
+  stratified_msm = stratified_pred_randomallocation  %>%
     filter(dataset == 'stratified_MSM') %>%
     mutate(ID_pair = ID_pair + 196*2) %>% 
-    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')),
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
+    mutate(transmitterallocation = 'random'),
   
-  stratified_pwid = stratified_pred  %>%
+  # Simulated SpVL means for PWID, individual SpVL predicted using H2 model
+  # Random allocation of transmitter
+  stratified_pwid = stratified_pred_randomallocation  %>%
     filter(dataset == 'stratified_PWID') %>%
     mutate(ID_pair = ID_pair + 196*2) %>% 
-    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
+    mutate(transmitterallocation = 'random'),
+  
+  
+  # Empirical SpVL means, individual SpVL predicted using H2 model
+  # Transmitter = max(SpVL)
+  shcs_predicted = shcs_h2preds_transmittermax %>%
+    select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
+    mutate(dataset = 'shcs_predicted') %>%
+    mutate(ID_pair = ID_pair + 196) %>% 
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
+    mutate(transmitterallocation = 'max'),
+  
+  # Simulated SpVL means for Heterosexuals, individual SpVL predicted using H2 model
+  # Transmitter = max(SpVL)
+  stratified_het = stratified_pred_transmittermax   %>%
+    filter(dataset == 'stratified_HET') %>%
+    mutate(ID_pair = ID_pair + 196*2) %>% 
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
+    mutate(transmitterallocation = 'max'),
+  
+  # Simulated SpVL means for MSM, individual SpVL predicted using H2 model
+  # Transmitter = max(SpVL)
+  stratified_msm = stratified_pred_transmittermax   %>%
+    filter(dataset == 'stratified_MSM') %>%
+    mutate(ID_pair = ID_pair + 196*2) %>% 
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
+    mutate(transmitterallocation = 'max'),
+  
+  # Simulated SpVL means for PWID, individual SpVL predicted using H2 model
+  # Transmitter = max(SpVL)
+  stratified_pwid = stratified_pred_transmittermax   %>%
+    filter(dataset == 'stratified_PWID') %>%
+    mutate(ID_pair = ID_pair + 196*2) %>% 
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
+    mutate(transmitterallocation = 'max')
 ) %>%
-  bind_rows() %>%
+  bind_rows() 
 
 
 ################################### Predict CD4 decline ###################################
