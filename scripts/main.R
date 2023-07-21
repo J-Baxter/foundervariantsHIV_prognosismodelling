@@ -61,9 +61,9 @@ cumulativeprobs_list <- lapply(shcs_data_int_list, function(x) x %>%
 
 # Run SimCohorts - see ./scripts/SHCS_simulation.R for details
 stratified_data <- mapply(SimCohorts,
-                   data = shcs_data_int_list,
-                   probs = cumulativeprobs_list,
-                   SIMPLIFY = F) %>%
+                          data = shcs_data_int_list,
+                          probs = cumulativeprobs_list,
+                          SIMPLIFY = F) %>%
   setNames(., c('HET', 'MSM', 'PWID')) %>%
   
   # Re-organising simulated data
@@ -73,7 +73,9 @@ stratified_data <- mapply(SimCohorts,
   pivot_longer(cols = - c(contains('couplemean'), riskgroup, ID_pair), 
                names_to = c(".value", "partner"), 
                names_pattern  = "^(.*)_([0-9])$") %>% 
-  mutate(partner = factor(partner, levels = c("1", "2"))) %>%
+  mutate(partner = case_when(partner == 1 ~ 'transmitter',
+                             partner == 2 ~ 'recipient')) %>%
+  mutate(partner = factor(partner, levels = c("transmitter", "recipient"))) %>%
   mutate(age.inf_category = cut(age.inf, 
                                 breaks = c(15,24,29,39,80), 
                                 labels = c('15-24', '25-29', '30-39','40-80'))) %>%
@@ -88,13 +90,14 @@ source('./scripts/validate_simcohorts.R')
 
 
 ################################### Predict SpVLs ###################################
-#Bind all datasets and label?
 
-shcs_h2preds <- epred_draws(heritability_model,
-                         newdata = shcs_data_long,
-                         allow_new_levels = TRUE, # allow new random effects levels
-                         sample_new_levels = "old_levels", #
-                         re_formula = ~ (1|log10_SpVL_couplemean),
+# Random allocation of transmitter/recipient
+shcs_h2preds_randomallocation <- predicted_draws(heritability_model_randomallocation,
+                                newdata = shcs_data_long,
+                                ndraws = 100,
+                                allow_new_levels = FALSE, # allow new random effects levels
+                                #sample_new_levels = "old_levels", #
+                         ##re_formula = ~ (1|log10_SpVL_couplemean),
                          value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
@@ -105,13 +108,46 @@ shcs_h2preds <- epred_draws(heritability_model,
   ungroup()
 
 
-stratified_pred <- epred_draws(heritability_model,
+stratified_pred_randomallocation <- predicted_draws(heritability_model_randomallocation,
                               newdata = stratified_data,
                               allow_new_levels = TRUE, # allow new random effects levels
                               sample_new_levels = "old_levels", #
                               re_formula = ~ (1|log10_SpVL_couplemean),
-                              ndraws = 4000,
+                              ndraws = 100,
                               value = 'predicted_log10_SpVL') %>% 
+  select(-c(.chain, .iteration, .draw)) %>%
+  group_by(ID_pair, partner) %>%
+  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
+  mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
+  select(-.row) %>%
+  distinct() %>%
+  ungroup()
+
+
+# Transmitter = Max(SpVLij) of couple j
+shcs_h2preds_transmittermax <- predicted_draws(heritability_model_transmittermax,
+                                               newdata = shcs_data_long,
+                                               ndraws = 100,
+                                               allow_new_levels = FALSE, # allow new random effects levels
+                                               #sample_new_levels = "old_levels", #
+                                               ##re_formula = ~ (1|log10_SpVL_couplemean),
+                                               value = 'predicted_log10_SpVL') %>% 
+  select(-c(.chain, .iteration, .draw)) %>%
+  group_by(ID_pair, partner) %>%
+  mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
+  mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
+  select(-.row) %>%
+  distinct() %>%
+  ungroup()
+
+
+stratified_pred_transmittermax <- predicted_draws(heritability_model_transmittermax,
+                                                  newdata = stratified_data,
+                                                  allow_new_levels = TRUE, # allow new random effects levels
+                                                  sample_new_levels = "old_levels", #
+                                                  re_formula = ~ (1|log10_SpVL_couplemean),
+                                                  ndraws = 100,
+                                                  value = 'predicted_log10_SpVL') %>% 
   select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
   mutate(predicted_log10_SpVL = mean(predicted_log10_SpVL)) %>%
