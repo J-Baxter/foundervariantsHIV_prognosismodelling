@@ -99,7 +99,7 @@ shcs_h2preds_randomallocation <- predicted_draws(heritability_model_randomalloca
                                 #sample_new_levels = "old_levels", #
                          ##re_formula = ~ (1|log10_SpVL_couplemean),
                          value = 'predicted_log10_SpVL') %>% 
-  select(-c(.chain, .iteration, .draw)) %>%
+  #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
@@ -114,7 +114,7 @@ stratified_pred_randomallocation <- predicted_draws(heritability_model_randomall
                               re_formula = ~ (1|log10_SpVL_couplemean),
                               ndraws = 100,
                               value = 'predicted_log10_SpVL') %>% 
-  select(-c(.chain, .iteration, .draw)) %>%
+  #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
@@ -130,7 +130,7 @@ shcs_h2preds_transmittermax <- predicted_draws(heritability_model_transmittermax
                                                #sample_new_levels = "old_levels", #
                                                ##re_formula = ~ (1|log10_SpVL_couplemean),
                                                value = 'predicted_log10_SpVL') %>% 
-  select(-c(.chain, .iteration, .draw)) %>%
+  #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
@@ -145,7 +145,7 @@ stratified_pred_transmittermax <- predicted_draws(heritability_model_transmitter
                                                   re_formula = ~ (1|log10_SpVL_couplemean),
                                                   ndraws = 100,
                                                   value = 'predicted_log10_SpVL') %>% 
-  select(-c(.chain, .iteration, .draw)) %>%
+  #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
   mutate(predicted_SpVL = raise_to_power(10, predicted_log10_SpVL)) %>%
   select(-.row) %>%
@@ -183,7 +183,7 @@ combined_data <- list(
   # Random allocation of transmitter
   stratified_msm = stratified_pred_randomallocation  %>%
     filter(dataset == 'stratified_MSM') %>%
-    mutate(ID_pair = ID_pair + 196*2) %>% 
+    mutate(ID_pair = ID_pair + 196*3) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'random'),
   
@@ -191,7 +191,7 @@ combined_data <- list(
   # Random allocation of transmitter
   stratified_pwid = stratified_pred_randomallocation  %>%
     filter(dataset == 'stratified_PWID') %>%
-    mutate(ID_pair = ID_pair + 196*2) %>% 
+    mutate(ID_pair = ID_pair + 196*4) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'random'),
   
@@ -201,7 +201,7 @@ combined_data <- list(
   shcs_predicted = shcs_h2preds_transmittermax %>%
     select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
     mutate(dataset = 'shcs_predicted') %>%
-    mutate(ID_pair = ID_pair + 196) %>% 
+    mutate(ID_pair = ID_pair + 196*5) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
     mutate(transmitterallocation = 'max'),
   
@@ -209,7 +209,7 @@ combined_data <- list(
   # Transmitter = max(SpVL)
   stratified_het = stratified_pred_transmittermax   %>%
     filter(dataset == 'stratified_HET') %>%
-    mutate(ID_pair = ID_pair + 196*2) %>% 
+    mutate(ID_pair = ID_pair + 196*6) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'max'),
   
@@ -217,7 +217,7 @@ combined_data <- list(
   # Transmitter = max(SpVL)
   stratified_msm = stratified_pred_transmittermax   %>%
     filter(dataset == 'stratified_MSM') %>%
-    mutate(ID_pair = ID_pair + 196*2) %>% 
+    mutate(ID_pair = ID_pair + 196*7) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'max'),
   
@@ -225,7 +225,7 @@ combined_data <- list(
   # Transmitter = max(SpVL)
   stratified_pwid = stratified_pred_transmittermax   %>%
     filter(dataset == 'stratified_PWID') %>%
-    mutate(ID_pair = ID_pair + 196*2) %>% 
+    mutate(ID_pair = ID_pair + 196*8) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'max')
 ) %>%
@@ -238,13 +238,21 @@ combined_data_CD4 <- combined_data  %>%
   mutate(delta_CD4 = ToleranceModel(log10_SpVL,
                                     age.inf,
                                     sex)) %>%
-  select(ID_pair, partner, riskgroup,  SpVL, delta_CD4, transmitterallocation, dataset) %>%
-  group_split(riskgroup)
+  mutate(riskgroup = case_when(riskgroup == 'HET' & sex == 'M' & partner == 'transmitter' ~ 'MF',
+                               riskgroup == 'HET' & sex == 'F' & partner == 'recipient' ~ 'MF',
+                               riskgroup == 'MSM' ~ 'MM',
+                               riskgroup == 'PWID' ~ 'PWID',
+                               riskgroup == 'UNKNOWN' ~ 'UNKNOWN',
+                               riskgroup == 'OTHER' ~ 'OTHER',
+                               .default = 'FM'
+                               )) %>%
+  select(-c(sex, contains('age'))) %>%
+  pivot_wider(names_from = partner, values_from = c(contains('SpVL'), delta_CD4, riskgroup)) %>%
+  group_split(riskgroup_recipient) 
 
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
 
-# For transmitter = partner 1
 # One iteration each for: 1) Empirical data 2) Predicted SHCS 3)Stratified SHCS
 # Each weighting runs for 1.5 hrs approx
 
