@@ -316,17 +316,28 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         rm(listofnumberFounderStrainDistribution)
         
         
-        variant_distribution <- as.data.frame(matrix(
-                unlist(purrr::map(.x = weight_numberFounderStrainDistribution,
-                                  .f = ~(dplyr::select(., starts_with("V")) %>%
-                                                 colSums(.)))),
-                ncol = ncol(numberFounderStrainDistribution)-2,
-                byrow = TRUE))  %>%
-                mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
-                colSums()
+        variant_distribution <-  as.data.frame(weight_numberFounderStrainDistribution) %>%
+                mutate(across(dplyr::starts_with("V"), ~(. * gc * (1/( taup + tauc + taua))))) %>%
+                group_by(nparticles) %>%
+                summarise(across(.cols = dplyr::starts_with(c("V" , 'prob')), .fns = sum)) %>%
+                ungroup()
+                
+                
+        #variant_distribution <- as.data.frame(matrix(
+                #unlist(purrr::map(.x = weight_numberFounderStrainDistribution,
+                #                  .f = ~(dplyr::select(., dplyr::starts_with("V")) %>%
+                #                                 colSums(.)))),
+               # ncol = maxVirionsConsidered,
+                #byrow = TRUE))  %>%
+                #mutate(across(everything(), ~(. * gc * (1/( taup + tauc + taua))))) %>%
+                #group_by(nparticles) %>%
+                #summarise(across(.cols = dplyr::starts_with(c("V" , 'prob')), .fns = sum)) %>%
+                #ungroup()
         
-        variant_distribution <- variant_distribution / sum(variant_distribution)
-        multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
+        variant_distribution <- variant_distribution  %>% 
+                mutate(across(.cols = dplyr::starts_with("V"), .fns = ~ .x / sum(variant_distribution %>% dplyr::select(dplyr::starts_with('V'))))) 
+        
+        #multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
         #rm(variant_distribution)
         
         # sum up across all times in primary infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
