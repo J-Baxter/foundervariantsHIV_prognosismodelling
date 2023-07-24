@@ -19,7 +19,6 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
                     88507, 25176, 22626, 967867, 1216484, 427765, 105021, 42084, 3574304, 4492440, 1341713, 471801)
         
         # The SPVLs of transmitters
-        ncVals <- sp_ViralLoad 
         nSims <- 100
         
         # The different VLs during preAIDS (Mellors et al 1995)
@@ -28,7 +27,7 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         # fraction of exposure that can lead to infection
         # rename for reducing code length
         f <- PropExposuresInfective 
-        
+        sp_ViralLoad <- round(sp_ViralLoad)
         ##################################################
         # Set weights for each VL
         # For SPVL parameters are from Thompson et al 2019
@@ -38,7 +37,7 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         mu = 4.74 - (2*sigma*alpha)/(sqrt(2*pi*(1 + alpha^2)))
         kappa = 1
         np = round(kappa*max(npVals))
-        nc = round(kappa*max(ncVals))
+        nc = round(kappa*max(sp_ViralLoad))
         na = round(kappa*max(naVals))
         Dmax = 25.4
         Dfifty = 3058
@@ -47,7 +46,7 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         #Duration of each stage
         fiebig_t <- c(5,5.3,3.2,5.6,69.5)/365 #Stage duration (Fiebig et al 2003)
         
-        tauc = array(0, length(ncVals))
+        tauc = array(0, length(sp_ViralLoad))
         taup = sum(fiebig_t)
         taua = 0.75
         
@@ -57,10 +56,10 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         fiebig_q <- c(0.1,0.15,0.5,0.15,0.1) #Quantiles 
         gp <- as.vector(outer(fiebig_t/sum(fiebig_t), fiebig_q))
         
-        # For ncVals is, SPVL informs i) duration of chronic infection and 
+        # For sp_ViralLoad is, SPVL informs i) duration of chronic infection and 
         # ii) weights for the viral loads
-        tauc = Dmax*(Dfifty^Dk)/(ncVals^Dk + (Dfifty^Dk))
-        gc = (2/sigma) * dnorm((log10(ncVals) - mu)/sigma) * pnorm(alpha*(log10(ncVals) - mu)/sigma)
+        tauc = Dmax*(Dfifty^Dk)/(sp_ViralLoad^Dk + (Dfifty^Dk))
+        gc = (2/sigma) * dnorm((log10(sp_ViralLoad) - mu)/sigma) * pnorm(alpha*(log10(sp_ViralLoad) - mu)/sigma)
         
         maximumTime = max(taup + tauc + taua)
         
@@ -94,8 +93,8 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         ##################################################
         
         # FIRST CALCULATE THE number of max Virions Considered 
-        chronic_prob_fulldist = dbinom(0:max(ncVals),
-                                       max(ncVals),
+        chronic_prob_fulldist = dbinom(0:sp_ViralLoad,
+                                       sp_ViralLoad,
                                        PerVirionProbability)
         VirionsConsidered <- which.max(chronic_prob_fulldist)
         maxVirionsConsidered <- min(which(chronic_prob_fulldist[VirionsConsidered:length(chronic_prob_fulldist)] < 1e-15))
@@ -112,7 +111,7 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
                                                    .x, 
                                                    PerVirionProbability))
         
-        chronic_prob_fulldist = purrr::map(.x = ncVals,
+        chronic_prob_fulldist = purrr::map(.x = sp_ViralLoad,
                                            ~dbinom(0:maxVirionsConsidered, 
                                                    .x, 
                                                    PerVirionProbability))
@@ -301,7 +300,7 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         ## FROM HERE IT NEEDS TO BE WEIGHTED BY VL density 
         
         # repeat founder strain distribution length(VL) times so we can use as input
-        listofnumberFounderStrainDistribution = rep(list(numberFounderStrainDistribution), length(ncVals))
+        listofnumberFounderStrainDistribution = rep(list(numberFounderStrainDistribution), length(sp_ViralLoad))
         
         # calculate the number of variants for each particle number, weighted by the prob of particle number
         weight_numberFounderStrainDistribution <- purrr::map2(.x = listofnumberFounderStrainDistribution,
