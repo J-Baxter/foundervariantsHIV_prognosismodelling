@@ -246,9 +246,10 @@ combined_data_CD4 <- combined_data  %>%
                                riskgroup == 'OTHER' ~ 'OTHER',
                                .default = 'FM'
                                )) %>%
-  select(-c(sex, contains('age'))) %>%
+  dplyr::select(-c(sex, contains('age'))) %>%
   pivot_wider(names_from = partner, values_from = c(contains('SpVL'), delta_CD4, riskgroup)) %>%
-  group_split(riskgroup_recipient) 
+  group_split(riskgroup_recipient) %>%
+  setNames(c('FM', 'MF', 'MM', 'PWID', 'UNKNOWN'))
 
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
@@ -256,18 +257,45 @@ combined_data_CD4 <- combined_data  %>%
 # One iteration each for: 1) Empirical data 2) Predicted SHCS 3)Stratified SHCS
 # Each weighting runs for 1.5 hrs approx
 
-combined_data_PMV <- c(RunParallel(TransmissionModel, combined_data_CD4$HET$deltaCD4),
-                        RunParallel(TransmissionModel, combined_data_CD4$MSM$deltaCD4),
-                        RunParallel(TransmissionModel, combined_data_CD4$OTHER$deltaCD4),
-                        RunParallel(TransmissionModel, combined_data_CD4$PWID$deltaCD4), 
-                       RunParallel(TransmissionModel, combined_data_CD4$UNKNOWN$deltaCD4)) %>%
+combined_data_PMV <- c(
+  
+  # Female-to-Male
+  RunParallel(TransmissionModel2, 
+              sp_ViralLoad = combined_data_CD4$FM$SpVL_transmitter,
+              PerVirionProbability = 8.779E-07, 
+              PropExposuresInfective = 0.14337),
+                       
+  # Male-to-Female
+  RunParallel(TransmissionModel2,
+              sp_ViralLoad = combined_data_CD4$MF$SpVL_transmitter,
+              PerVirionProbability = 1.765E-06, 
+              PropExposuresInfective = 0.13762),
+  
+  # MSM: currently using MSM:insertive params
+  RunParallel(TransmissionModel2, 
+              sp_ViralLoad = combined_data_CD4$MSM$SpVL_transmitter,
+              PerVirionProbability = 8.779E-07, 
+              PropExposuresInfective = 0.14337),
+  
+  #PWID: Currently using MSM:receptive params
+  RunParallel(TransmissionModel2, 
+              sp_ViralLoad = combined_data_CD4$PWID$SpVL_transmitter,
+              PerVirionProbability = 3.19E-06, 
+              PropExposuresInfective = 0.08923),
+  
+  # Unknown: Currently using Male-to-Female
+  RunParallel(TransmissionModel2, 
+              sp_ViralLoad = combined_data_CD4$UNKNOWN$SpVL_transmitter,
+              PerVirionProbability = 8.779E-07, 
+              PropExposuresInfective = 0.14337)) %>%
+                                   
   
   # Label
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL',  'w')) %>%
-  mapply(function(x,y) c(x, y ),
-         x= ., 
-         y = combined_data_CD4 %>% group_split(ID_pair, SpVL), 
-         SIMPLIFY = F)
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) #%>%
+  #mapply(function(x,y) c(x, y ),
+         #x= ., 
+         #y = combined_data_CD4 %>% group_split(riskgroup_recipient, SpVL), 
+        # SIMPLIFY = F)
 
 
 ################################### Format Model Outputs ###################################
