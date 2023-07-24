@@ -238,14 +238,14 @@ TransmissionModel <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*
   
   
   variant_distribution <- as.data.frame(weight_numberFounderStrainDistribution) %>%
-    mutate(case_when(tvals <= taucrit & taucrit < (taup + tauc + taua) ~ (dplyr::select(., starts_with("V")) * g * (w/((w-1)*taucrit + taup + tauc + taua))), 
-                     tvals > taucrit ~ (dplyr::select(., starts_with("V")) * g * (1/( (w-1)*taucrit +taup + tauc + taua))))) %>%
+    mutate(case_when(tvals <= taucrit & taucrit < (taup + tauc + taua) ~ (dplyr::select(., dplyr::starts_with("V")) * g * (w/((w-1)*taucrit + taup + tauc + taua))), 
+                     tvals > taucrit ~ (dplyr::select(., dplyr::starts_with("V")) * g * (1/( (w-1)*taucrit +taup + tauc + taua))))) %>%
     group_by(nparticles) %>%
-    summarise(across(.cols = starts_with(c("V" , 'prob')), .fns = sum)) %>%
+    summarise(across(.cols = dplyr::starts_with(c("V" , 'prob')), .fns = sum)) %>%
     ungroup()
   
   variant_distribution <- variant_distribution  %>% 
-    mutate(across(.cols = starts_with("V"), .fns = ~ .x / sum(variant_distribution %>% select(starts_with('V'))))) 
+    mutate(across(.cols = dplyr::starts_with("V"), .fns = ~ .x / sum(variant_distribution %>% dplyr::select(dplyr::starts_with('V'))))) 
            
  # multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
   
