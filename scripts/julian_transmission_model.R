@@ -1,14 +1,12 @@
 # for fixed spVL, per virion prob of infection and proportion of exposure with potential for infection
 # this function calculates i) the probability of infection, ii) the probability of multiple founder variants
 
-populationmodel_acrossVL_Env <- function(theta=c(4.715*1e-8, 0.029)){
-
+TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029){
         require(doFuture)
         require(dplyr)
         require(fitdistrplus)
         
-        PerVirionProbability <- theta[1]
-        PropExposuresInfective <- theta[2]
+        
         
         # The VLs during primary stage
         
@@ -21,7 +19,7 @@ populationmodel_acrossVL_Env <- function(theta=c(4.715*1e-8, 0.029)){
                     88507, 25176, 22626, 967867, 1216484, 427765, 105021, 42084, 3574304, 4492440, 1341713, 471801)
         
         # The SPVLs of transmitters
-        ncVals <- round(c(10^2, 10^2.5, 10^3, 10^3.5, 10^4, 10^4.5, 10^5, 10^5.5, 10^6, 10^6.5, 10^7))
+        ncVals <- sp_ViralLoad 
         nSims <- 100
         
         # The different VLs during preAIDS (Mellors et al 1995)
@@ -99,89 +97,89 @@ populationmodel_acrossVL_Env <- function(theta=c(4.715*1e-8, 0.029)){
         chronic_prob_fulldist = dbinom(0:max(ncVals),
                                        max(ncVals),
                                        PerVirionProbability)
-         VirionsConsidered <- which.max(chronic_prob_fulldist)
-         maxVirionsConsidered <- min(which(chronic_prob_fulldist[VirionsConsidered:length(chronic_prob_fulldist)] < 1e-15))
-         maxVirionsConsidered <- VirionsConsidered+maxVirionsConsidered-2
+        VirionsConsidered <- which.max(chronic_prob_fulldist)
+        maxVirionsConsidered <- min(which(chronic_prob_fulldist[VirionsConsidered:length(chronic_prob_fulldist)] < 1e-15))
+        maxVirionsConsidered <- VirionsConsidered+maxVirionsConsidered-2
         
-         # This reduces computational time. Variant transmission does not change 
-         # much for higher virion transmission
-         maxVirionsConsidered <- ifelse(maxVirionsConsidered>500, 500, maxVirionsConsidered)
-         
-         #  NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
-
-         primary_prob_fulldist = purrr::map(.x = npVals,
-                                            ~dbinom(0:maxVirionsConsidered, 
-                                                    .x, 
-                                                    PerVirionProbability))
-         
-         chronic_prob_fulldist = purrr::map(.x = ncVals,
-                                            ~dbinom(0:maxVirionsConsidered, 
-                                                    .x, 
-                                                    PerVirionProbability))
-         
-         
-         preaids_prob_fulldist = purrr::map(.x = naVals,
-                                            ~dbinom(0:maxVirionsConsidered, 
-                                                    .x, 
-                                                    PerVirionProbability))
-         
-         #if maxVirionsConsidered>500 edit last particle value so each x_prob_fulldist sums to 1
-         if(any(round(sapply(primary_prob_fulldist, sum),9)!=1)){
-                 for(i in 1:length(primary_prob_fulldist)){
-                         if(round(sum(primary_prob_fulldist[[i]]),9)!=1){
-                                 primary_prob_fulldist[[i]][length(primary_prob_fulldist[[i]])] <- primary_prob_fulldist[[i]][length(primary_prob_fulldist[[i]])] + 1-sum(primary_prob_fulldist[[i]])
-                         }
-                 }
-         }
-         if(any(round(sapply(chronic_prob_fulldist, sum),9)!=1)){
-                 for(i in 1:length(chronic_prob_fulldist)){
-                         if(round(sum(chronic_prob_fulldist[[i]]),9)!=1){
-                                 chronic_prob_fulldist[[i]][length(chronic_prob_fulldist[[i]])] <- chronic_prob_fulldist[[i]][length(chronic_prob_fulldist[[i]])] + 1-sum(chronic_prob_fulldist[[i]])
-                         }
-                 }
-         }
-         if(any(round(sapply(preaids_prob_fulldist, sum),9)!=1)){
-                 for(i in 1:length(preaids_prob_fulldist)){
-                         if(round(sum(preaids_prob_fulldist[[i]]),9)!=1){
-                                 preaids_prob_fulldist[[i]][length(preaids_prob_fulldist[[i]])] <- preaids_prob_fulldist[[i]][length(preaids_prob_fulldist[[i]])] + 1-sum(preaids_prob_fulldist[[i]])
-                         }
-                 }
-         }
-         
-         probNVirionsTransmittedPerSexAct <- array(0, maxVirionsConsidered+1)
-         probNVirionsTransmittedPerSexAct_PRIMARY <- array(0, maxVirionsConsidered+1)
-         probNVirionsTransmittedPerSexAct_CHRONIC <- array(0, maxVirionsConsidered+1)
-         probNVirionsTransmittedPerSexAct_PREAIDS <- array(0, maxVirionsConsidered+1)
-         
-         #The principle here is:
-         # probNVirionsTransmittedPerSexAct_XXX[1] = (1-f) + f*XXX_prob_fulldist[1]
-         # probNVirionsTransmittedPerSexAct_XXX[-1] = f*XXX_prob_fulldist[-1]
-         
-         myfun1 <- function(g0, distr0){
-                 return(g0 * ((1-f) + f*distr0[1]))
-         }
-         
-         myfun2 <- function(g0, distr0){
-                 return(g0 * f * distr0[-1])
-         }
-         
-         myfun3 <- function(g0, tau0, distr0){
-                 return(g0 * ((1-f) + f*((taup/(taup + tau0 + taua))*sum(unlist(purrr::pmap(.l = list(as.list(gp), primary_prob_fulldist),
-                                                                                            .f = myfun1))) +
-                                                 (tau0/(taup + tau0 + taua))*distr0[1] +
-                                                 (taua/(taup + tau0 + taua))*sum(unlist(purrr::pmap(.l = list(as.list(ga), preaids_prob_fulldist),
-                                                                                                    .f = myfun1))))))
-         }
-         
-         myfun4 <- function(g0, tau0, distr0){
-                 return(g0 * (f*((taup/(taup + tau0 + taua))*colSums(matrix(unlist(purrr::pmap(.l = list(as.list(gp), primary_prob_fulldist),
-                                                                                               .f = myfun2)), 
-                                                                            byrow= TRUE, nrow = length(primary_prob_fulldist))) +
-                                         (tau0/(taup + tau0 + taua))*distr0[-1] +
-                                         (taua/(taup + tau0 + taua))*colSums(matrix(unlist(purrr::pmap(.l = list(as.list(ga), preaids_prob_fulldist),
-                                                                                                       .f = myfun2)), 
-                                                                                    byrow= TRUE, nrow = length(preaids_prob_fulldist))))))
-         }
+        # This reduces computational time. Variant transmission does not change 
+        # much for higher virion transmission
+        maxVirionsConsidered <- ifelse(maxVirionsConsidered>500, 500, maxVirionsConsidered)
+        
+        #  NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
+        
+        primary_prob_fulldist = purrr::map(.x = npVals,
+                                           ~dbinom(0:maxVirionsConsidered, 
+                                                   .x, 
+                                                   PerVirionProbability))
+        
+        chronic_prob_fulldist = purrr::map(.x = ncVals,
+                                           ~dbinom(0:maxVirionsConsidered, 
+                                                   .x, 
+                                                   PerVirionProbability))
+        
+        
+        preaids_prob_fulldist = purrr::map(.x = naVals,
+                                           ~dbinom(0:maxVirionsConsidered, 
+                                                   .x, 
+                                                   PerVirionProbability))
+        
+        #if maxVirionsConsidered>500 edit last particle value so each x_prob_fulldist sums to 1
+        if(any(round(sapply(primary_prob_fulldist, sum),9)!=1)){
+                for(i in 1:length(primary_prob_fulldist)){
+                        if(round(sum(primary_prob_fulldist[[i]]),9)!=1){
+                                primary_prob_fulldist[[i]][length(primary_prob_fulldist[[i]])] <- primary_prob_fulldist[[i]][length(primary_prob_fulldist[[i]])] + 1-sum(primary_prob_fulldist[[i]])
+                        }
+                }
+        }
+        if(any(round(sapply(chronic_prob_fulldist, sum),9)!=1)){
+                for(i in 1:length(chronic_prob_fulldist)){
+                        if(round(sum(chronic_prob_fulldist[[i]]),9)!=1){
+                                chronic_prob_fulldist[[i]][length(chronic_prob_fulldist[[i]])] <- chronic_prob_fulldist[[i]][length(chronic_prob_fulldist[[i]])] + 1-sum(chronic_prob_fulldist[[i]])
+                        }
+                }
+        }
+        if(any(round(sapply(preaids_prob_fulldist, sum),9)!=1)){
+                for(i in 1:length(preaids_prob_fulldist)){
+                        if(round(sum(preaids_prob_fulldist[[i]]),9)!=1){
+                                preaids_prob_fulldist[[i]][length(preaids_prob_fulldist[[i]])] <- preaids_prob_fulldist[[i]][length(preaids_prob_fulldist[[i]])] + 1-sum(preaids_prob_fulldist[[i]])
+                        }
+                }
+        }
+        
+        probNVirionsTransmittedPerSexAct <- array(0, maxVirionsConsidered+1)
+        probNVirionsTransmittedPerSexAct_PRIMARY <- array(0, maxVirionsConsidered+1)
+        probNVirionsTransmittedPerSexAct_CHRONIC <- array(0, maxVirionsConsidered+1)
+        probNVirionsTransmittedPerSexAct_PREAIDS <- array(0, maxVirionsConsidered+1)
+        
+        #The principle here is:
+        # probNVirionsTransmittedPerSexAct_XXX[1] = (1-f) + f*XXX_prob_fulldist[1]
+        # probNVirionsTransmittedPerSexAct_XXX[-1] = f*XXX_prob_fulldist[-1]
+        
+        myfun1 <- function(g0, distr0){
+                return(g0 * ((1-f) + f*distr0[1]))
+        }
+        
+        myfun2 <- function(g0, distr0){
+                return(g0 * f * distr0[-1])
+        }
+        
+        myfun3 <- function(g0, tau0, distr0){
+                return(g0 * ((1-f) + f*((taup/(taup + tau0 + taua))*sum(unlist(purrr::pmap(.l = list(as.list(gp), primary_prob_fulldist),
+                                                                                           .f = myfun1))) +
+                                                (tau0/(taup + tau0 + taua))*distr0[1] +
+                                                (taua/(taup + tau0 + taua))*sum(unlist(purrr::pmap(.l = list(as.list(ga), preaids_prob_fulldist),
+                                                                                                   .f = myfun1))))))
+        }
+        
+        myfun4 <- function(g0, tau0, distr0){
+                return(g0 * (f*((taup/(taup + tau0 + taua))*colSums(matrix(unlist(purrr::pmap(.l = list(as.list(gp), primary_prob_fulldist),
+                                                                                              .f = myfun2)), 
+                                                                           byrow= TRUE, nrow = length(primary_prob_fulldist))) +
+                                        (tau0/(taup + tau0 + taua))*distr0[-1] +
+                                        (taua/(taup + tau0 + taua))*colSums(matrix(unlist(purrr::pmap(.l = list(as.list(ga), preaids_prob_fulldist),
+                                                                                                      .f = myfun2)), 
+                                                                                   byrow= TRUE, nrow = length(preaids_prob_fulldist))))))
+        }
         
         probNVirionsTransmittedPerSexAct[1] <- sum(unlist(purrr::pmap(.l = list(as.list(gc),as.list(tauc), chronic_prob_fulldist),
                                                                       .f = myfun3)))
@@ -304,7 +302,7 @@ populationmodel_acrossVL_Env <- function(theta=c(4.715*1e-8, 0.029)){
         
         # repeat founder strain distribution length(VL) times so we can use as input
         listofnumberFounderStrainDistribution = rep(list(numberFounderStrainDistribution), length(ncVals))
-
+        
         # calculate the number of variants for each particle number, weighted by the prob of particle number
         weight_numberFounderStrainDistribution <- purrr::map2(.x = listofnumberFounderStrainDistribution,
                                                               .y = as.list(tauc),
@@ -327,65 +325,70 @@ populationmodel_acrossVL_Env <- function(theta=c(4.715*1e-8, 0.029)){
                 byrow = TRUE))  %>%
                 mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
                 colSums()
+        
         variant_distribution <- variant_distribution / sum(variant_distribution)
         multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
-        rm(variant_distribution)
+        #rm(variant_distribution)
         
         # sum up across all times in primary infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
-
-        variant_distribution_primary <- as.data.frame(matrix(
-                unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
-                                   .y = as.list(tauc),
-                                   .f = ~( filter(., tvals <= taup) %>%
-                                                   dplyr::select(., starts_with("V")) %>%
-                                                   colSums(.)))),
-                ncol = ncol(numberFounderStrainDistribution)-2,
-                byrow = TRUE)) %>%
-                mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
-                colSums()
         
-        variant_distribution_primary <- variant_distribution_primary / sum(variant_distribution_primary)
-        multiple_founder_proportion_primary <- 1 - as.numeric(variant_distribution_primary[1])
+        #variant_distribution_primary <- as.data.frame(matrix(
+        # unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
+        #    .y = as.list(tauc),
+        #  .f = ~( filter(., tvals <= taup) %>%
+        #                 dplyr::select(., starts_with("V")) %>%
+        #                 colSums(.)))),
+        # ncol = ncol(numberFounderStrainDistribution)-2,
+        #byrow = TRUE)) %>%
+        #mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
+        #colSums()
+        
+        # variant_distribution_primary <- variant_distribution_primary / sum(variant_distribution_primary)
+        #multiple_founder_proportion_primary <- 1 - as.numeric(variant_distribution_primary[1])
         
         # sum up across all times in chronic infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
-        variant_distribution_chronic <- as.data.frame(matrix(
-                unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
-                                   .y = as.list(tauc),
-                                   .f = ~(filter(., tvals > taup & tvals <= (taup + .y)) %>%
-                                                  dplyr::select(., starts_with("V")) %>%
-                                                  colSums(.)))),
-                ncol = ncol(numberFounderStrainDistribution)-2,
-                byrow = TRUE)) %>%
-                mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
-                colSums()
-        variant_distribution_chronic <- variant_distribution_chronic / sum(variant_distribution_chronic)
-        multiple_founder_proportion_chronic <- 1 - as.numeric(variant_distribution_chronic[1])
+        # variant_distribution_chronic <- as.data.frame(matrix(
+        # unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
+        #                   .y = as.list(tauc),
+        #                   .f = ~(filter(., tvals > taup & tvals <= (taup + .y)) %>%
+        #                                  dplyr::select(., starts_with("V")) %>%
+        #                                  colSums(.)))),
+        # ncol = ncol(numberFounderStrainDistribution)-2,
+        # byrow = TRUE)) %>%
+        #mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
+        # colSums()
+        # variant_distribution_chronic <- variant_distribution_chronic / sum(variant_distribution_chronic)
+        #multiple_founder_proportion_chronic <- 1 - as.numeric(variant_distribution_chronic[1])
         
         # sum up across all times in preaids infection for each spvl person and then average across all of them - weighting by duration of infection and freq in population                                                       
-        variant_distribution_preaids <- as.data.frame(matrix(
-                unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
-                                   .y = as.list(tauc),
-                                   .f = ~(filter(., tvals > (taup + .y) & (tvals <= (taup + .y + taua))) %>%
-                                                  dplyr::select(., starts_with("V")) %>%
-                                                  colSums(.)))),
-                ncol = ncol(numberFounderStrainDistribution)-2,
-                byrow = TRUE)) %>%
-                mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
-                colSums()
-        variant_distribution_preaids <- variant_distribution_preaids / sum(variant_distribution_preaids)
-        multiple_founder_proportion_preaids <- 1 - as.numeric(variant_distribution_preaids[1])
+        #variant_distribution_preaids <- as.data.frame(matrix(
+        #   unlist(purrr::map2(.x = weight_numberFounderStrainDistribution,
+        #                     .y = as.list(tauc),
+        #                    .f = ~(filter(., tvals > (taup + .y) & (tvals <= (taup + .y + taua))) %>%
+        #                                  dplyr::select(., starts_with("V")) %>%
+        #                                 colSums(.)))),
+        #ncol = ncol(numberFounderStrainDistribution)-2,
+        #byrow = TRUE)) %>%
+        # mutate(across(everything(), ~(. * gc * (1/(taup + tauc + taua))))) %>%
+        #colSums()
+        #variant_distribution_preaids <- variant_distribution_preaids / sum(variant_distribution_preaids)
+        #multiple_founder_proportion_preaids <- 1 - as.numeric(variant_distribution_preaids[1])
         
         # output the prob of transmission across all infectious period and the chance of multiple lineages
-        output <- list(probTransmissionPerSexAct = probTransmissionPerSexAct,
-                       probTransmissionPerSexAct_primary = probTransmissionPerSexAct_PRIMARY,
-                       probTransmissionPerSexAct_chronic = probTransmissionPerSexAct_CHRONIC,
-                       probTransmissionPerSexAct_preaids = probTransmissionPerSexAct_PREAIDS,
-                       multiple_founder_proportion = multiple_founder_proportion,
-                       multiple_founder_proportion_primary = multiple_founder_proportion_primary,
-                       multiple_founder_proportion_chronic = multiple_founder_proportion_chronic,
-                       multiple_founder_proportion_preaids = multiple_founder_proportion_preaids)
+        output <- list(variant_distribution,
+                       probTransmissionPerSexAct,
+                       sp_ViralLoad)
+        #list(probTransmissionPerSexAct = probTransmissionPerSexAct,
+        # probTransmissionPerSexAct_primary = probTransmissionPerSexAct_PRIMARY,
+        # probTransmissionPerSexAct_chronic = probTransmissionPerSexAct_CHRONIC,
+        #probTransmissionPerSexAct_preaids = probTransmissionPerSexAct_PREAIDS,
+        #multiple_founder_proportion = multiple_founder_proportion,
+        # multiple_founder_proportion_primary = multiple_founder_proportion_primary,
+        # multiple_founder_proportion_chronic = multiple_founder_proportion_chronic,
+        #multiple_founder_proportion_preaids = multiple_founder_proportion_preaids)
         
         return(output)
+        
         
         
 }
