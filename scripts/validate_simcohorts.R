@@ -4,7 +4,7 @@
 # This script calculates normalised measures of bias and prepares tidy data frames to be plotted
 # as confusion matrices in the supplementary materials. 
 
-require('./scripts/simulate_cohort_funcs.R')
+source('./scripts/simulate_cohorts_funcs.R')
 # MUST HAVE RUN ./scripts/main.R UP TO LINE 85
 
 # Sanity Check
@@ -16,12 +16,12 @@ stopifnot('stratified_data' %in% ls(envir = .GlobalEnv))
 sim_data_int_list <- stratified_data %>%
   select(-age.inf_category) %>%
   pivot_wider(names_from = partner, values_from = c(sex, age.inf)) %>%
-  unite(sex ,c(sex_1, sex_2), sep = '') %>%
+  unite(sex ,c(sex_transmitter, sex_recipient), sep = '') %>%
   mutate(across(starts_with('sex'), .fns = ~ match(.x, c('MF', 'FM', 'MM', 'FF')))) %>%
   #mutate(across(starts_with('sex'), .fns = ~ match(.x, c('M', 'F')))) %>% 
   mutate(across(starts_with('riskgroup'), .fns = ~ match(.x, c('HET', 'MSM', 'PWID')))) %>%
   relocate(ends_with('couplemean'), .after = last_col())  %>%
-  select(-c(ID_pair, SpVL_couplemean)) %>%
+  select(-c(ID_pair, SpVL_couplemean)) %>% 
   group_by(riskgroup) %>%
   group_split() %>%
   lapply(., function(x) x %>% select(where(~n_distinct(.) > 1))) %>%
@@ -60,22 +60,6 @@ bias_covmats <- mapply(function(x_sim, x_emp) x_sim - x_emp, x_sim = sim_data_co
   rename(riskgroup = L1)
 
 
-# Sample Plots
-#ggplot(bias_means) +
-  #geom_col(aes(x = variable, y = bias))+ 
-  #facet_wrap(.~riskgroup) +
-  #my_theme + 
-  #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-
-#ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = value)) +
-  #geom_tile(color = "white",
-            #lwd = 1.5,
-            #linetype = 1) + 
-  #geom_text(aes(label = signif(value, 3)), color = "black", size = 3) +
-  #scale_fill_distiller(palette = 'OrRd') + 
-  #facet_wrap(.~riskgroup) +
-  #my_theme+ 
-  #theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 
 # END #
