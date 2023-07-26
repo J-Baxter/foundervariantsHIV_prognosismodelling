@@ -319,7 +319,7 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         variant_distribution <-  as.data.frame(weight_numberFounderStrainDistribution) %>%
                 mutate(across(dplyr::starts_with("V"), ~(. * gc * (1/( taup + tauc + taua))))) %>%
                 group_by(nparticles) %>%
-                summarise(across(.cols = dplyr::starts_with(c("V" , 'prob')), .fns = sum)) %>%
+                summarise(across(.cols = dplyr::starts_with(c("V")), .fns = sum)) %>%
                 ungroup()
                 
                 
