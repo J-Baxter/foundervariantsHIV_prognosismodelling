@@ -254,9 +254,9 @@ combined_data_CD4 <- combined_data  %>%
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
 # Implement transmission model (Thompson et al. and re-parameterised by Villabona-Arenas et al. (Unpublished))
-# NB: THIS IS COMPUTATIONALLY EXPENSIVE AND WILL RUN FOR MANY HOURS (159396 iterations)
+# NB: THIS IS COMPUTATIONALLY EXPENSIVE AND WILL RUN FOR ~ 25 HOURS USING 4 CORES
 
-combined_data_PMV <- c(
+combined_data_PMV <- list(
   
   # Female-to-Male
   RunParallel(TransmissionModel2,
@@ -290,7 +290,7 @@ combined_data_PMV <- c(
                                    
   
   # Label
-  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) #%>%
+  sapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL'), simplify = F) #%>%
   #mapply(function(x,y) c(x, y ),
          #x= ., 
          #y = combined_data_CD4 %>% group_split(riskgroup_recipient, SpVL), 
