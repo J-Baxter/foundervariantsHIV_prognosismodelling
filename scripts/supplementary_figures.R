@@ -53,9 +53,7 @@ bias_covmats <- bias_covmats %>%
   mutate(across(starts_with('Var'), .fns = ~ case_when(.x == 'age.inf_transmitter' ~ 'Transmitter Age',
                                                        .x == 'age.inf_recipient' ~ 'Recipient Age',
                                                        .x == 'log10_SpVL_couplemean' ~ 'Log10SpVL Pair Mean',
-                                                       .x == 'sex' ~ 'Sex'))) %>%
-  rename(Simulated = Var1) %>%
-  rename(Empirical = Var2) # Check which way round these go
+                                                       .x == 'sex' ~ 'Sex'))) 
 
 bias_means <- bias_means %>%
   mutate(variable = case_when(variable == 'age.inf_transmitter' ~ 'Transmitter Age',
@@ -75,7 +73,7 @@ plt_s2a <- ggplot(bias_means) +
                      breaks = seq(-0.3, 0.3, by = 0.1) %>% round(digits  = 2))
 
 
-plt_s2b <- ggplot(bias_covmats, aes(x = Empirical, y = Simulated, fill = value)) +
+plt_s2b <- ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile(color = "white",
             lwd = 1.5,
             linetype = 1) + 
@@ -83,10 +81,12 @@ plt_s2b <- ggplot(bias_covmats, aes(x = Empirical, y = Simulated, fill = value))
   scale_fill_distiller(palette = 'OrRd') + 
   facet_wrap(.~riskgroup)+ 
   my_theme+ 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        axis.title.x  = element_blank(),
+        axis.title.y  = element_blank())
 
 plt_s2 <- cowplot::plot_grid(plt_s2a, plt_s2b, nrow = 2, ncol = 1,align = 'hv', labels = 'AUTO')
-ggsave(plot = plt_s2 , filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 16, height = 12)
+ggsave(plot = plt_s2 , filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 15, height = 14)
 
 
 # Heritability Model Plots
