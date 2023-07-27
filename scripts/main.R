@@ -290,25 +290,40 @@ combined_data_PMV <- list(
                                    
   
   # Label
-  sapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL'), simplify = F) #%>%
-  #mapply(function(x,y) c(x, y ),
-         #x= ., 
-         #y = combined_data_CD4 %>% group_split(riskgroup_recipient, SpVL), 
-        # SIMPLIFY = F)
+  lapply(., function(x) lapply(x, setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL'))) 
+
+
+#CorrectMyMistake <- function(x){
+  #x[['variant_distribution']] <- x[['variant_distribution']]  %>% dplyr::select(-prob_nparticles)
+  #return(x)
+#}
+#combined_data_PMV_test_1 <- lapply(combined_data_PMV , CorrectMyMistake)
+
+combined_data_PMV_test <- list(combined_data_PMV_test_1[1:24828],
+                               combined_data_PMV_test_1[24829:(24828+26830)],
+                               combined_data_PMV_test_1[(24828+26830+1):(24828 + 26830 + 56884)],
+                               combined_data_PMV_test_1[(24828 + 26830 + 56884 + 1):(24828 + 26830 + 56884+50251)],
+                               combined_data_PMV_test_1[(24828 + 26830 + 56884+50251 + 1):(24828 + 26830 + 56884+50251 + 603)])  %>%
+  setNames(., nm = names(combined_data_CD4))
+  
+
+combined_data_CD4_split <- lapply(combined_data_CD4, function(x) x %>% mutate(i = seq(1:nrow(.))) %>% group_split(i))
+
+combined_data_PMV_onwards <- mapply(function(i,j) mapply(function(x,y) c(x, y), i, j , SIMPLIFY  = FALSE), combined_data_PMV_test, combined_data_CD4_split, SIMPLIFY  = FALSE)
 
 
 ################################### Format Model Outputs ###################################
 # Warning: this will take some time to run
 
-combined_data_CD4_PMV <- combined_data_PMV %>%
+combined_data_CD4_PMV <- flatten(combined_data_PMV_onwards) %>%
   # Sum joint probabilities to estimate marginal probabilities of the number of variants and 
   # virus particles initiating infection
   
   lapply(., function(x) c(x, list('p_particles' = rowSums(x[['variant_distribution']] %>%
-                                                            select(-nparticles) %>% 
+                                                            dplyr::select(-nparticles) %>% 
                                                             as.vector())))) %>%
   lapply(., function(x) c(x, list('p_variants' = colSums(x[['variant_distribution']] %>% 
-                                                           select(-c(nparticles, prob_nparticles)))))) %>%
+                                                           dplyr::select(-c(nparticles, prob_nparticles)))))) %>%
   
   # Process model outputs to form dataframe where each row contains all results for one participant
   lapply(., function(x) bind_cols(bind_cols(x[-c(1,2,3, 17,18)]), 
