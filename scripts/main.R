@@ -29,12 +29,11 @@ source('./scripts/import_data.R')
 
 ################################### Fit/Import Base Models ###################################
 # Import fitted model
-source('./scripts/transmission_model.R')
+source('./scripts/julian_transmission_model.R')
 source('./scripts/tolerance_model.R')
 
 # Fit Bayesian linear mixed model to SHCS data (<2 mins to fit)
 source('./scripts/heritability_model.R')
-#source('./scripts/heritability_extra_model.R') # vary assumptions of heritability
 
 
 ################################### Simulate Stratified Cohorts ###################################
