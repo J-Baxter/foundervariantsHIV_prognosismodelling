@@ -25,10 +25,11 @@ CalcRecipient <- function(MC, VC){
   # Variables
   # MC <- Carrier phenotype
   # VC <- Carrier variance
+  h2 <- 0.33
   mu_0 <- 4.46  # Gaussian approximation of Transmission Potential
   v_0 <- 0.96  # Gaussian approximation of Transmission Potential
   mu_e <- 3  # Distribution of environmental effects 
-  v_e <- 0.5  # Distribution of environmental effects 
+  v_e <-  VC - VC*h2  # Distribution of environmental effects 
   v_t <- 0.15 # variance asssociated with sampling at transmission
   
   # Subtract environmental effects to calculate genotypic distribution
@@ -44,7 +45,7 @@ CalcRecipient <- function(MC, VC){
   m_r <- m_d 
   v_r <- v_d + v_t
   
-  # Re-distribute environmental variance for recipient phenotype
+  # Re-distribute environmental variance for recipient phenotype1
   MR <- m_r + mu_e
   VR <- v_r + v_e
   
@@ -55,7 +56,7 @@ CalcRecipient <- function(MC, VC){
 }
 
 
-SpVLClassifier <- function(VL, transmitter, recipient){
+SpVLClassifier <- function(VL_pair, transmitter, recipient){
   
   # Transmitter and recipient mut be named vectors with mean an variance
   stopifnot(all(is.numeric(transmitter) && is.numeric(recipient)))
@@ -71,11 +72,8 @@ SpVLClassifier <- function(VL, transmitter, recipient){
   
   # Determine bounds of ML Classifier
   a <- 1/v_r - 1/v_t
-  print(a)
   b <- 2*mu_t/v_t - 2*mu_r/v_r
-  print(b)
   c <- (mu_r**2)/v_r - (mu_t**2)/v_t + 2*log(v_r/v_t)
-  print(c)
   
   ub <- (-b + sqrt(b**2 - 4*a*c))/(2*a)
   lb <- (-b - sqrt(b**2 - 4*a*c))/(2*a)
@@ -83,20 +81,53 @@ SpVLClassifier <- function(VL, transmitter, recipient){
   print(ub)
   print(lb)
   
+  # Likelihood of being a transmitter
+  
+  
   # Classify VLs
-  res <- matrix(nrow  = length(VL), ncol = 2)
-  res[,1] <- VL
   
-  res[,2] <- ifelse(lb > res[,1] & res[,1] > ub,  'Transmitter', 'Recipient')
+  #res <- 
+ 
+  #res[,2] <- ifelse( > res[,1] & res[,1] > ub,  'Transmitter', 'Recipient')
   
-  return(res)
+  #return(res)
 }
+
+## THIS ONE ##
+vlpairs <- shcs_data %>% mutate(transmitter = case_when(
+  dnorm(log10_SpVL_1, mean = 4.37, sd = sqrt(0.1845)) > dnorm(log10_SpVL_2, mean = 4.37, sd = sqrt(0.1845)) ~ 1 ,
+  dnorm(log10_SpVL_1, mean = 4.37, sd = sqrt(0.1845)) < dnorm(log10_SpVL_2, mean = 4.37, sd = sqrt(0.1845)) ~ 2 ,
+  .default = NA
+))
+
+# This one uses the ML classifier which gives only transmitter/recipient pairs
+vlpairs_alt <- shcs_data_long %>% mutate(transmitter = case_when(
+  dnorm(log10_SpVL, mean = 4.37, sd = sqrt(0.1845)) > dnorm(log10_SpVL, mean = 4.356, sd = sqrt(0.3737)) ~ 1 ,
+  .default = 0)) %>%
+  mutate(recipient= case_when(
+    dnorm(log10_SpVL, mean = 4.37, sd = sqrt(0.1845)) < dnorm(log10_SpVL, mean = 4.356, sd = sqrt(0.3737)) ~ 1 ,
+    .default = 0))
+
+vl_pair_long <- vlpairs %>% 
+  select(c(log10_SpVL_1, log10_SpVL_2, transmitter)) %>% pivot_longer(cols = starts_with('log10_SpVL'), values_to = 'log10SpVL') %>%
+  mutate(role = case_when(name == 'log10_SpVL_1' &  transmitter == 1 ~ 't',
+                                 name == 'log10_SpVL_2' & transmitter == 2 ~ 't',
+                                 .default = 'r'
+                                 ))
+
+
+ggplot(vl_pair_long)+
+  geom_histogram(aes(x = log10SpVL, fill = role))
+
 
 
 # TEST
 mc <- 4.35
 vc <- 0.478**2
 
+testfunc <- function(x, mean, var){
+  lh <- 1/sqrt(2*pi*var)exp(-((x - mean)^2)/2*var)
+}
 
 t <- CalcTransmitter(mc,vc)
 
