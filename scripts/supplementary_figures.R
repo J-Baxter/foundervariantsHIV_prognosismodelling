@@ -127,11 +127,12 @@ plt_qq <- shcs_data_long_transmitterallocated %>%
   my_theme
 
 # Plot Prior ~ Posterior distributions
-h2_df <- ggs(heritability_model_randomallocation)
+model_list <- list(random = heritability_model_randomallocation, 
+                   max.spvl = heritability_model_transmittermax)
 
-
-# Plot posterior chains
-plot_df <- h2_df %>%
+h2_chains <- lapply(model_list, ggs) %>% # Warning message In custom.sort(D$Parameter) : NAs introduced by coercion
+  do.call(rbind.data.frame, .) %>%
+  mutate(model = sapply(str_split(rownames(.), '\\.'), '[', 1)) %>%
   filter(Parameter %in% c('b_Intercept',  'b_sexF', 'b_partnerrecipient',
                           'b_age.inf_category25M29', 'b_age.inf_category30M39',
                           'b_age.inf_category40M80', 'b_riskgroupMSM', 
@@ -160,12 +161,20 @@ plot_df <- h2_df %>%
                             )
   ))
 
-plot_chains <- ggplot(plot_df,
+r2_bayes <- lapply(model_list, r2_posterior) %>%
+  lapply(., function(x) x$R2_Bayes)%>%
+  do.call(cbind.data.frame, .) %>%
+  pivot_longer(cols = everything(), names_to = 'model', values_to = 'R2')
+  
+
+
+# Plot posterior chains
+plot_chains <- ggplot(h2_chains,
                       aes(x   = Iteration,
                           y   = value, 
                           col = as.factor(Chain)))+
   geom_line()+
-  facet_grid(Parameter ~ .,
+  facet_grid(Parameter ~ model,
              scale  = 'free_y',
              switch = 'y',
              labeller = label_parsed)+
@@ -176,17 +185,15 @@ plot_chains <- ggplot(plot_df,
 
 ggsave(plot = plot_chains, filename = paste(figs_dir,sep = '/', "panel_chains.jpeg"), device = jpeg, width = 12, height = 19)
 
-plot_density <- ggplot(plot_df,
-                      aes(x = value,
-                          fill = as.factor(Chain)))+
-  geom_density(alpha = 0.5, colour = NA)+
-  facet_wrap(Parameter ~ .,
-             scale  = 'free',
-             switch = 'y',
-             labeller = label_parsed, ncol = 2)+
+plot_r2_density <- ggplot(r2_bayes,
+                      aes(x = R2,
+                          fill = as.factor(model)))+
+  geom_histogram(aes(y = after_stat(count / max(count))), colour = NA)+
   scale_fill_brewer(palette = 'OrRd', 'Chains') +
+  scale_y_continuous(expand = c(0,0), 'Frequency')+
+  scale_x_continuous(expand = c(0,0), limits = c(0,1), expression(R^2))+
   my_theme + 
-  theme(legend.position = 'bottom', 
+  theme(legend.position = 'right', 
         strip.text.y = element_text(family = 'sans'))
 
-ggsave(plot = plot_density , filename = paste(figs_dir,sep = '/', "panel_density.jpeg"), device = jpeg, width = 14, height = 16)
+ggsave(plot = plot_r2_density , filename = paste(figs_dir,sep = '/', "plot_r2_density.jpeg"), device = jpeg, width = 14, height = 14)
