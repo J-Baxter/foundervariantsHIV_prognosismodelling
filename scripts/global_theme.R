@@ -4,10 +4,10 @@ require(showtext)
 require(showtextdb)
 
 # Format fonts for output
-font_add_google("Questrial", "Questrial")
+font_add("lmsans10", 'lmsans10-regular.otf')
 showtext_auto()
 
-my_theme <- theme_classic(base_family = "Questrial")+
+my_theme <- theme_classic(base_family = "lmsans10")+
   theme(
     text = element_text(size=16),
     axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
