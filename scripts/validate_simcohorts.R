@@ -34,15 +34,13 @@ shcs_data_covmats <- lapply(shcs_data_int_list, cov)
 
 
 # Calculate normalise
-min_max_norm <- function(x) {
-  (x - min(x)) / (max(x) - min(x))
-}
+#min_max_norm <- function(x) {
+  #(x - min(x)) / (max(x) - min(x))
+#}
 
-sim_data_means <- lapply(sim_data_int_list, function(x) x %>% mutate(across(everything(), .fns = ~min_max_norm(.x)))) %>%
-  lapply(., colMeans)
+sim_data_means <- lapply(sim_data_int_list, colMeans)
 
-shcs_data_means <- lapply(shcs_data_int_list, function(x) x %>% mutate(across(everything(), .fns = ~min_max_norm(.x)))) %>%
-  lapply(., colMeans)
+shcs_data_means <- lapply(shcs_data_int_list, colMeans)
 
 
 # Calculate bias (x_sim - x)
@@ -58,8 +56,6 @@ bias_covmats <- mapply(function(x_sim, x_emp) x_sim - x_emp, x_sim = sim_data_co
   reshape2::melt() %>% 
   tibble() %>%
   rename(riskgroup = L1)
-
-
 
 
 # END #
