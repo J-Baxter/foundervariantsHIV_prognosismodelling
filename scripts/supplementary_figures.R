@@ -1,34 +1,28 @@
+###################################################################################################
+# Supplementary Figures
+
+
+################################### Dependencies ###################################
+require(tidyverse)
+require(showtext)
+require(showtextdb)
+require(cowplot)
+require(RColorBrewer)
+
+source('./scripts/BonhoefferEqns.R')
+
+
+################################### Fig S1 #################################
 # Change in distribution of SpVL over transmission cycle
 MC <- 4
 VC <- 0.5
-mu_0 <- 4.46  # Gaussian approximation of Transmission Potential
-v_0 <- 1  # Gaussian approximation of Transmission Potential
-mu_e <- 3  # Distribution of environmental effects 
-v_e <- 1  # Distribution of environmental effects 
-v_t <- 0.15 # variance asssociated with sampling at transmission
 
-# Subtract environmental effects to calculate genotypic distribution
-m_c <- MC - mu_e
-v_c <- VC - v_e
+t <- CalcTransmitter(MC, VC)
+r <- CalcRecipient(MC, VC)
 
-# Apply transmission potential to infer donor genotype
-m_d <- (m_c*(v_e + v_0) + (mu_0 - mu_e)*v_c)/(v_c + v_e + v_0)
-v_d <- (v_c*(v_e + v_0))/(v_c + v_e + v_0)
-
-# Infer donor phenotype
-MD <- (MC*v_0 + mu_0*VC)/(v_0 + VC)
-VD <- (VC*v_0)/(v_0 + VC)
-
-# sample from donor genotypes for recipient genotypes
-m_r <- m_d 
-v_r <- v_d + v_t
-
-# Re-distribute environmental variance for recipient phenotype
-MR <- m_r + mu_e
-VR <- v_r + v_e
-s1_data <- tibble(Carrier = rnorm(100000, MC, VC), 
-                  Transmitter = rnorm(100000, MD, sqrt(VD)),
-                  Recipient = rnorm(100000, MR, sqrt(VR))) %>%
+s1_data <- tibble(Carrier = rnorm(100000, MC, sqrt(VC)), 
+                  Transmitter = rnorm(100000, t[['mean']], sqrt(t[['var']])),
+                  Recipient = rnorm(100000, r[['mean']], sqrt(r[['var']]))) %>%
   pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl') %>%
   mutate(stage = forcats::fct_relevel(stage, c('Carrier', 'Transmitter', 'Recipient')))
   
@@ -46,6 +40,11 @@ plt_s1 <- ggplot(s1_data) +
 ggsave(plot = plt_s1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"), device = jpeg, width = 6, height =8)
 
 
+################################### Fig S2 #################################
+# Densities and correlations of simulated variables.
+
+
+################################### Fig S3 #################################
 # Validate Simulation Plots
 source('/scripts/validate_simcohorts.R')
 
@@ -89,6 +88,7 @@ plt_s2 <- cowplot::plot_grid(plt_s2a, plt_s2b, nrow = 2, ncol = 1,align = 'hv', 
 ggsave(plot = plt_s2 , filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 15, height = 14)
 
 
+################################### Fig S4 #################################
 # Heritability Model Plots
 
 # Check Residuals
@@ -126,10 +126,36 @@ plt_qq <- shcs_data_long_transmitterallocated %>%
   geom_qq_line()+ 
   my_theme
 
+
+################################### Fig S5 #################################
+
+################################### Fig S6 #################################
 # Plot Prior ~ Posterior distributions
 model_list <- list(random = heritability_model_randomallocation, 
                    max.spvl = heritability_model_transmittermax)
 
+
+r2_bayes <- lapply(model_list, r2_posterior) %>%
+  lapply(., function(x) x$R2_Bayes)%>%
+  do.call(cbind.data.frame, .) %>%
+  pivot_longer(cols = everything(), names_to = 'model', values_to = 'R2')
+  
+plot_r2_density <- ggplot(r2_bayes,
+                          aes(x = R2,
+                              fill = as.factor(model)))+
+  geom_histogram(aes(y = after_stat(count / max(count))), colour = NA)+
+  scale_fill_brewer(palette = 'OrRd', 'Chains') +
+  scale_y_continuous(expand = c(0,0), 'Frequency')+
+  scale_x_continuous(expand = c(0,0), limits = c(0,1), expression(R^2))+
+  my_theme + 
+  theme(legend.position = 'right', 
+        strip.text.y = element_text(family = 'sans'))
+
+ggsave(plot = plot_r2_density , filename = paste(figs_dir,sep = '/', "plot_r2_density.jpeg"), device = jpeg, width = 14, height = 14)
+
+
+################################### Fig S7 #################################
+# Plot posterior chains
 h2_chains <- lapply(model_list, ggs) %>% # Warning message In custom.sort(D$Parameter) : NAs introduced by coercion
   do.call(rbind.data.frame, .) %>%
   mutate(model = sapply(str_split(rownames(.), '\\.'), '[', 1)) %>%
@@ -161,14 +187,6 @@ h2_chains <- lapply(model_list, ggs) %>% # Warning message In custom.sort(D$Para
                             )
   ))
 
-r2_bayes <- lapply(model_list, r2_posterior) %>%
-  lapply(., function(x) x$R2_Bayes)%>%
-  do.call(cbind.data.frame, .) %>%
-  pivot_longer(cols = everything(), names_to = 'model', values_to = 'R2')
-  
-
-
-# Plot posterior chains
 plot_chains <- ggplot(h2_chains,
                       aes(x   = Iteration,
                           y   = value, 
@@ -185,15 +203,64 @@ plot_chains <- ggplot(h2_chains,
 
 ggsave(plot = plot_chains, filename = paste(figs_dir,sep = '/', "panel_chains.jpeg"), device = jpeg, width = 12, height = 19)
 
-plot_r2_density <- ggplot(r2_bayes,
-                      aes(x = R2,
-                          fill = as.factor(model)))+
-  geom_histogram(aes(y = after_stat(count / max(count))), colour = NA)+
-  scale_fill_brewer(palette = 'OrRd', 'Chains') +
-  scale_y_continuous(expand = c(0,0), 'Frequency')+
-  scale_x_continuous(expand = c(0,0), limits = c(0,1), expression(R^2))+
-  my_theme + 
-  theme(legend.position = 'right', 
-        strip.text.y = element_text(family = 'sans'))
 
-ggsave(plot = plot_r2_density , filename = paste(figs_dir,sep = '/', "plot_r2_density.jpeg"), device = jpeg, width = 14, height = 14)
+################################### Fig S8 #################################
+# Transmission Model Plots
+# This script plots extracted estimates/data from the Thompson transmission model to produce 
+# plots describing the within-host processes encoded within the model
+
+
+my_palette <- RColorBrewer::brewer.pal(name="OrRd",n=9)[4:9]
+
+# For a given SpVL, plot the probabilities of transmission over time since infection (Thompson)
+spvl_infdur <- read_csv('./data/spvl_infectionduration.csv')
+plt_tda <- 
+  ggplot(spvl_infdur)+
+  geom_line(aes(x = t, y = p, colour = as.factor(spvl)), size = 1.5)+
+  scale_color_manual(values = my_palette, name = 'SpVL')+
+  my_theme+
+  scale_x_continuous(expand = c(0,0), limits = c(0,17), 'Time') +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 0.04), 'P(Acquisition)')+
+  theme(legend.position = c(0.92,0.88))
+
+
+
+# For a given SpVL, plot the probabilities of transmission over time since infection (Villabona)
+npVals <- c(97, 42084, 64344, 3878, 1714, 421, 92159, 136380, 27524, 7214, 2742, 262131, 491492,
+            88507, 25176, 22626, 967867, 1216484, 427765, 105021, 42084, 3574304, 4492440, 1341713, 471801)
+
+# The different VLs during preAIDS (Mellors et al 1995)
+naVals <- round(c(10^4, 10^4.5, 10^5, 10^5.5, 10^6))
+
+
+plt_tda <- 
+  ggplot(spvl_infdur)+
+  geom_line(aes(x = t, y = p, colour = as.factor(spvl)), size = 1.5)+
+  scale_color_manual(values = my_palette, name = 'SpVL')+
+  my_theme+
+  scale_x_continuous(expand = c(0,0), limits = c(0,17), 'Time') +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 0.04), 'P(Acquisition)')+
+  theme(legend.position = c(0.92,0.88))
+
+
+# Plot the proportion of the xth most common variants over time since infection
+var_t <- read_csv('./data/variant_distribution_time.csv') %>% 
+  mutate(x_var = as.factor(x_var)) %>% 
+  rename(time = T)
+
+plot_var <- ggplot(var_t, aes(x = time, y = P, fill = x_var)) + 
+  geom_area() + 
+  scale_x_continuous(name = 'Time', expand = c(0,0))+
+  scale_y_continuous(name = 'Proportion of Xth Most Common Variant', expand = c(0,0))+
+  scale_fill_brewer(palette = 'OrRd', na.value = 'black')+
+  my_theme+
+  theme(legend.position = 'none')
+
+# Values of F and P
+
+
+# P(Aq) ~ P(MV)
+
+panel_s1 <- cowplot::plot_grid( plot_var,NA, plt_tda, nrow = 1, align = 'hv', labels = c('A', '', 'B'), rel_widths = c(1,0.2,1))
+
+## END ##
