@@ -32,20 +32,28 @@ EnumerateLevels <- function(x){
 
 SimCohorts <- function(dataframe,probs) {
   
-  # Set lower bound for age
-  lb <- ifelse(grepl("age.inf", names(dataframe)), 16, -Inf)
+  # Log10 transform age.inf
+  dataframe <- dataframe %>%
+    mutate(across(starts_with('age.inf'), .fns = ~ log10(.x)))
+  
+  # Set lower bound for age (log10(16) = 1.20412)
+  # Set upper bound for age (log10(80) = 1.90309)
+  lb <- ifelse(grepl("age.inf", names(dataframe)), 1.20412 , -Inf)
+  ub <- ifelse(grepl("age.inf", names(dataframe)), 1.90309 , Inf)
   
   # Simulate from truncated multivariate normal
   out <- tmvtnorm::rtmvnorm(n = 200, 
                             mean = as.vector(colMeans(dataframe)), 
                             sigma = cov(dataframe),
                             lower = lb,
-                            upper = rep(Inf, length = ncol(dataframe)),
+                            upper = ub,
                             algorithm = 'rejection' # Use rejection sampling instead of Gibbs
   ) %>%
     as_tibble(name_repair = NULL) %>%
     setNames(colnames(dataframe)) %>%
-    
+    # exponentiate age.inf 
+    mutate(across(starts_with('age.inf'), .fns = ~ raise_to_power(10, .x))) %>%
+  
     # Cut estimates to infer categorical variables
     mutate(across(starts_with(c('sex', 'riskgroup')), 
                   .fns = ~cut(.x,
