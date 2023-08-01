@@ -95,8 +95,8 @@ SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
 zambia_variance <- 0.61**2 #0.61 is the standard deviation
 zambia_mean <- 4.74 
 
-recipient_dist <- BonhoefferEqns(zambia_mean, 
-                                 zambia_variance)
+recipient_dist <- CalcRecipient(zambia_mean, 
+                                zambia_variance)
 
 
 ################################### Decompose Recipient Distribution ###################################
