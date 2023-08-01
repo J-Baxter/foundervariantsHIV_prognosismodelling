@@ -62,30 +62,44 @@ bias_means <- bias_means %>%
 
 
 plt_s2a <- ggplot(bias_means) +
-  geom_col(aes(x = variable, y = bias, fill = bias))+ 
+  geom_col(aes(x = variable, y = bias, fill = abs(bias)))+ 
   facet_wrap(.~riskgroup) +
   my_theme + 
-  scale_fill_distiller(palette = 'OrRd') + 
+  scale_fill_distiller(palette = 'OrRd', direction = 1) + 
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
   scale_y_continuous(expression(paste(bar(x)["simulated"] - bar(x)['empirical'])), 
-                     limits = c(-0.3, 0.3), 
-                     breaks = seq(-0.3, 0.3, by = 0.1) %>% round(digits  = 2))
+                     limits = c(-0.8, 0.8), 
+                     breaks = seq(-0.8, 0.8, by = 0.2) %>% round(digits  = 2)
+                     )
 
 
-plt_s2b <- ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = value)) +
+plt_s2b <- ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = abs(value))) +
   geom_tile(color = "white",
             lwd = 1.5,
             linetype = 1) + 
   geom_text(aes(label = signif(value, 3)), color = "black", size = 3) +
-  scale_fill_distiller(palette = 'OrRd') + 
+  scale_fill_distiller(palette = 'OrRd', direction = 1) + 
   facet_wrap(.~riskgroup)+ 
   my_theme+ 
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
         axis.title.x  = element_blank(),
         axis.title.y  = element_blank())
 
-plt_s2 <- cowplot::plot_grid(plt_s2a, plt_s2b, nrow = 2, ncol = 1,align = 'hv', labels = 'AUTO')
-ggsave(plot = plt_s2 , filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 15, height = 14)
+validate_df <- list(Simulated = stratified_data, Empirical = shcs_data_long) %>%
+  bind_rows(.id = 'id') %>%
+  select(sex, riskgroup, age.inf,  id) %>% filter(riskgroup %in% c('HET', "MSM", 'PWID'))
+
+plt_2c <- ggplot(validate_df ) +
+  geom_histogram(aes(x= age.inf, y = after_stat(density)), binwidth = 2, fill = '#e34a33')+
+  facet_wrap(id~riskgroup, ncol = 3)+
+  scale_x_continuous('Age at Infection', limits = c(15,80), breaks = seq(16,80, by = 8), expand = c(0,0))+
+  scale_y_continuous('Density', limits = c(0,0.08), expand = c(0,0))+
+  my_theme
+
+
+panel_s2 <- cowplot::plot_grid(plt_s2a, plt_s2b, plt_2c,nrow = 3, ncol = 1,align = 'hv', labels = 'AUTO')
+
+ggsave(plot = panel_s2  , filename = paste(figs_dir,sep = '/', "panel_s2_new.jpeg"), device = jpeg, width = 15, height = 20)
 
 
 ################################### Fig S4 #################################
@@ -225,12 +239,31 @@ plt_tda <-
 
 
 
-# For a given SpVL, plot the probabilities of transmission over time since infection (Villabona)
-npVals <- c(97, 42084, 64344, 3878, 1714, 421, 92159, 136380, 27524, 7214, 2742, 262131, 491492,
-            88507, 25176, 22626, 967867, 1216484, 427765, 105021, 42084, 3574304, 4492440, 1341713, 471801)
+# Primary Infection VLs (Feibig et al. 2003)
+fiebig_q <- c(0.1,   0.15,      0.5,    0.15,    0.1)
+# I 0-5 days\\II 5-10.3 days\\III 10.3-13.5 days\\IV 13.5-19.1 days\\V 19.1-88.6 days
 
-# The different VLs during preAIDS (Mellors et al 1995)
+#            I\\      II\\      III\\    IV\\       V 
+npVals <- c( 97,     42084,   64344,    3878,     1714,     # 0.1 (w = 0.1)
+            421,     92159,   136380,   27524,     7214,    # 0.25 (w = 0.15)
+            2742,    262131,   491492,   88507,    25176,   # 0.5 (w = 0.5)
+            22626,   967867,  1216484,   427765,   105021,  # 0.75 (w = 0.15)
+            42084,  3574304,  4492440,   1341713,   471801) # 0.9 (w = 0.1)
+
+fiebig_t <- c(5,5.3,3.2,5.6,69.5)/365 #Stage duration (Fiebig et al 2003) (Total time in acute infection = 0.243)
+fiebig_q <- c(0.1,0.15,0.5,0.15,0.1) #Quantiles 
+gp <- as.vector(outer(fiebig_t/sum(fiebig_t), fiebig_q))
+
+# preAIDS  Infection VLs (Mellors et al 1995)
 naVals <- round(c(10^4, 10^4.5, 10^5, 10^5.5, 10^6))
+ga <- c(0.06053491, 0.23398873, 0.34935005, 0.25220102, 0.10392529) # Probability density function of Mellors VLs (ie. estimate is averaged over these vls for fixed period 0.75)
+
+
+
+
+tauc = array(0, length(sp_ViralLoad))
+taup = sum(fiebig_t)
+taua = 0.75
 
 
 plt_tda <- 
