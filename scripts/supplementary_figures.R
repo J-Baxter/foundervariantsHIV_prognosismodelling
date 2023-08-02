@@ -143,48 +143,72 @@ ggsave(plot = panel_s3  , filename = paste(figs_dir,sep = '/', "panel_s3_new.jpe
 ################################### Fig S4 #################################
 # Heritability Model Plots
 
-# Check Residuals
-# Plot residuals with associated uncertainty
-plt_residuals <- shcs_data_long %>%
-  add_residual_draws(heritability_model) %>%
-  ggplot(aes(x = .row, y = .residual)) + 
-  stat_pointinterval() + 
-  my_theme
+# Prior-predictive check
+color_scheme_set("brewer-OrRd") 
+s4a_plt <- pp_check(priorpreditivesim, ndraws = 1000) + my_theme 
 
-# QQ plot
-plt_qq <- shcs_data_long %>%
-  add_residual_draws(heritability_model) %>%
-  median_qi() %>%
-  ggplot(aes(sample = .residual)) + 
-  geom_qq() + 
-  geom_qq_line()+ 
-  my_theme
+# Posterior-predictive check
+s4b_plt <- pp_check(heritability_model_transmitterrandom, ndraws = 1000) + my_theme 
+
+s4c_plt <- pp_check(heritability_model_transmitterML, ndraws = 1000) + my_theme 
 
 
 # Check Residuals
 # Plot residuals with associated uncertainty
-plt_residuals <- shcs_data_long_transmitterallocated %>%
-  add_residual_draws(heritability_model_transmittermax) %>%
+s4d_plt <- shcs_data_long_transmitterrandom %>%
+  add_residual_draws(heritability_model_transmitterrandom) %>%
   ggplot(aes(x = .row, y = .residual)) + 
-  stat_pointinterval() + 
+  scale_y_continuous('Residual') +
+  scale_x_continuous('Expected Value') +
+  stat_pointinterval(colour = '#e34a33', shape = 4, size = 0.5, interval_alpha = 0.7) + 
   my_theme
 
+
+s4e_plt <- shcs_data_long_transmitterML %>%
+  add_residual_draws(heritability_model_transmitterML) %>%
+  ggplot(aes(x = .row, y = .residual)) + 
+  scale_y_continuous('Residual') +
+  scale_x_continuous('Expected Value') +
+  stat_pointinterval(colour= '#e34a33', shape = 4, size = 0.5, interval_alpha = 0.7) + 
+  my_theme
+
+
 # QQ plot
-plt_qq <- shcs_data_long_transmitterallocated %>%
-  add_residual_draws(heritability_model_transmittermax) %>%
+s4f_plt <- shcs_data_long_transmitterrandom %>%
+  add_residual_draws(heritability_model_transmitterrandom) %>%
   median_qi() %>%
   ggplot(aes(sample = .residual)) + 
-  geom_qq() + 
+  geom_qq(colour = '#e34a33') + 
   geom_qq_line()+ 
+  scale_y_continuous('Sample Quantiles') +
+  scale_x_continuous('Theoretical Quantiles') +
   my_theme
+
+s4g_plt <- shcs_data_long_transmitterML %>%
+  add_residual_draws(heritability_model_transmitterML) %>%
+  median_qi() %>%
+  ggplot(aes(sample = .residual)) + 
+  geom_qq(colour = '#e34a33') + 
+  geom_qq_line()+ 
+  scale_y_continuous('Sample Quantiles') +
+  scale_x_continuous('Theoretical Quantiles') +
+  my_theme
+
+panel_s4_top <- plot_grid(s4a_plt, s4b_plt ,s4c_plt, ncol = 3, align = 'hv', labels = 'AUTO', label_size = 8)
+panel_s4_middle <- plot_grid(s4d_plt, s4e_plt, nrow = 2, align = 'hv', labels = c('D', 'E'), label_size = 8)
+panel_s4_bottom <- plot_grid(s4f_plt,s4g_plt, ncol = 2, align = 'hv', labels = c('F', 'G'), label_size = 8)
+panel_s4_top_legend <- get_legend(s4a_plt+ theme(legend.position = 'bottom')) 
+
+panel_s4 <- plot_grid(panel_s4_top, panel_s4_top_legend, panel_s4_middle, panel_s4_bottom, nrow = 4, rel_heights = c(1,0.1,1.5,1))
+
+ggsave(plot = panel_s4 , filename = paste(figs_dir,sep = '/', "panel_s4.jpeg"), 
+       device = jpeg,  width = 170, height = 200,  units = 'mm')
 
 
 ################################### Fig S5 #################################
-
-################################### Fig S6 #################################
 # Plot Prior ~ Posterior distributions
-model_list <- list(random = heritability_model_randomallocation, 
-                   max.spvl = heritability_model_transmittermax)
+model_list <- list(random = heritability_model_transmitterrandom, 
+                   ml = heritability_model_transmitterML)
 
 
 r2_bayes <- lapply(model_list, r2_posterior) %>%
@@ -196,14 +220,13 @@ plot_r2_density <- ggplot(r2_bayes,
                           aes(x = R2,
                               fill = as.factor(model)))+
   geom_histogram(aes(y = after_stat(count / max(count))), colour = NA)+
-  scale_fill_brewer(palette = 'OrRd', 'Chains') +
+  scale_fill_brewer(palette = 'OrRd', 'Allocation', labels= c('Maximum Likelihood', 'Random') ) +
   scale_y_continuous(expand = c(0,0), 'Frequency')+
   scale_x_continuous(expand = c(0,0), limits = c(0,1), expression(R^2))+
   my_theme + 
-  theme(legend.position = 'right', 
-        strip.text.y = element_text(family = 'sans'))
+  theme(legend.position = 'right')
 
-ggsave(plot = plot_r2_density , filename = paste(figs_dir,sep = '/', "plot_r2_density.jpeg"), device = jpeg, width = 14, height = 14)
+ggsave(plot = plot_r2_density , filename = paste(figs_dir,sep = '/', "panel_s5.jpeg"), device = jpeg,   width = 170, height = 170,  units = 'mm')
 
 
 ################################### Fig S7 #################################
