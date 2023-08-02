@@ -10,6 +10,8 @@
 
 ################################### Dependencies ###################################
 source('./scripts/dependencies.R')
+source('./scripts/BonhoefferEqns.R')
+source('./scripts/AllocateTransmitter.R')
 source('./scripts/simulate_cohorts_funcs.R')
 source('./scripts/global_theme.R')
 
@@ -24,16 +26,25 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 # by the Swiss HIV Cohort Study. These data were used in the analysis of Bertels et. al
 # 2018 https://academic.oup.com/mbe/article/35/1/27/4210012
 
+# init distribtions for transmitter allocation
+# mc and vc are the mean and variance of the Amsterdam seroconverter study, respectively.
+mc <- 4.35
+vc <- 0.478**2
+
+t <- CalcTransmitter(mc,vc)
+r <- CalcRecipient(mc,vc)
+
+# Import data and pre-process
 source('./scripts/import_data.R')
 
 
 ################################### Fit/Import Base Models ###################################
 # Import fitted model
-source('./scripts/julian_transmission_model.R')
-source('./scripts/tolerance_model.R')
+source('./scripts/TransmissionModel.R')
+source('./scripts/ToleranceModel.R')
 
 # Fit Bayesian linear mixed model to SHCS data (<2 mins to fit)
-source('./scripts/heritability_model.R')
+source('./scripts/HeritabilityModel.R')
 
 
 ################################### Simulate Stratified Cohorts ###################################
