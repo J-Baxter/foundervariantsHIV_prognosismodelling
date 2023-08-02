@@ -9,6 +9,7 @@
 require(brms)
 require(tidybayes)
 require(performance)
+require(bayesplot)
 
 
 ################################### Set Model Priors ###################################
@@ -21,47 +22,47 @@ require(performance)
 
 model_priors <- c( set_prior(coef = 'age.inf_category25M29', 
                             class = 'b', 
-                            prior = 'normal(0.32, 2)'), # from Hollingsworth et al. 2010
+                            prior = 'normal(0.32, 0.5)'), # from Hollingsworth et al. 2010
                   
                   set_prior(coef = 'age.inf_category30M39', 
                             class = 'b', 
-                            prior = 'normal(0.35, 2)'), # from Hollingsworth et al. 2010
+                            prior = 'normal(0.35, 0.5)'), # from Hollingsworth et al. 2010
                   
                   set_prior(coef = 'age.inf_category40M80', 
                             class = 'b', 
-                            prior = 'normal(0.73, 2)'), # from Hollingsworth et al. 2010
+                            prior = 'normal(0.73, 0.5)'), # from Hollingsworth et al. 2010
                   
                   set_prior(coef = 'partnerrecipient', 
                             class = 'b', 
-                            prior = "normal(0.42, 2)"), # from Hollingsworth et al. 2010
+                            prior = "normal(0.42, 0.5)"), # from Hollingsworth et al. 2010
                 
                   set_prior(coef = 'riskgroupMSM', 
                             class = 'b',
-                            prior = "normal(0, 3)"), # Relatively uninformative
+                            prior = "normal(0, 1)"), # Relatively uninformative
                   
                   set_prior(coef = 'riskgroupPWID',
                             class = 'b', 
-                            prior = "normal(0,4)"), # Relatively uninformative
+                            prior = "normal(0,1)"), # Relatively uninformative
                   
                   set_prior(coef = 'riskgroupOTHER', 
                             class = 'b', 
-                            prior = "normal(0, 4)"), # Relatively uninformative
+                            prior = "normal(0, 1)"), # Relatively uninformative
                   
                   set_prior(coef = 'riskgroupUNKNOWN', 
                             class = 'b', 
-                            prior = "normal(0, 4)"), # Relatively uninformative
+                            prior = "normal(0, 1)"), # Relatively uninformative
                   
                   set_prior(coef = 'sexF', 
                             class = 'b', 
-                            prior = "normal(0.15, 2)"), # from Hollingsworth et al. 2010
+                            prior = "normal(0.15, 0.5)"), # from Hollingsworth et al. 2010
                   
                   set_prior(coef = '', # left intentionally blank
                             class = 'Intercept', 
-                            prior = "normal(4, 3)"), # From mean of log10_SpVL_couplemean
+                            prior = "normal(4, 1)"), # From mean of log10_SpVL_couplemean
                   
                   set_prior(coef = '', # left intentionally blank
                             class = 'sd', 
-                            prior = "normal(0, 4)"), # Relatively uninformative
+                            prior = "normal(0, 1)"), # Relatively uninformative
                 
                  # set_prior(group = 'log10_SpVL_couplemean', 
                            # class = "sd",
@@ -70,11 +71,11 @@ model_priors <- c( set_prior(coef = 'age.inf_category25M29',
                   set_prior(coef = 'Intercept',
                             class = "sd",
                             group = 'log10_SpVL_couplemean', 
-                            prior = "normal(0, 4)"), # Relatively uninformative
+                            prior = "normal(0, 1)"), # Relatively uninformative
                   
                   set_prior(coef = '', # left intentionally blank
                             class = 'sigma',
-                            prior = "normal(0, 4)") # Relatively uninformative
+                            prior = "normal(0, 1)") # Relatively uninformative
                   )
 
 
@@ -90,8 +91,6 @@ priorpreditivesim <- brm(log10_SpVL ~  + partner + sex + age.inf_category + risk
                         cores = 4,
                         control = list(adapt_delta = 0.95),
                         sample_prior = 'only')
-
-pp_check(priorpreditivesim, ndraws = 1000)
 
 
 ################################### Fit Model ###################################
