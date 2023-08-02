@@ -18,6 +18,7 @@
 ##################################### Dependencies #####################################
 source('./scripts/BonhoefferEqns.R')
 
+
 ################################################################################################### 
 AllocateTransmitter <- function(VL1, VL2, transmitter, recipient, method){
   
@@ -70,17 +71,25 @@ AllocateTransmitter <- function(VL1, VL2, transmitter, recipient, method){
 }
 
 
+##################################### Bounds of ML Classifier #####################################
+# Determine bounds of ML Classifier by solving quadratic equation
+# a <- 1/v_r - 1/v_t
+# b <- 2*mu_t/v_t - 2*mu_r/v_r
+# c <- (mu_r**2)/v_r - (mu_t**2)/v_t + 2*log(v_r/v_t)
+
+#ub <- (-b + sqrt(b**2 - 4*a*c))/(2*a)
+#lb <- (-b - sqrt(b**2 - 4*a*c))/(2*a)
+
+
 ##################################### Testing #####################################
-mc <- 4.35
-vc <- 0.478**2
+#mc <- 4.35
+#vc <- 0.478**2
 
-t <- CalcTransmitter(mc,vc)
+#t <- CalcTransmitter(mc,vc)
+#r <- CalcRecipient(mc,vc)
 
-r <- CalcRecipient(mc,vc)
-likVL1 <- dnorm(2.51, t[['mean']], t[['var']]**2)
-likVL2 <- dnorm(4.27,t[['mean']], t[['var']]**2) 
-
-transmitter <- which.max(c(likVL1, likVL2))
-vlpairs_test <- shcs_data %>% rowwise() %>% mutate(transmitter = ClassifyVL(log10_SpVL_1, log10_SpVL_2, transmitter = t, recipient = r, method = 'bayes'))
+#vlpairs_test <- shcs_data %>%
+#  rowwise() %>%
+#  mutate(transmitter = ClassifyVL(log10_SpVL_1, log10_SpVL_2, transmitter = t, recipient = r, method = 'bayes'))
 
 ##################################### END #####################################
