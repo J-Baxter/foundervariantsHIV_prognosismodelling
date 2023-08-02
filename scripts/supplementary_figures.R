@@ -44,7 +44,38 @@ ggsave(plot = plt_s1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"),
 
 
 ################################### Fig S2 #################################
-# Densities and correlations of simulated variables.
+# Transmitter allocation strategies
+
+vlpairs <- shcs_data %>%
+  rowwise() %>%
+  mutate(transmitter_random = ClassifyVL(log10_SpVL_1, log10_SpVL_2, transmitter = t, recipient = r, method = 'random')) %>%
+  mutate(transmitter_max = ClassifyVL(log10_SpVL_1, log10_SpVL_2, transmitter = t, recipient = r, method = 'max')) %>%
+  mutate(transmitter_ml = ClassifyVL(log10_SpVL_1, log10_SpVL_2, transmitter = t, recipient = r, method = 'ml')) %>%
+  mutate(transmitter_bayes = ClassifyVL(log10_SpVL_1, log10_SpVL_2, transmitter = t, recipient = r, method = 'bayes')) %>%
+  select(c(log10_SpVL_1, log10_SpVL_2, starts_with('transmitter'))) %>%
+  pivot_longer(cols = starts_with('log10_SpVL'), values_to = 'log10SpVL') %>%
+  mutate(across(starts_with('transmitter'), .fns = ~ case_when(name == 'log10_SpVL_1' &  .x == 1 ~ 't',
+                                                               name == 'log10_SpVL_2' &  .x == 2 ~ 't',
+                                                               .default = 'r'))) %>%
+  pivot_longer(cols = starts_with('transmitter'), values_to = 'role', names_to = 'allocation') %>%
+  mutate(allocation = str_remove(allocation, 'transmitter_')) %>%
+  mutate(allocation = str_to_title(allocation)) %>%
+  mutate(allocation = case_when(allocation == 'Ml' ~ 'ML', 
+                                .default = allocation))
+
+panel_s2 <- ggplot(vlpairs)+
+  geom_histogram(aes(x = log10SpVL, fill = role), binwidth = 0.25) +
+  scale_fill_brewer(palette = 'OrRd', 'Role Allocated',labels = c('Recipient', 'Transmitter'))+
+  scale_y_continuous('Count', expand = c(0,0), limits = c(0,70), breaks = seq(0,70,by=10))+
+  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand =  c(0,0), limits = c(1,7))+
+  facet_wrap(.~allocation)+
+  my_theme + 
+  theme(legend.position = 'right')
+
+
+
+ggsave(plot = panel_s2  , filename = paste(figs_dir,sep = '/', "panel_s2_new.jpeg"), 
+       device = jpeg,  width = 170, height = 140,  units = 'mm')
 
 
 ################################### Fig S3 #################################
@@ -64,23 +95,24 @@ bias_means <- bias_means %>%
                               variable == 'sex' ~ 'Sex'))
 
 
-plt_s2a <- ggplot(bias_means) +
+plt_s3a <- ggplot(bias_means) +
   geom_col(aes(x = variable, y = bias, fill = abs(bias)))+ 
   facet_wrap(.~riskgroup) +
   my_theme + 
   scale_fill_distiller(palette = 'OrRd', direction = 1) + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        axis.title.x = element_blank())+
   scale_y_continuous(expression(paste(bar(x)["simulated"] - bar(x)['empirical'])), 
                      limits = c(-0.8, 0.8), 
                      breaks = seq(-0.8, 0.8, by = 0.2) %>% round(digits  = 2)
                      )
 
 
-plt_s2b <- ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = abs(value))) +
+plt_s3b <- ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = abs(value))) +
   geom_tile(color = "white",
             lwd = 1.5,
             linetype = 1) + 
-  geom_text(aes(label = signif(value, 3)), color = "black", size = 3) +
+  geom_text(aes(label = signif(value, 3)), color = "black", size = 2) +
   scale_fill_distiller(palette = 'OrRd', direction = 1) + 
   facet_wrap(.~riskgroup)+ 
   my_theme+ 
@@ -92,18 +124,21 @@ validate_df <- list(Simulated = stratified_data, Empirical = shcs_data_long) %>%
   bind_rows(.id = 'id') %>%
   select(sex, riskgroup, age.inf,  id) %>% filter(riskgroup %in% c('HET', "MSM", 'PWID'))
 
-plt_2c <- ggplot(validate_df ) +
+plt_s3c <- ggplot(validate_df ) +
   geom_histogram(aes(x= age.inf, y = after_stat(density)), binwidth = 2, fill = '#e34a33')+
-  facet_wrap(id~riskgroup, ncol = 3)+
+ 
+ 
   scale_x_continuous('Age at Infection', limits = c(15,80), breaks = seq(16,80, by = 8), expand = c(0,0))+
   scale_y_continuous('Density', limits = c(0,0.08), expand = c(0,0))+
-  my_theme
+  my_theme +
+  facet_grid(id~riskgroup, switch = 'y')+
+  theme(strip.placement = 'outside')
 
 
-panel_s2 <- cowplot::plot_grid(plt_s2a, plt_s2b, plt_2c,nrow = 3, ncol = 1,align = 'hv', labels = 'AUTO')
+panel_s3 <- cowplot::plot_grid(plt_s3a, plt_s3b, plt_s3c,nrow = 3, ncol = 1,align = 'hv', labels = 'AUTO', label_size = 10)
 
-ggsave(plot = panel_s2  , filename = paste(figs_dir,sep = '/', "panel_s2_new.jpeg"), device = jpeg, width = 15, height = 20)
-
+ggsave(plot = panel_s3  , filename = paste(figs_dir,sep = '/', "panel_s3_new.jpeg"), 
+       device = jpeg,  width = 170, height = 230,  units = 'mm')
 
 ################################### Fig S4 #################################
 # Heritability Model Plots
@@ -300,3 +335,4 @@ plot_var <- ggplot(var_t, aes(x = time, y = P, fill = x_var)) +
 panel_s1 <- cowplot::plot_grid( plot_var,NA, plt_tda, nrow = 1, align = 'hv', labels = c('A', '', 'B'), rel_widths = c(1,0.2,1))
 
 ## END ##
+
