@@ -43,6 +43,7 @@ source('./scripts/import_data.R')
 source('./scripts/TransmissionModel.R')
 source('./scripts/ToleranceModel.R')
 
+
 # Fit Bayesian linear mixed model to SHCS data (<2 mins to fit)
 source('./scripts/HeritabilityModel.R')
 
@@ -102,8 +103,8 @@ source('./scripts/validate_simcohorts.R')
 ################################### Predict SpVLs ###################################
 
 # Random allocation of transmitter/recipient
-shcs_h2preds_randomallocation <- predicted_draws(heritability_model_randomallocation,
-                                newdata = shcs_data_long,
+shcs_h2preds_transmitterrandom <- predicted_draws(heritability_model_transmitterrandom,
+                                newdata = shcs_data_long_transmitterrandom,
                                 ndraws = 100,
                                 allow_new_levels = FALSE, # allow new random effects levels
                                 #sample_new_levels = "old_levels", #
@@ -117,7 +118,7 @@ shcs_h2preds_randomallocation <- predicted_draws(heritability_model_randomalloca
   ungroup()
 
 
-stratified_pred_randomallocation <- predicted_draws(heritability_model_randomallocation,
+stratified_pred_transmitterrandom  <- predicted_draws(heritability_model_transmitterrandom ,
                               newdata = stratified_data,
                               allow_new_levels = TRUE, # allow new random effects levels
                               sample_new_levels = "old_levels", #
@@ -133,8 +134,8 @@ stratified_pred_randomallocation <- predicted_draws(heritability_model_randomall
 
 
 # Transmitter = Max(SpVLij) of couple j
-shcs_h2preds_transmittermax <- predicted_draws(heritability_model_transmittermax,
-                                               newdata = shcs_data_long,
+shcs_h2preds_transmitterML <- predicted_draws(heritability_model_transmitterML,
+                                               newdata = shcs_data_long_transmitterML,
                                                ndraws = 100,
                                                allow_new_levels = FALSE, # allow new random effects levels
                                                #sample_new_levels = "old_levels", #
@@ -148,7 +149,7 @@ shcs_h2preds_transmittermax <- predicted_draws(heritability_model_transmittermax
   ungroup()
 
 
-stratified_pred_transmittermax <- predicted_draws(heritability_model_transmittermax,
+stratified_pred_transmitterML <- predicted_draws(heritability_model_transmitterML,
                                                   newdata = stratified_data,
                                                   allow_new_levels = TRUE, # allow new random effects levels
                                                   sample_new_levels = "old_levels", #
