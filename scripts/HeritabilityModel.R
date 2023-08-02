@@ -92,6 +92,8 @@ priorpreditivesim <- brm(log10_SpVL ~  + partner + sex + age.inf_category + risk
                         sample_prior = 'only')
 
 pp_check(priorpreditivesim, ndraws = 1000)
+
+
 ################################### Fit Model ###################################
 # Fit model to SHCS data (long format). This 'should' run relatively quickly.
 # NB: User should set 'cores' parameter as appropriate for their device: recommend 
@@ -104,25 +106,26 @@ pp_check(priorpreditivesim, ndraws = 1000)
 # R-hat (compares the between- and within-chain estimates for model parameters) should
 # be less than 1.05 (our run == 1)
 
-heritability_model_randomallocation <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
-                                           prior = model_priors,
-                                           data = shcs_data_long,
-                                           chains = 4,
-                                           iter = 10000,
-                                           warmup = 1000, # 10% burn in 
-                                           cores = 4,
-                                           control = list(adapt_delta = 0.95)
-                                           )
+heritability_model_transmitterrandom <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
+                                            prior = model_priors,
+                                            data = shcs_data_long_transmitterrandom,
+                                            chains = 4,
+                                            iter = 10000,
+                                            warmup = 1000, # 10% burn in 
+                                            cores = 4,
+                                            control = list(adapt_delta = 0.95))
 
-heritability_model_transmittermax <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
-                                           prior = model_priors,
-                                           data = shcs_data_long_transmitterallocated,
-                                           chains = 4,
-                                           iter = 10000,
-                                           warmup = 1000, # 10% burn in 
-                                           cores = 4,
-                                           control = list(adapt_delta = 0.95)
-)
+
+heritability_model_transmitterML <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
+                                        prior = model_priors,
+                                        data = shcs_data_long_transmitterML,
+                                        chains = 4,
+                                        iter = 10000,
+                                        warmup = 1000, # 10% burn in 
+                                        cores = 4,
+                                        control = list(adapt_delta = 0.95))
+
+
 ################################### Misc Evaluation Code ###################################
 # performance(heritability_model) # tibble output of model metrics including R2, ELPD, LOOIC, RMSE
 
