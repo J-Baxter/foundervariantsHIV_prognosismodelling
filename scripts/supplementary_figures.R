@@ -34,10 +34,13 @@ plt_s1 <- ggplot(s1_data) +
   geom_vline(xintercept = MD,  linetype = 2, colour = '#fdbb84')+
   geom_vline(xintercept = MC ,  linetype = 2, colour = '#fee8c8')+
   geom_vline(xintercept = MR, linetype = 2, colour = '#e34a33')+
-  facet_wrap(.~stage, nrow = 3)+
+  facet_wrap(.~stage, ncol = 3)+
   my_theme
 
-ggsave(plot = plt_s1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"), device = jpeg, width = 6, height =8)
+# A4: 210 x 297 mm, 
+# 170 x 100
+ggsave(plot = plt_s1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"), 
+       device = jpeg, width = 170, height = 60, units = 'mm')
 
 
 ################################### Fig S2 #################################
