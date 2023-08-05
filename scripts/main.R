@@ -168,23 +168,37 @@ stratified_pred_transmitterML <- predicted_draws(heritability_model_transmitterM
 combined_data <- list(
   
   # Empirical SpVL, not adjustment from H2 model
-  shcs_empirical = shcs_data_long %>%
+  shcs_empirical_transmitterrandom = shcs_data_long_transmitterrandom %>%
     select(-contains('cohortmean')) %>%
     mutate(dataset = 'shcs_empirical') %>%
     mutate(transmitterallocation = 'random'),
   
+  shcs_empirical_transmitterML = shcs_data_long_transmitterML %>%
+    select(-contains('cohortmean')) %>%
+    mutate(dataset = 'shcs_empirical') %>%
+    mutate(transmitterallocation = 'ML'),
+  
   # Empirical SpVL means, individual SpVL predicted using H2 model
   # Random allocation of transmitter
-  shcs_predicted = shcs_h2preds_randomallocation %>%
+  shcs_predicted_transmitterrandom = shcs_h2preds_transmitterrandom %>%
     select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
     mutate(dataset = 'shcs_predicted') %>%
     mutate(ID_pair = ID_pair + 196) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
     mutate(transmitterallocation = 'random'),
   
+  # Empirical SpVL means, individual SpVL predicted using H2 model
+  # Transmitter = Maximum Likelihood(SpVL)
+  shcs_predicted_transmitterML = shcs_h2preds_transmitterML %>%
+    select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
+    mutate(dataset = 'shcs_predicted') %>%
+    mutate(ID_pair = ID_pair + 196*5) %>% 
+    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
+    mutate(transmitterallocation = 'ML'),
+  
   # Simulated SpVL means for Heterosexuals, individual SpVL predicted using H2 model
   # Random allocation of transmitter
-  stratified_het = stratified_pred_randomallocation  %>%
+  stratified_het_transmitterrandom = stratified_pred_transmitterrandom  %>%
     filter(dataset == 'stratified_HET') %>%
     mutate(ID_pair = ID_pair + 196*2) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
@@ -192,7 +206,7 @@ combined_data <- list(
   
   # Simulated SpVL means for MSM, individual SpVL predicted using H2 model
   # Random allocation of transmitter
-  stratified_msm = stratified_pred_randomallocation  %>%
+  stratified_msm_transmitterrandom = stratified_pred_transmitterrandom  %>%
     filter(dataset == 'stratified_MSM') %>%
     mutate(ID_pair = ID_pair + 196*3) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
@@ -200,67 +214,57 @@ combined_data <- list(
   
   # Simulated SpVL means for PWID, individual SpVL predicted using H2 model
   # Random allocation of transmitter
-  stratified_pwid = stratified_pred_randomallocation  %>%
+  stratified_pwid_transmitterrandom = stratified_pred_transmitterrandom  %>%
     filter(dataset == 'stratified_PWID') %>%
     mutate(ID_pair = ID_pair + 196*4) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'random'),
   
-  
-  # Empirical SpVL means, individual SpVL predicted using H2 model
-  # Transmitter = max(SpVL)
-  shcs_predicted = shcs_h2preds_transmittermax %>%
-    select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
-    mutate(dataset = 'shcs_predicted') %>%
-    mutate(ID_pair = ID_pair + 196*5) %>% 
-    rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
-    mutate(transmitterallocation = 'max'),
-  
   # Simulated SpVL means for Heterosexuals, individual SpVL predicted using H2 model
-  # Transmitter = max(SpVL)
-  stratified_het = stratified_pred_transmittermax   %>%
+  # Transmitter = Maximum Likelihood(SpVL)
+  stratified_het_transmitterML = stratified_pred_transmitterML  %>%
     filter(dataset == 'stratified_HET') %>%
     mutate(ID_pair = ID_pair + 196*6) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
-    mutate(transmitterallocation = 'max'),
+    mutate(transmitterallocation = 'ML'),
   
   # Simulated SpVL means for MSM, individual SpVL predicted using H2 model
-  # Transmitter = max(SpVL)
-  stratified_msm = stratified_pred_transmittermax   %>%
+  # Transmitter = Maximum Likelihood(SpVL)
+  stratified_msm_transmitterML = stratified_pred_transmitterML   %>%
     filter(dataset == 'stratified_MSM') %>%
     mutate(ID_pair = ID_pair + 196*7) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
-    mutate(transmitterallocation = 'max'),
+    mutate(transmitterallocation = 'ML'),
   
   # Simulated SpVL means for PWID, individual SpVL predicted using H2 model
-  # Transmitter = max(SpVL)
-  stratified_pwid = stratified_pred_transmittermax   %>%
+  # Transmitter = Maximum Likelihood(SpVL)
+  stratified_pwid_transmitterML = stratified_pred_transmitterML   %>%
     filter(dataset == 'stratified_PWID') %>%
     mutate(ID_pair = ID_pair + 196*8) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
-    mutate(transmitterallocation = 'max')
-) %>%
-  bind_rows() 
+    mutate(transmitterallocation = 'ML')
+) 
 
 
 ################################### Predict CD4 decline and format ###################################
 
 combined_data_CD4 <- combined_data  %>%
-  mutate(delta_CD4 = ToleranceModel(log10_SpVL,
-                                    age.inf,
-                                    sex)) %>%
-  mutate(riskgroup = case_when(riskgroup == 'HET' & sex == 'M' & partner == 'transmitter' ~ 'MF',
-                               riskgroup == 'HET' & sex == 'F' & partner == 'recipient' ~ 'MF',
-                               riskgroup == 'MSM' ~ 'MM',
-                               riskgroup == 'PWID' ~ 'PWID',
-                               riskgroup == 'UNKNOWN' ~ 'UNKNOWN',
-                               riskgroup == 'OTHER' ~ 'OTHER',
-                               .default = 'FM'
-                               )) %>%
-  dplyr::select(-c(sex, contains('age'))) %>%
-  pivot_wider(names_from = partner, values_from = c(contains('SpVL'), delta_CD4, riskgroup)) %>% 
+  lapply(., function(x) x %>% mutate(delta_CD4 = ToleranceModel(log10_SpVL,
+                                                                age.inf,
+                                                                sex))) %>%
+  lapply(., function(x) x %>%   mutate(riskgroup = case_when(riskgroup == 'HET' & sex == 'M' & partner == 'transmitter' ~ 'MF',
+                                                             riskgroup == 'HET' & sex == 'F' & partner == 'recipient' ~ 'MF',
+                                                             riskgroup == 'MSM' ~ 'MM',
+                                                             riskgroup == 'PWID' ~ 'PWID',
+                                                             riskgroup == 'UNKNOWN' ~ 'UNKNOWN',
+                                                             riskgroup == 'OTHER' ~ 'OTHER',
+                                                             .default = 'FM'))) %>%
+  lapply(., function(x) x %>%  dplyr::select(-c(sex, contains('age')))) %>%
+  lapply(., function(x) x %>%  pivot_wider(names_from = partner, values_from = c(log10_SpVL, SpVL, delta_CD4, riskgroup))) %>%
+  bind_rows() %>%
+  rowid_to_column( "index") %>% 
   group_split(riskgroup_recipient) %>%
-  setNames(c('FM', 'MF', 'MM', 'PWID', 'UNKNOWN'))
+  setNames(c('FM', 'MF', 'MM', 'OTHER', 'PWID', 'UNKNOWN')) 
 
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
