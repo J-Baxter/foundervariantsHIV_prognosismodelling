@@ -145,7 +145,8 @@ ggsave(plot = panel_s3  , filename = paste(figs_dir,sep = '/', "panel_s3_new.jpe
 
 # Prior-predictive check
 color_scheme_set("brewer-OrRd") 
-s4a_plt <- pp_check(priorpreditivesim, ndraws = 1000) + my_theme 
+s4a_plt <- pp_check(priorpreditivesim_transmitterrandom, ndraws = 1000) + my_theme 
+s4a_plt 
 
 # Posterior-predictive check
 s4b_plt <- pp_check(heritability_model_transmitterrandom, ndraws = 1000) + my_theme 
@@ -159,7 +160,7 @@ s4d_plt <- shcs_data_long_transmitterrandom %>%
   add_residual_draws(heritability_model_transmitterrandom) %>%
   ggplot(aes(x = .row, y = .residual)) + 
   scale_y_continuous('Residual') +
-  scale_x_continuous('Expected Value') +
+  scale_x_continuous(expression('Individual SpVL' ['ij'])) +
   stat_pointinterval(colour = '#e34a33', shape = 4, size = 0.5, interval_alpha = 0.7) + 
   my_theme
 
@@ -168,7 +169,7 @@ s4e_plt <- shcs_data_long_transmitterML %>%
   add_residual_draws(heritability_model_transmitterML) %>%
   ggplot(aes(x = .row, y = .residual)) + 
   scale_y_continuous('Residual') +
-  scale_x_continuous('Expected Value') +
+  scale_x_continuous(expression('Individual SpVL' ['ij'])) +
   stat_pointinterval(colour= '#e34a33', shape = 4, size = 0.5, interval_alpha = 0.7) + 
   my_theme
 
@@ -219,14 +220,15 @@ r2_bayes <- lapply(model_list, r2_posterior) %>%
 plot_r2_density <- ggplot(r2_bayes,
                           aes(x = R2,
                               fill = as.factor(model)))+
-  geom_histogram(aes(y = after_stat(count / max(count))), colour = NA)+
+  geom_density(aes(y = after_stat(density)),colour = NA, alpha = 0.7)+
   scale_fill_brewer(palette = 'OrRd', 'Allocation', labels= c('Maximum Likelihood', 'Random') ) +
   scale_y_continuous(expand = c(0,0), 'Frequency')+
-  scale_x_continuous(expand = c(0,0), limits = c(0,1), expression(R^2))+
-  my_theme + 
-  theme(legend.position = 'right')
+  scale_x_continuous(expand = c(0,0), limits = c(0,0.5), expression(R^2))+
+  facet_wrap(.~model, labeller = as_labeller(c('ml' = 'ML', 'random' = 'Random')))+
+  my_theme #+ 
+ # theme(legend.position = c(0.75,0.75))
 
-ggsave(plot = plot_r2_density , filename = paste(figs_dir,sep = '/', "panel_s5.jpeg"), device = jpeg,   width = 170, height = 170,  units = 'mm')
+ggsave(plot = plot_r2_density , filename = paste(figs_dir,sep = '/', "panel_s5.jpeg"), device = jpeg,   width = 170, height = 80,  units = 'mm')
 
 
 ################################### Fig S7 #################################
@@ -276,7 +278,8 @@ plot_chains <- ggplot(h2_chains,
   theme(legend.position = 'bottom', 
         strip.text.y = element_text(family = 'sans'))
 
-ggsave(plot = plot_chains, filename = paste(figs_dir,sep = '/', "panel_chains.jpeg"), device = jpeg, width = 12, height = 19)
+ggsave(plot = plot_chains , filename = paste(figs_dir,sep = '/', "panel_s6.jpeg"), device = jpeg,   width = 170, height = 250,  units = 'mm')
+
 
 
 ################################### Fig S8 #################################
