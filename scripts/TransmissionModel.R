@@ -103,6 +103,7 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         # This reduces computational time. Variant transmission does not change 
         # much for higher virion transmission
         maxVirionsConsidered <- ifelse(maxVirionsConsidered>500, 500, maxVirionsConsidered)
+
         
         #  NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
         
