@@ -96,7 +96,7 @@ stratified_data <- mapply(SimCohorts,
   mutate(dataset = paste('stratified', riskgroup, sep = '_'))
 
 
-# Validate composition of simulated cohorts
+################################### Validate composition of simulated cohorts ###################################
 source('./scripts/validate_simcohorts.R')
 
 
@@ -105,7 +105,7 @@ source('./scripts/validate_simcohorts.R')
 # Random allocation of transmitter/recipient
 shcs_h2preds_transmitterrandom <- predicted_draws(heritability_model_transmitterrandom,
                                 newdata = shcs_data_long_transmitterrandom,
-                                ndraws = 100,
+                                ndraws = 50,
                                 allow_new_levels = FALSE, # allow new random effects levels
                                 #sample_new_levels = "old_levels", #
                          ##re_formula = ~ (1|log10_SpVL_couplemean),
@@ -123,7 +123,7 @@ stratified_pred_transmitterrandom  <- predicted_draws(heritability_model_transmi
                               allow_new_levels = TRUE, # allow new random effects levels
                               sample_new_levels = "old_levels", #
                               re_formula = ~ (1|log10_SpVL_couplemean),
-                              ndraws = 100,
+                              ndraws = 50,
                               value = 'predicted_log10_SpVL') %>% 
   #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
@@ -136,7 +136,7 @@ stratified_pred_transmitterrandom  <- predicted_draws(heritability_model_transmi
 # Transmitter = Max(SpVLij) of couple j
 shcs_h2preds_transmitterML <- predicted_draws(heritability_model_transmitterML,
                                                newdata = shcs_data_long_transmitterML,
-                                               ndraws = 100,
+                                               ndraws = 50,
                                                allow_new_levels = FALSE, # allow new random effects levels
                                                #sample_new_levels = "old_levels", #
                                                ##re_formula = ~ (1|log10_SpVL_couplemean),
@@ -154,7 +154,7 @@ stratified_pred_transmitterML <- predicted_draws(heritability_model_transmitterM
                                                   allow_new_levels = TRUE, # allow new random effects levels
                                                   sample_new_levels = "old_levels", #
                                                   re_formula = ~ (1|log10_SpVL_couplemean),
-                                                  ndraws = 100,
+                                                  ndraws = 50,
                                                   value = 'predicted_log10_SpVL') %>% 
   #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
@@ -271,127 +271,137 @@ combined_data_CD4 <- combined_data  %>%
 # Implement transmission model (Thompson et al. and re-parameterised by Villabona-Arenas et al. (Unpublished))
 # NB: THIS IS COMPUTATIONALLY EXPENSIVE AND WILL RUN FOR ~ 25 HOURS USING 4 CORES
 
-combined_data_PMV <- list(
+# Female-to-Male
+FM_results <- RunParallel(TransmissionModel2,
+                          combined_data_CD4$FM$SpVL_transmitter,
+                          PerVirionProbability = 8.779E-07, 
+                          PropExposuresInfective = 0.14337) %>%
   
-  # Female-to-Male
-  RunParallel(TransmissionModel2,
-              combined_data_CD4$FM$SpVL_transmitter,
-              PerVirionProbability = 8.779E-07, 
-              PropExposuresInfective = 0.14337),
-                       
-  # Male-to-Female
-  RunParallel(TransmissionModel2,
-              combined_data_CD4$MF$SpVL_transmitter,
-              PerVirionProbability = 1.765E-06, 
-              PropExposuresInfective = 0.13762),
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
-  # MSM: currently using MSM:insertive params
-  RunParallel(TransmissionModel2, 
-              combined_data_CD4$MM$SpVL_transmitter,
-              PerVirionProbability = 8.779E-07, 
-              PropExposuresInfective = 0.14337),
+  mapply(PostProcess,
+         tmresult = ., 
+         metadata = combined_data_CD4$FM  %>%
+           group_split(index), 
+         SIMPLIFY = F) %>%
+  bind_rows()
+
+
+# Male-to-Female
+MF_results <- RunParallel(TransmissionModel2,
+                          combined_data_CD4$MF$SpVL_transmitter,
+                          PerVirionProbability = 1.765E-06, 
+                          PropExposuresInfective = 0.13762) %>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
-  #PWID: Currently using MSM:receptive params
-  RunParallel(TransmissionModel2, 
-              combined_data_CD4$PWID$SpVL_transmitter,
-              PerVirionProbability = 3.19E-06, 
-              PropExposuresInfective = 0.08923),
+  mapply(PostProcess,
+         tmresult = ., 
+         metadata = combined_data_CD4$FM  %>%
+           group_split(index), 
+         SIMPLIFY = F)%>%
+  bind_rows()
+
+
+# MSM: currently using MSM:insertive params
+MM_results <- RunParallel(TransmissionModel2, 
+                          combined_data_CD4$MM$SpVL_transmitter,
+                          PerVirionProbability = 8.779E-07, 
+                          PropExposuresInfective = 0.14337) %>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
-  # Unknown: Currently using Male-to-Female
-  RunParallel(TransmissionModel2, 
-              combined_data_CD4$UNKNOWN$SpVL_transmitter,
-              PerVirionProbability = 8.779E-07, 
-              PropExposuresInfective = 0.14337)) %>%
-                                   
+  mapply(PostProcess,
+         tmresult = ., 
+         metadata = combined_data_CD4$FM  %>%
+           group_split(index), 
+         SIMPLIFY = F)%>%
+  bind_rows()
+
+
+
+# PWID: Currently using MSM:receptive params
+PWID_results <- RunParallel(TransmissionModel2, 
+                            combined_data_CD4$PWID$SpVL_transmitter,
+                            PerVirionProbability = 3.19E-06, 
+                            PropExposuresInfective = 0.08923) %>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
-  # Label
-  lapply(., function(x) lapply(x, setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL'))) 
+  mapply(PostProcess,
+         tmresult = ., 
+         metadata = combined_data_CD4$FM  %>%
+           group_split(index), 
+         SIMPLIFY = F)%>%
+  bind_rows()
 
 
-#CorrectMyMistake <- function(x){
-  #x[['variant_distribution']] <- x[['variant_distribution']]  %>% dplyr::select(-prob_nparticles)
-  #return(x)
-#}
-#combined_data_PMV_test_1 <- lapply(combined_data_PMV , CorrectMyMistake)
-
-combined_data_PMV_test <- list(combined_data_PMV_test_1[1:24828],
-                               combined_data_PMV_test_1[24829:(24828+26830)],
-                               combined_data_PMV_test_1[(24828+26830+1):(24828 + 26830 + 56884)],
-                               combined_data_PMV_test_1[(24828 + 26830 + 56884 + 1):(24828 + 26830 + 56884+50251)],
-                               combined_data_PMV_test_1[(24828 + 26830 + 56884+50251 + 1):(24828 + 26830 + 56884+50251 + 603)])  %>%
-  setNames(., nm = names(combined_data_CD4))
+# OTHER: Currently using Male-to-Female
+OTHER_results <- RunParallel(TransmissionModel2, 
+                               combined_data_CD4$OTHER$SpVL_transmitter,
+                               PerVirionProbability = 8.779E-07, 
+                               PropExposuresInfective = 0.14337) %>%
+lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
+  mapply(PostProcess,
+         tmresult = ., 
+         metadata = combined_data_CD4$FM  %>%
+           group_split(index), 
+         SIMPLIFY = F)%>%
+  bind_rows()
 
-combined_data_CD4_split <- lapply(combined_data_CD4, function(x) x %>% mutate(i = seq(1:nrow(.))) %>% group_split(i))
 
-combined_data_PMV_onwards <- mapply(function(i,j) mapply(function(x,y) c(x, y), i, j , SIMPLIFY  = FALSE), combined_data_PMV_test, combined_data_CD4_split, SIMPLIFY  = FALSE)
-
-
-################################### Format Model Outputs ###################################
-# Warning: this will take some time to run
-
-combined_data_CD4_PMV <- flatten(combined_data_PMV_onwards) %>%
-  # Sum joint probabilities to estimate marginal probabilities of the number of variants and 
-  # virus particles initiating infection
+# UNKNOWN: Currently using Male-to-Female
+UNKNOWN_results <- RunParallel(TransmissionModel2, 
+                               combined_data_CD4$UNKNOWN$SpVL_transmitter,
+                               PerVirionProbability = 8.779E-07, 
+                               PropExposuresInfective = 0.14337) %>%
+lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
-  lapply(., function(x) c(x, list('p_particles' = rowSums(x[['variant_distribution']] %>%
-                                                            dplyr::select(-nparticles) %>% 
-                                                            as.vector())))) %>%
-  lapply(., function(x) c(x, list('p_variants' = colSums(x[['variant_distribution']] %>% 
-                                                           dplyr::select(-c(nparticles, prob_nparticles)))))) %>%
-  
-  # Process model outputs to form dataframe where each row contains all results for one participant
-  lapply(., function(x) bind_cols(bind_cols(x[-c(1,2,3, 17,18)]), 
-                                  bind_cols(particles = 1:33, x[17]) %>% 
-                                    pivot_wider(names_from = particles, values_from = p_particles, names_prefix = 'p_particles_'), 
-                                  bind_cols(variants = 1:33, x[18]) %>%
-                                    pivot_wider(names_from = variants, values_from = p_variants, names_prefix = 'p_variants_'))) %>%
-  bind_rows() %>%
-  
-  # Remove high number variants/virions (probability of these events is approximately equivalent to 0)
-  select(-ends_with(as.character(13:33)))
+  mapply(PostProcess,
+         tmresult = ., 
+         metadata = combined_data_CD4$FM  %>%
+           group_split(index), 
+         SIMPLIFY = F)%>%
+  bind_rows()
 
-
-# Confirm output is a dataframe of dimensions 
-stopifnot(dim(combined_data_CD4_PMV) == c(7936, 37))
-  
-  
-# Save to file (so you don't have to run again!)
-write.csv(combined_data_CD4_PMV, paste0(results_dir, '/combined_results_CD4_PM.csv'))
-
-combined_data_CD4_PMV <- read_csv('./results/24Jun23/combined_results_CD4_PM.csv',col_types = cols(...1 = col_skip()))
-
-combined_data_CD4_PMV_wide_long <- combined_data_CD4_PMV %>%
-  filter(w == 1) %>% # No weighting for early transmission
-  pivot_wider(names_from = partner, values_from = c(sex, age.inf, riskgroup, SpVL, log10_SpVL, age.inf_category, delta_CD4, starts_with('p_')), names_sep = '_') %>%
-  pivot_longer(cols = starts_with('p_'), names_to = 'x', values_to = 'probability') %>%
-  separate(x, sep = '_', c(NA, 'type', 'x', 'partner'))
-
-
-combined_data_CD4_PMV_wide <- combined_data_CD4_PMV %>%
-  filter(w == 1) %>%
-  pivot_wider(names_from = partner, values_from = c(sex, age.inf, riskgroup, SpVL, log10_SpVL, age.inf_category, delta_CD4, starts_with('p_')), names_sep = '_') 
 
 ################################### Write to file ################################### 
-source('./scripts/figures.R')
 
-ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.jpeg"), device = jpeg, width = 14, height = 14) # Model Components - functional
-ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 18) # Confounder - functional 
-ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), device = jpeg, width = 14, height = 18) # Non - Linear
-ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 18) # Timing of transmission
+# Sort into 'dataframes' (dataset:transmitterselection)
+datanames <- unique(FM_results$dataset)
+
+combinded_results <- list(FM_results, 
+                          MF_results,
+                          MM_results,
+                          PWID_results,
+                          OTHER_results,
+                          UNKNOWN_results) %>%
+  do.call(bind.data.frame, .) %>%
+  group_split(dataset) 
+
+# write csv to file
+filenames <- paste0(results_dir, '/', datanames, '_modelresults.csv')
+
+mapply(write_csv, combinded_results, file = filenames)
+
+
+#source('./scripts/figures.R')
+
+#ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.jpeg"), device = jpeg, width = 14, height = 14) # Model Components - functional
+#ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 18) # Confounder - functional 
+#ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), device = jpeg, width = 14, height = 18) # Non - Linear
+#ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 18) # Timing of transmission
 
 # Supplementary plots
 # SHCS summary plots
 # Simulation Bias Checks
 # H2 model plots
 # SA ?
-source('./scripts/tm_withinhostprocesses.R') 
+#source('./scripts/tm_withinhostprocesses.R') 
 
 
-ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 18, height = 12) #Within-host dynamics -functional
-ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 18, height = 12) #Simulating transmitter population - functional
-ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting 
-ggsave(plot = plt_s4, filename = paste(figs_dir,sep = '/', "panel_s4.jpeg"), device = jpeg, width = 14, height = 14) #Sensitivity Analysis - functional
+#ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 18, height = 12) #Within-host dynamics -functional
+#ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 18, height = 12) #Simulating transmitter population - functional
+#ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting 
+#ggsave(plot = plt_s4, filename = paste(figs_dir,sep = '/', "panel_s4.jpeg"), device = jpeg, width = 14, height = 14) #Sensitivity Analysis - functional
 
 ###################################################################################################
 
