@@ -98,7 +98,7 @@ stratified_data <- mapply(SimCohorts,
 
 
 ################################### Validate composition of simulated cohorts ###################################
-source('./scripts/validate_simcohorts.R')
+#source('./scripts/validate_simcohorts.R')
 
 
 ################################### Predict SpVLs ###################################
@@ -376,7 +376,7 @@ combinded_results <- list(FM_results,
                           PWID_results,
                           OTHER_results,
                           UNKNOWN_results) %>%
-  do.call(bind.data.frame, .) %>%
+  do.call(rbind.data.frame, .) %>%
   group_split(dataset) 
 
 # write csv to file
@@ -386,24 +386,6 @@ mapply(write_csv, combinded_results, file = filenames)
 
 
 #source('./scripts/figures.R')
-
-#ggsave(plot = panel_1, filename = paste(figs_dir,sep = '/', "panel_1.jpeg"), device = jpeg, width = 14, height = 14) # Model Components - functional
-#ggsave(plot = panel_2, filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), device = jpeg, width = 14, height = 18) # Confounder - functional 
-#ggsave(plot = panel_3, filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), device = jpeg, width = 14, height = 18) # Non - Linear
-#ggsave(plot = panel_4, filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), device = jpeg, width = 14, height = 18) # Timing of transmission
-
-# Supplementary plots
-# SHCS summary plots
-# Simulation Bias Checks
-# H2 model plots
-# SA ?
-#source('./scripts/tm_withinhostprocesses.R') 
-
-
-#ggsave(plot = panel_s1, filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), device = jpeg, width = 18, height = 12) #Within-host dynamics -functional
-#ggsave(plot = panel_s2, filename = paste(figs_dir,sep = '/', "panel_s2.jpeg"), device = jpeg, width = 18, height = 12) #Simulating transmitter population - functional
-#ggsave(plot = panel_s3, filename = paste(figs_dir,sep = '/', "panel_s3.jpeg"), device = jpeg, width = 14, height = 14) #Heritability model fitting 
-#ggsave(plot = plt_s4, filename = paste(figs_dir,sep = '/', "panel_s4.jpeg"), device = jpeg, width = 14, height = 14) #Sensitivity Analysis - functional
-
+#source ('./scripts/supplementary_figures.R)
 ###################################################################################################
 
