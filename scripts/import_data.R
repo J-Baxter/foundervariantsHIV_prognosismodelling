@@ -28,7 +28,7 @@ shcs_data <-read_csv("data/shcs_data.csv",
                 .fns = ~log10(.x), .names = "log10_{.col}")) %>%
   rowwise() %>%
   mutate(transmitter.allocaterandom = AllocateTransmitter(log10_SpVL.1, log10_SpVL.2, transmitter = t, recipient = r, method = 'random')) %>%
-  mutate(transmitter.allocateML = AllocateTransmitterL(log10_SpVL.1, log10_SpVL.2, transmitter = t, recipient = r, method = 'ml')) %>%
+  mutate(transmitter.allocateML = AllocateTransmitter(log10_SpVL.1, log10_SpVL.2, transmitter = t, recipient = r, method = 'ml')) %>%
   rename_with( ~ stri_replace_last_fixed(.x, '.', '_')) 
 
 
