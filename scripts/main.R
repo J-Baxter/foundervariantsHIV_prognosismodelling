@@ -177,6 +177,7 @@ combined_data <- list(
   shcs_empirical_transmitterML = shcs_data_long_transmitterML %>%
     select(-contains('cohortmean')) %>%
     mutate(dataset = 'shcs_empirical') %>%
+    mutate(ID_pair = ID_pair + 196) %>% 
     mutate(transmitterallocation = 'ML'),
   
   # Empirical SpVL means, individual SpVL predicted using H2 model
@@ -184,7 +185,7 @@ combined_data <- list(
   shcs_predicted_transmitterrandom = shcs_h2preds_transmitterrandom %>%
     select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
     mutate(dataset = 'shcs_predicted') %>%
-    mutate(ID_pair = ID_pair + 196) %>% 
+    mutate(ID_pair = ID_pair + 196*2) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
     mutate(transmitterallocation = 'random'),
   
@@ -193,7 +194,7 @@ combined_data <- list(
   shcs_predicted_transmitterML = shcs_h2preds_transmitterML %>%
     select(-c(contains('cohortmean'), 'SpVL', 'log10_SpVL'))%>%
     mutate(dataset = 'shcs_predicted') %>%
-    mutate(ID_pair = ID_pair + 196*5) %>% 
+    mutate(ID_pair = ID_pair + 196*3) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted')) %>%
     mutate(transmitterallocation = 'ML'),
   
@@ -201,7 +202,7 @@ combined_data <- list(
   # Random allocation of transmitter
   stratified_het_transmitterrandom = stratified_pred_transmitterrandom  %>%
     filter(dataset == 'stratified_HET') %>%
-    mutate(ID_pair = ID_pair + 196*2) %>% 
+    mutate(ID_pair = ID_pair + 196*4) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'random'),
   
@@ -209,7 +210,7 @@ combined_data <- list(
   # Random allocation of transmitter
   stratified_msm_transmitterrandom = stratified_pred_transmitterrandom  %>%
     filter(dataset == 'stratified_MSM') %>%
-    mutate(ID_pair = ID_pair + 196*3) %>% 
+    mutate(ID_pair = ID_pair + 196*5) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'random'),
   
@@ -217,7 +218,7 @@ combined_data <- list(
   # Random allocation of transmitter
   stratified_pwid_transmitterrandom = stratified_pred_transmitterrandom  %>%
     filter(dataset == 'stratified_PWID') %>%
-    mutate(ID_pair = ID_pair + 196*4) %>% 
+    mutate(ID_pair = ID_pair + 196*6) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'random'),
   
@@ -225,7 +226,7 @@ combined_data <- list(
   # Transmitter = Maximum Likelihood(SpVL)
   stratified_het_transmitterML = stratified_pred_transmitterML  %>%
     filter(dataset == 'stratified_HET') %>%
-    mutate(ID_pair = ID_pair + 196*6) %>% 
+    mutate(ID_pair = ID_pair + 196*7) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'ML'),
   
@@ -233,7 +234,7 @@ combined_data <- list(
   # Transmitter = Maximum Likelihood(SpVL)
   stratified_msm_transmitterML = stratified_pred_transmitterML   %>%
     filter(dataset == 'stratified_MSM') %>%
-    mutate(ID_pair = ID_pair + 196*7) %>% 
+    mutate(ID_pair = ID_pair + 196*8) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'ML'),
   
@@ -241,7 +242,7 @@ combined_data <- list(
   # Transmitter = Maximum Likelihood(SpVL)
   stratified_pwid_transmitterML = stratified_pred_transmitterML   %>%
     filter(dataset == 'stratified_PWID') %>%
-    mutate(ID_pair = ID_pair + 196*8) %>% 
+    mutate(ID_pair = ID_pair + 196*9) %>% 
     rename_with(~ gsub("predicted_", "", .x), starts_with('predicted'))%>%
     mutate(transmitterallocation = 'ML')
 ) 
