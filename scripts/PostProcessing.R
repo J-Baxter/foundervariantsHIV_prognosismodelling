@@ -2,10 +2,11 @@ PostProcess <- function(tmresult, metadata){
 
   variant_distribtion <- tmresult[['variant_distribution']]%>%
     dplyr::select(-nparticles)
-    
   
-  p_particles <- rep(0,15)
-  p_variants <- rep(0,15)
+  max_particles <- 32
+  
+  p_particles <- rep(0,max_particles)
+  p_variants <- rep(0,max_particles)
   
   for (i in 1:max(dim(variant_distribtion))){
     
@@ -14,7 +15,7 @@ PostProcess <- function(tmresult, metadata){
       
   }
   
-  probabilities <- bind_cols(p_particles= p_particles, p_variants = p_variants, n = 1:15) %>%
+  probabilities <- bind_cols(p_particles= p_particles, p_variants = p_variants, n = 1:max_particles) %>%
     pivot_wider(names_from = n, values_from = c(p_variants, p_particles), names_sep = '_', names_vary = 'fastest')%>%
     bind_rows() 
   
