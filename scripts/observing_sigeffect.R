@@ -141,51 +141,5 @@ riskgroup <- c('MF', 'FM', 'MM')
 dimnames(or_matrix) <- list('riskgroup' = riskgroup, 'outcome' = outcome)
 
 epitools::oddsratio(or_matrix)
-################################### Visualise ###################################
 
-# Normal distributions of recipient phenotype, multiple variant and single variant
-facet.labs <- c("Recipient Population", "Multiple Variant Recipients", "Single Variant Recipients") %>%
-  setNames(c('recipient_mean', 'recipient_mv', 'recipient_sv'))
-
-plt1a <- ggplot(vls ) + 
-  geom_density(aes(x = vl ,fill = stage), alpha = 0.5, colour = 'white')+
-  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0))+
-  scale_y_continuous('Density', expand= c(0,0))+
-  scale_fill_brewer(palette = 'OrRd')+
-  geom_vline(xintercept = decomp_vl$mv['mean'],  linetype = 2, colour = '#fdbb84')+
-  geom_vline(xintercept = 4.74 ,  linetype = 2, colour = '#fee8c8')+
-  geom_vline(xintercept = decomp_vl$sv['mean'], linetype = 2, colour = '#e34a33')+
-  facet_wrap(.~stage, nrow = 3,labeller = labeller(stage = facet.labs))+
-  my_theme
-
-
-# Plotting the proportion of tests where a significant result is returned under different 
-# conditions of effect size, sample size and p(mv)
-plt1b <- ggplot(simsignificances ) +
-  geom_raster(aes(x = p_mv, y = effect_size, fill = value))+    
-  geom_point(x = 0.32, y = 0.293, shape = 2, colour = 'white') + 
-  
-  geom_point(x = 0.25, y = 0.372, shape = 5, colour = 'white') + 
- 
-  geom_vline(xintercept = 0.21, colour = "white", linetype = 2) + 
-  annotate("text", label = "MF",
-           x = 0.23, y = 0.95, size = 4, colour = "white"
-  )+
-  geom_vline(xintercept = 0.13, colour = "white", linetype = 2)+
-  annotate("text", label = "FM",
-           x = 0.15, y = 0.95, size = 4, colour = "white"
-  )+
-  geom_vline(xintercept = 0.3, colour = "white", linetype = 2) + 
-  annotate("text", label = "MM",
-           x = 0.32, y = 0.95, size = 4, colour = "white"
-  )+
-  facet_wrap(.~sample_size, scales = "free_x") + 
-  scale_y_continuous('Increase in SpVL due to Multiple Variants', expand= c(0,0)) +
-  scale_x_continuous('Cohort P(Multiple Variants)', expand= c(0,0))+
-  scale_fill_distiller(palette = 'OrRd', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
-  my_theme 
-
-
-
-
-cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO', rel_widths = c(0.4,0.6))
+# END #
