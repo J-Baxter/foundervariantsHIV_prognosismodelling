@@ -2,12 +2,120 @@
 
 # Dependencies
 source('./scripts/dependencies.R')
-font_add_google("Questrial", "Questrial")
-set_null_device(cairo_pdf)
-showtext_auto()
-
+source('./scripts/global_theme.R')
+#set_null_device(cairo_pdf)
 
 ############################################## Panel 1 ##############################################
+# From observe sig effect
+
+# Normal distributions of recipient phenotype, multiple variant and single variant
+facet.labs <- c("Recipient Population", "Multiple Variant Recipients", "Single Variant Recipients") %>%
+  setNames(c('recipient_mean', 'recipient_mv', 'recipient_sv'))
+
+plt1a <- ggplot(vls ) + 
+  geom_density(aes(x = vl ,fill = stage), alpha = 0.5, colour = 'white')+
+  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0))+
+  scale_y_continuous('Density', expand= c(0,0))+
+  scale_fill_brewer(palette = 'OrRd')+
+  geom_vline(xintercept = decomp_vl$mv['mean'],  linetype = 2, colour = '#fdbb84')+
+  geom_vline(xintercept = 4.74 ,  linetype = 2, colour = '#fee8c8')+
+  geom_vline(xintercept = decomp_vl$sv['mean'], linetype = 2, colour = '#e34a33')+
+  facet_wrap(.~stage, nrow = 3,labeller = labeller(stage = facet.labs))+
+  my_theme
+
+
+# Plotting the proportion of tests where a significant result is returned under different 
+# conditions of effect size, sample size and p(mv)
+plt1b <- ggplot(simsignificances ) +
+  geom_raster(aes(x = p_mv, y = effect_size, fill = value))+    
+  geom_point(x = 0.32, y = 0.293, shape = 2, colour = 'white') + 
+  
+  geom_point(x = 0.25, y = 0.372, shape = 5, colour = 'white') + 
+  
+  geom_vline(xintercept = 0.21, colour = "white", linetype = 2) + 
+  annotate("text", label = "MF",
+           x = 0.23, y = 0.95, size = 4, colour = "white"
+  )+
+  geom_vline(xintercept = 0.13, colour = "white", linetype = 2)+
+  annotate("text", label = "FM",
+           x = 0.15, y = 0.95, size = 4, colour = "white"
+  )+
+  geom_vline(xintercept = 0.3, colour = "white", linetype = 2) + 
+  annotate("text", label = "MM",
+           x = 0.32, y = 0.95, size = 4, colour = "white"
+  )+
+  facet_wrap(.~sample_size, scales = "free_x") + 
+  scale_y_continuous('Increase in SpVL due to Multiple Variants', expand= c(0,0)) +
+  scale_x_continuous('Cohort P(Multiple Variants)', expand= c(0,0))+
+  scale_fill_distiller(palette = 'OrRd', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
+  my_theme 
+
+
+
+
+cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO', rel_widths = c(0.4,0.6))
+
+############################################## Panel 2 ##############################################
+# Model overview, component models
+
+############################################## Panel 3 ##############################################
+# Swiss HIV data, TM applied to SHCS data
+shcs_plt1a <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
+  geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
+    colour = '#ef654a',
+    shape = 4, size = 3) +
+  scale_x_log10(limits = c(10**2, 10**7),
+                expand = c(0.05,0),
+                name = expression(paste("SpVL Partner 1", ' (', Log[10], " copies ", ml**-1, ')')),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_y_log10(name = expression(paste("SpVL Partner 2", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**2, 10**7),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  annotation_logticks() +
+  my_theme
+
+# Sex
+shcs_plt1b <- ggplot(data_model , aes(x = sex, fill = partner)) +
+  geom_bar() + 
+  scale_y_continuous(expand = c(0,0), name = 'Count') + 
+  scale_x_discrete(expand = c(0,0), name = 'Sex') +
+  scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
+  my_theme
+
+
+#Risk Group
+shcs_plt1b <- ggplot(data_model , aes(x =  riskgroup)) +
+  geom_bar( fill = '#ef654a') + 
+  scale_y_continuous(expand = c(0,0), name = 'Count') + 
+  scale_x_discrete(expand = c(0,0), name = 'Risk Group') +
+  #scale_fill_brewer(palette = 'OrRd', name = 'Sex')+
+  my_theme
+
+
+# Age
+shcs_plt1c <-   #scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
+  #scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
+  my_theme
+
+shcs_plt1c <- ggplot(data_model) + 
+  geom_histogram(aes(x = age.inf, fill = partner)) + 
+  scale_y_continuous(expand = c(0.01,0.01), name = 'Count') + 
+  scale_x_continuous(expand = c(0.01,0.01), name = 'Age at Infection',
+                     breaks = seq(0,12, by = 1)) +
+  scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
+  my_theme
+
+
+
+############################################## Panel 4 ##############################################
+# Adjsuted for heritability model
+
+############################################## Panel 5 ##############################################
+# Results from stratified cohorts
+
 #3 model framework and individual model outputs (tolerance, herit, jp transmission)
 plt_1a <- ggdraw() +
   draw_image("dag.svg")
