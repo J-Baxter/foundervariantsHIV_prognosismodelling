@@ -102,7 +102,6 @@ stratified_data <- mapply(SimCohorts,
 
 
 ################################### Predict SpVLs ###################################
-
 # Random allocation of transmitter/recipient
 shcs_h2preds_transmitterrandom <- predicted_draws(heritability_model_transmitterrandom,
                                 newdata = shcs_data_long_transmitterrandom,
@@ -249,7 +248,6 @@ combined_data <- list(
 
 
 ################################### Predict CD4 decline and format ###################################
-
 combined_data_CD4 <- combined_data  %>%
   lapply(., function(x) x %>% mutate(delta_CD4 = ToleranceModel(log10_SpVL,
                                                                 age.inf,
@@ -319,7 +317,6 @@ MM_results <- RunParallel(TransmissionModel2,
   bind_rows()
 
 
-
 # PWID: Currently using MSM:receptive params
 PWID_results <- RunParallel(TransmissionModel2, 
                             combined_data_CD4$PWID$SpVL_transmitter,
@@ -366,7 +363,6 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
 
 
 ################################### Write to file ################################### 
-
 # Sort into 'dataframes' (dataset:transmitterselection)
 datanames <- unique(FM_results$dataset)
 
@@ -388,4 +384,3 @@ mapply(write_csv, combinded_results, file = filenames)
 #source('./scripts/figures.R')
 #source ('./scripts/supplementary_figures.R)
 ###################################################################################################
-
