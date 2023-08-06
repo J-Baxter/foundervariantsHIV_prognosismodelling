@@ -3,7 +3,7 @@ PostProcess <- function(tmresult, metadata){
   variant_distribtion <- tmresult[['variant_distribution']]%>%
     dplyr::select(-nparticles)
   
-  max_particles <- 32
+  max_particles <- 100
   
   p_particles <- rep(0,max_particles)
   p_variants <- rep(0,max_particles)
