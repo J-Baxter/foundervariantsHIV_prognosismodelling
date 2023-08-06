@@ -59,6 +59,63 @@ ggsave(plot = plt_1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"),
 ############################################## Panel 2 ##############################################
 # Model overview, component models
 
+plt_2b <- ggplot(data, aes(x = SpVL, y=CD4.decline))+
+  geom_point(colour = '#ef654a', shape= 4, alpha = 0.3) +
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
+                     expand = c(0,0),
+                     limits = c(-2,2))+
+  scale_x_continuous(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                     expand = c(0,0))+
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#fdbb84', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.55, y = -0.35), label = "20 yrs", colour = "#fdbb84", size = 6) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*40) * x**2, colour = '#ef6548', linewidth = 1.2, xlim = c(0,6.3))+
+  geom_text(aes(x = 6.55, y = -0.5, label = "40 yrs"), colour = "#ef6548", size = 6) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*60) * x**2, colour = '#b30000', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.55, y = -0.62, label = "60 yrs"), colour = "#b30000", size = 6) + #Add 95% CIs to lines (geom_ribbon)
+  my_theme + theme(axis.title.y = element_text(family = 'sans')) + 
+  annotation_logticks(sides = 'b') 
+
+
+freq_model <- lme4::lmer(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
+                         data = shcs_data_long)
+
+plt2_c <- mutate(shcs_data_long,
+                 .pred = predict(freq_model)) %>%
+  data.table() %>%
+  mltools::one_hot(cols = c('age.inf_category', 'partner', 'sex', 'riskgroup')) %>%
+  as_tibble() %>%
+  select(contains(c('partner_2', 'sex_F', 'riskgroup', 'log10_SpVL_couplemean', 'age.inf_category' , "ID_pair", '.pred'))) %>%
+  select(-c('age.inf_category_15-24', 'riskgroup_HET')) %>%
+  mutate(partner_2 = case_when(partner_2 == 1 ~ -0.03912252,
+                               .default = 0)) %>%
+  mutate(sex_F = case_when(sex_F == 1 ~ -0.03394273,
+                           .default = 0)) %>%
+  mutate(`age.inf_category_25-29` = case_when(`age.inf_category_25-29` == 1 ~ 0.09351565,
+                                              .default = 0)) %>%
+  mutate(`age.inf_category_30-39` = case_when(`age.inf_category_30-39` == 1 ~ 0.1278834,
+                                              .default = 0)) %>%
+  mutate(`age.inf_category_40-80` = case_when(`age.inf_category_40-80` == 1 ~ 0.1901484,
+                                              .default = 0)) %>%
+  mutate(riskgroup_MSM = case_when(riskgroup_MSM == 1 ~ 0.02510452,
+                                   .default = 0)) %>%
+  mutate(riskgroup_PWID = case_when(riskgroup_PWID == 1 ~ 0.02278369,
+                                    .default = 0)) %>%
+  mutate(riskgroup_OTHER = case_when(riskgroup_OTHER == 1 ~ 0.03121261,
+                                     .default = 0)) %>%
+  mutate(riskgroup_UNKNOWN = case_when(riskgroup_UNKNOWN == 1 ~ -0.2791359,
+                                       .default = 0)) %>%
+  mutate(slope = rowSums(select(., -c(ID_pair, log10_SpVL_couplemean, .pred)))) %>%
+  arrange(log10_SpVL_couplemean) %>%
+  mutate(intercept = rep(coef(freq_model)$log10_SpVL_couplemean[,1], each = 2)) %>%
+  ggplot() +
+  geom_abline(aes(intercept =intercept, slope = slope), alpha = 0.1, colour = '#fdbb84') +
+  geom_point(aes(x = log10_SpVL_couplemean, y = log10_SpVL), 
+             data = shcs_data_long, 
+             colour = '#d7301f', shape = 4) + 
+  xlim(0, 7) +
+  ylim(0, 7) + 
+  my_theme
+
 ############################################## Panel 3 ##############################################
 # Swiss HIV data, TM applied to SHCS data
 shcs_plt1a <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
