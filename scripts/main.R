@@ -296,7 +296,7 @@ MF_results <- RunParallel(TransmissionModel2,
   
   mapply(PostProcess,
          tmresult = ., 
-         metadata = combined_data_CD4$FM  %>%
+         metadata = combined_data_CD4$MF  %>%
            group_split(index), 
          SIMPLIFY = F)%>%
   bind_rows()
@@ -311,7 +311,7 @@ MM_results <- RunParallel(TransmissionModel2,
   
   mapply(PostProcess,
          tmresult = ., 
-         metadata = combined_data_CD4$FM  %>%
+         metadata = combined_data_CD4$MM  %>%
            group_split(index), 
          SIMPLIFY = F)%>%
   bind_rows()
@@ -326,7 +326,7 @@ PWID_results <- RunParallel(TransmissionModel2,
   
   mapply(PostProcess,
          tmresult = ., 
-         metadata = combined_data_CD4$FM  %>%
+         metadata = combined_data_CD4$PWID  %>%
            group_split(index), 
          SIMPLIFY = F)%>%
   bind_rows()
@@ -341,7 +341,7 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
   
   mapply(PostProcess,
          tmresult = ., 
-         metadata = combined_data_CD4$FM  %>%
+         metadata = combined_data_CD4$OTHER  %>%
            group_split(index), 
          SIMPLIFY = F)%>%
   bind_rows()
@@ -356,7 +356,7 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
   
   mapply(PostProcess,
          tmresult = ., 
-         metadata = combined_data_CD4$FM  %>%
+         metadata = combined_data_CD4$UNKNOWN  %>%
            group_split(index), 
          SIMPLIFY = F)%>%
   bind_rows()
