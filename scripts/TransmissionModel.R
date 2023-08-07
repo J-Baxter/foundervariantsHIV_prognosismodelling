@@ -2,12 +2,9 @@
 # this function calculates i) the probability of infection, ii) the probability of multiple founder variants
 
 TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715*1e-8, PropExposuresInfective = 0.029){
-        require(doFuture)
         require(dplyr)
-        require(fitdistrplus)
         
-        
-        
+
         # The VLs during primary stage
         
         # Fiebig et al 2003 profiles. Stages I-V only.
@@ -97,12 +94,12 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
                                        sp_ViralLoad,
                                        PerVirionProbability)
         VirionsConsidered <- which.max(chronic_prob_fulldist)
-        maxVirionsConsidered <- min(which(chronic_prob_fulldist[VirionsConsidered:length(chronic_prob_fulldist)] < 1e-15))
-        maxVirionsConsidered <- VirionsConsidered+maxVirionsConsidered-2
+        maxVirionsConsidered <-32 #min(which(chronic_prob_fulldist[VirionsConsidered:length(chronic_prob_fulldist)] < 1e-15))
+       # maxVirionsConsidered <- #VirionsConsidered+maxVirionsConsidered-2
         
         # This reduces computational time. Variant transmission does not change 
         # much for higher virion transmission
-        maxVirionsConsidered <- ifelse(maxVirionsConsidered>500, 500, maxVirionsConsidered)
+        #maxVirionsConsidered <- ifelse(maxVirionsConsidered>500, 500, maxVirionsConsidered)
 
         
         #  NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER
@@ -338,6 +335,10 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
         variant_distribution <- variant_distribution  %>% 
                 mutate(across(.cols = dplyr::starts_with("V"), .fns = ~ .x / sum(variant_distribution %>% dplyr::select(dplyr::starts_with('V'))))) 
         
+       # if(ncol(variant_distribution)>16){
+              #  variant_distribution <- variant_distribution[ ,2:16]
+      #  }
+
         #multiple_founder_proportion <- 1 - as.numeric(variant_distribution[1])
         #rm(variant_distribution)
         
