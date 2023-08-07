@@ -53,7 +53,7 @@ RunParallel <- function(func, v1, ...){
   require(parallel)
  
   # Set up cluster (fork)
-  cl <- detectCores() %>% `-` (3) 
+  cl <- detectCores() %>% `-` (2) 
  
   start <- Sys.time()
   print(start)
