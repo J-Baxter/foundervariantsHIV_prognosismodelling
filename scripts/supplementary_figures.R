@@ -314,6 +314,14 @@ npVals <- c( 97,     42084,   64344,    3878,     1714,     # 0.1 (w = 0.1)
             22626,   967867,  1216484,   427765,   105021,  # 0.75 (w = 0.15)
             42084,  3574304,  4492440,   1341713,   471801) # 0.9 (w = 0.1)
 
+
+
+p = 1.765E-06
+f = 0.13762
+n = 42084
+x = 0
+1-f*(choose(n, x) * p**x * (1-p)^(n-x))
+
 fiebig_t <- c(5,5.3,3.2,5.6,69.5)/365 #Stage duration (Fiebig et al 2003) (Total time in acute infection = 0.243)
 fiebig_q <- c(0.1,0.15,0.5,0.15,0.1) #Quantiles 
 gp <- as.vector(outer(fiebig_t/sum(fiebig_t), fiebig_q))
