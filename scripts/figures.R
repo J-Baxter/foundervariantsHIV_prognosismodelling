@@ -7,13 +7,14 @@ source('./scripts/global_theme.R')
 
 ############################################## Import Results ############################################## 
 
+cd4_data <- read_table('./data/pbio.1001951.s006.tsv') %>%
+  rename(SpVL = spVL)
+
 resultsfiles <- list.files('./results/07Aug23/', full.names = T)
 
 results <- lapply(resultsfiles, read_csv)
 
-shcs_empirical_results <- results[[1]]
 
-shcs_predicted_results <- results[[2]]
 ############################################## Panel 1 ##############################################
 # From observe sig effect
 
@@ -68,65 +69,6 @@ ggsave(plot = plt_1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"),
 ############################################## Panel 2 ##############################################
 # Model overview, component models and SHCS data
 
-cd4_data <- read_table('./data/pbio.1001951.s006.tsv') %>%
-  rename(SpVL = spVL)
-
-# DAG
-require(ggdag)
-require(dagitty)
-
-ShortenDagArrows <- function(tidy_dag, proportion){
-  # Update underlying ggdag object
-  tidy_dag$data <- dplyr::mutate(tidy_dag$data, 
-                                 xend = (1-proportion/2)*(xend - x) + x, 
-                                 yend = (1-proportion/2)*(yend - y) + y,
-                                 xstart = (1-proportion/2)*(x - xend) + xend,
-                                 ystart = (1-proportion/2)*(y-yend) + yend)
-  return(tidy_dag)
-}
-
-coords <- list(
-  x = c(SpVLr = 10, SpVLt = 2.5, deltaCD4 = 10, PMV = 2.5),
-  y = c(SpVLr = 8, SpVLt = 8, deltaCD4 = 2, PMV = 2)) %>% 
-  coords2df() %>%
-  coords2list()
-
-test_dag <- dagify(
-  deltaCD4 ~ SpVLr,
-  SpVLr ~ SpVLt,
-  PMV ~ SpVLt ) 
-
-dagitty::coordinates(test_dag) <- coords
-
-model_cols <- c('Heritability' = '#fdbb84', 'Transmission' ='#d7301f', 'Tolerance' = '#7f0000')
-node_labels <- list( expression(P[MV]), expression(SpVL[R]), expression(SpVL['T']),
-                    expression(paste(Delta, ' CD4+')))
-
-
-plt_2a <- test_dag %>%
-  tidy_dagitty() %>%
-  ShortenDagArrows(proportion = .09) %>%
-  mutate(linetype = ifelse(name == "PMV", "dashed", "solid")) %>% 
-  arrange(name) %>%
-  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
-  
-  geom_rect(xmin = 1, xmax = 4, ymin = 1, ymax = 9.5, aes(colour = 'Transmission'), fill=NA, alpha = 0.05, size = 2) +
-  geom_rect(xmin = 8.5, xmax = 11.5, ymin = 1, ymax = 9.5, aes(colour = 'Tolerance'), fill=NA,  alpha = 0.05, size = 2) +
-  geom_rect(xmin = 1.5, xmax = 11, ymin = 6.75, ymax = 9.25, aes(colour = 'Heritability'), fill=NA, alpha = 0.05,  size = 2) +
-  
-  geom_dag_point(colour = '#ef654a', size = 30, shape = 'square') +
-  geom_dag_edges(aes(x = xstart, y = ystart, xend = xend, yend = yend, edge_linetype =  linetype),edge_width = 1.5) +
-  
-  geom_dag_text(parse = TRUE, label =node_labels  , colour = 'white', family = 'lmsans10', size = 4) +
-  
-  scale_x_continuous(limits = c(0,12), expand= c(0,0), name = NA )+ 
-  scale_y_continuous(limits = c(0,10), expand= c(0,0), name = NA )+ 
-  
-  scale_colour_manual(values = model_cols, 'Model')+ 
-  my_theme +
-  theme_dag() +
-  theme(legend.position = c(0.5,0.5))
- 
 # Transmission Model 
 plt_2b_probabilities <- TransmissionModel2(sp_ViralLoad = 10**6, 
                                   PerVirionProbability = 8.779E-07, 
@@ -232,14 +174,6 @@ plt_2e <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
                 labels = trans_format("log10", math_format(.x))) +
   my_theme
 
-# Sex
-#plt_2f <- ggplot(shcs_data_long_transmitterML, aes(x = sex)) +
-#  geom_bar() + 
-#  scale_y_continuous(expand = c(0,0), name = 'Count') + 
-#  scale_x_discrete(expand = c(0,0), name = 'Sex') +
- # scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
-#  my_theme
-
 
 #Risk Group
 plt_2f <- ggplot(shcs_data_long_transmitterML , aes(x =  riskgroup)) +
@@ -258,24 +192,155 @@ plt_2g <- ggplot(shcs_data_long_transmitterML) +
   
   my_theme
 
-
-panel_2_topright <- plot_grid(plt_2b, plt_2c, plt_2d, labels = c('B', 'C', 'D'), ncol = 1, align = 'hv', label_size = 9)
-panel_2_top  <- plot_grid(plt_2a, panel_2_topright, labels = c('A', ''), ncol = 2, rel_widths = c(1,0.6), label_size = 9)
-panel_2_bottom <- plot_grid(plt_2e, plt_2f, plt_2g, labels = c('E', 'F', 'G'), ncol = 3, align = 'hv', label_size = 9)
-
 panel_2 <- plot_grid(plt_2b, plt_2c, plt_2d, plt_2e, plt_2f, plt_2g,  ncol = 3, align = 'hv', label_size = 9, labels = 'AUTO')
-  plot_grid(panel_2_top, panel_2_bottom , rel_heights = c(1,0.4), nrow =2, label_size = 9)
 
 ggsave(plot = panel_2 , filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), 
        device = jpeg,  width = 170, height = 140,  units = 'mm')
 
+
 ############################################## Panel 3 ##############################################
+shcs_empirical_results <- results[[1]]
+shcs_predicted_results <- results[[2]]
+
+plt_3a <- ggplot(shcs_empirical_results %>% filter(transmitterallocation == 'ML'))+
+  geom_point(aes(y = SpVL_recipient, x = 1-p_variants_1, colour = riskgroup_recipient),size = 1, shape = 4)+
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**2, 10**7),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_color_brewer(palette = 'OrRd', 'Recipient Riskgroup') +
+  my_theme+
+  theme(axis.title = element_text(size = 7))
+
+plt_3b <- ggplot(shcs_empirical_results %>% filter(transmitterallocation == 'ML'))+
+  geom_point(aes(y = SpVL_recipient, x = 1-p_particles_1, colour = riskgroup_recipient),size = 1, shape = 4)+
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**2, 10**7),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  scale_color_brewer(palette = 'OrRd') +
+  my_theme+
+  theme(axis.title = element_text(size = 7))
+
+plt_3c <- ggplot(shcs_empirical_results %>% filter(transmitterallocation == 'ML'))+
+  geom_point(aes(y = delta_CD4_recipient, x = 1-p_variants_1, colour = riskgroup_recipient),size = 1, shape = 4)+
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
+                     expand = c(0,0),
+                     limits = c(-1,0)) +
+  scale_color_brewer(palette = 'OrRd') +
+  my_theme +
+  theme(axis.title = element_text(size = 7))
+
+plt_3d <- ggplot(shcs_empirical_results %>% filter(transmitterallocation == 'ML'))+
+  geom_point(aes(y = delta_CD4_recipient, x = 1-p_particles_1, colour = riskgroup_recipient),size = 1, shape = 4)+
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
+                     expand = c(0,0),
+                     limits = c(-1,0)) +
+  scale_color_brewer(palette = 'OrRd') +
+  my_theme +
+  theme(axis.title = element_text(size = 7))
+
+
+plt_3e <- ggplot(shcs_predicted_results %>% filter(transmitterallocation == 'ML'), 
+                 aes(y = SpVL_recipient, x = 1-p_variants_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**1, 10**7.5),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  my_theme+
+  theme(axis.title = element_text(size = 7))
+
+plt_3f <- ggplot(shcs_predicted_results %>% filter(transmitterallocation == 'ML'),
+                 aes(y = SpVL_recipient, x = 1-p_particles_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**1, 10**7.5),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  my_theme +
+  theme(axis.title = element_text(size = 7))
+
+
+plt_3g <- ggplot(shcs_predicted_results %>% filter(transmitterallocation == 'ML'),
+                 aes(y = delta_CD4_recipient, x = 1-p_variants_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_continuous(limits = c(-0.5,0), 
+                     expand = c(0,0.01), 
+                     breaks = seq(-0.5, 0, by = 0.1),
+                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
+  my_theme+
+  theme(axis.title = element_text(size = 7))
+
+
+plt_3h <- ggplot(shcs_predicted_results %>% filter(transmitterallocation == 'ML'),
+                 aes(y = delta_CD4_recipient, x = 1-p_particles_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_continuous(limits = c(-0.5,0), 
+                     expand = c(0,0.01), 
+                     breaks = seq(-0.5, 0, by = 0.1),
+                     name =expression(paste(Delta, CD4,'+ ' , mu, l**-1, ' ', day**-1))) +
+  my_theme+
+  theme(axis.title = element_text(size = 7))
+
+panel3_top <- plot_grid(plt_3a, plt_3b, plt_3c,plt_3d, nrow= 1, labels= 'AUTO', label_size = 9, align = 'hv')
+panel3_legend <- get_legend(plt_3a + theme(legend.position = 'bottom')) 
+panel3_bottom <- plot_grid(plt_3e, plt_3f, plt_3g, plt_3h, nrow= 1, labels= c('E', 'F', 'G', 'H'), label_size = 9, align = 'hv')
+
+panel_3 <- plot_grid(panel3_legend, panel3_top,  panel3_bottom, nrow= 3, labels= c('', '', '','E', 'F', 'G', 'H'), label_size = 9, rel_heights =  c(0.1,1,1))
+
+ggsave(plot = panel_3 , filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), 
+       device = jpeg,  width = 200, height = 130,  units = 'mm')
 
 
 ############################################## Panel 4 ##############################################
 
 sim_results <-  bind_rows(results[3:5]) %>% filter(transmitterallocation == 'ML')
-my_palette <- colorRampPalette(brewer.pal(9, "OrRd"))(11)
+my_palette <- colorRampPalette(brewer.pal(9, "OrRd"))(13)
 
 plt_4a <- ggplot(sim_results,aes(y = SpVL_recipient, x = 1-p_variants_1))+
   geom_density_2d_filled()+
