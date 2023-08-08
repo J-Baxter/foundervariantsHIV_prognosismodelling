@@ -291,61 +291,34 @@ ggsave(plot = plot_chains , filename = paste(figs_dir,sep = '/', "panel_s6.jpeg"
 my_palette <- RColorBrewer::brewer.pal(name="OrRd",n=9)[4:9]
 
 # For a given SpVL, plot the probabilities of transmission over time since infection (Thompson)
-spvl_infdur <- read_csv('./data/spvl_infectionduration.csv')
-plt_tda <- 
-  ggplot(spvl_infdur)+
-  geom_line(aes(x = t, y = p, colour = as.factor(spvl)), size = 1.5)+
-  scale_color_manual(values = my_palette, name = 'SpVL')+
+spvl_dur <- read_csv('./data/spvl_duration.csv')
+
+
+plt_s8a <- spvl_dur %>%
+  ggplot() +
+  geom_line(aes(x = time, y = vl, colour = as.factor(spvl)), size = 1.5) +
+  scale_colour_brewer(palette = 'OrRd', name = 'SpVL')+
   my_theme+
-  scale_x_continuous(expand = c(0,0), limits = c(0,17), 'Time') +
-  scale_y_continuous(expand = c(0,0), limits = c(0, 0.04), 'P(Acquisition)')+
+  scale_x_continuous(expand = c(0,0), limits = c(0,20), 'Time') +
+  scale_y_log10(limits = c(10**0, 10**8),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x)))+
+  facet_wrap(.~model, scales = 'free_y')+
   theme(legend.position = c(0.92,0.88))
 
-
-
-# Primary Infection VLs (Feibig et al. 2003)
-fiebig_q <- c(0.1,   0.15,      0.5,    0.15,    0.1)
-# I 0-5 days\\II 5-10.3 days\\III 10.3-13.5 days\\IV 13.5-19.1 days\\V 19.1-88.6 days
-
-#            I\\      II\\      III\\    IV\\       V 
-npVals <- c( 97,     42084,   64344,    3878,     1714,     # 0.1 (w = 0.1)
-            421,     92159,   136380,   27524,     7214,    # 0.25 (w = 0.15)
-            2742,    262131,   491492,   88507,    25176,   # 0.5 (w = 0.5)
-            22626,   967867,  1216484,   427765,   105021,  # 0.75 (w = 0.15)
-            42084,  3574304,  4492440,   1341713,   471801) # 0.9 (w = 0.1)
-
-
-
-p = 1.765E-06
-f = 0.13762
-n = 42084
-x = 0
-1-f*(choose(n, x) * p**x * (1-p)^(n-x))
-
-fiebig_t <- c(5,5.3,3.2,5.6,69.5)/365 #Stage duration (Fiebig et al 2003) (Total time in acute infection = 0.243)
-fiebig_q <- c(0.1,0.15,0.5,0.15,0.1) #Quantiles 
-gp <- as.vector(outer(fiebig_t/sum(fiebig_t), fiebig_q))
-
-# preAIDS  Infection VLs (Mellors et al 1995)
-naVals <- round(c(10^4, 10^4.5, 10^5, 10^5.5, 10^6))
-ga <- c(0.06053491, 0.23398873, 0.34935005, 0.25220102, 0.10392529) # Probability density function of Mellors VLs (ie. estimate is averaged over these vls for fixed period 0.75)
-
-
-
-
-tauc = array(0, length(sp_ViralLoad))
-taup = sum(fiebig_t)
-taua = 0.75
-
-
-plt_tda <- 
-  ggplot(spvl_infdur)+
-  geom_line(aes(x = t, y = p, colour = as.factor(spvl)), size = 1.5)+
-  scale_color_manual(values = my_palette, name = 'SpVL')+
+plt_s8b <- spvl_dur %>%
+  ggplot() +
+  geom_line(aes(x = time, y = vl, colour = as.factor(spvl)), size = 1.5) +
+  scale_colour_brewer(palette = 'OrRd', name = 'SpVL')+
   my_theme+
-  scale_x_continuous(expand = c(0,0), limits = c(0,17), 'Time') +
-  scale_y_continuous(expand = c(0,0), limits = c(0, 0.04), 'P(Acquisition)')+
-  theme(legend.position = c(0.92,0.88))
+  scale_x_continuous(expand = c(0,0), limits = c(0,20), 'Time') +
+  scale_y_log10(limits = c(10**0, 10**8),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x)))+
+  facet_wrap(.~model, scales = 'free_y')+
+  coord_cartesian(xlim = c(0,1))
 
 
 # Plot the proportion of the xth most common variants over time since infection
