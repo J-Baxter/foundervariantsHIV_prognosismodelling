@@ -94,12 +94,12 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
                                        sp_ViralLoad,
                                        PerVirionProbability)
         VirionsConsidered <- which.max(chronic_prob_fulldist)
-        maxVirionsConsidered <-32 #min(which(chronic_prob_fulldist[VirionsConsidered:length(chronic_prob_fulldist)] < 1e-15))
-       # maxVirionsConsidered <- #VirionsConsidered+maxVirionsConsidered-2
+        maxVirionsConsidered <-min(which(chronic_prob_fulldist[VirionsConsidered:length(chronic_prob_fulldist)] < 1e-15))
+        maxVirionsConsidered <- VirionsConsidered+maxVirionsConsidered-2
         
         # This reduces computational time. Variant transmission does not change 
         # much for higher virion transmission
-        #maxVirionsConsidered <- ifelse(maxVirionsConsidered>500, 500, maxVirionsConsidered)
+        maxVirionsConsidered <- ifelse(maxVirionsConsidered>500, 500, maxVirionsConsidered)
 
         
         #  NOW CALCULATE FULL DISTRIBUTION OF VIRIONS NUMBER

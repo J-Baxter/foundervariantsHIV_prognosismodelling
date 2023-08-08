@@ -14,7 +14,7 @@ source('./scripts/BonhoefferEqns.R')
 source('./scripts/AllocateTransmitter.R')
 source('./scripts/simulate_cohorts_funcs.R')
 source('./scripts/PostProcessing.R')
-source('./scripts/global_theme.R')
+#source('./scripts/global_theme.R')
 
 
 # Set Seed
@@ -364,7 +364,9 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
 
 ################################### Write to file ################################### 
 # Sort into 'dataframes' (dataset:transmitterselection)
-datanames <- unique(FM_results$dataset)
+datanames <- unique(c(FM_results$dataset, MF_results$dataset, MM_results$dataset,
+                      PWID_results$dataset, OTHER_results$dataset, 
+                      UNKNOWN_results$dataset))
 
 combinded_results <- list(FM_results, 
                           MF_results,
@@ -373,6 +375,7 @@ combinded_results <- list(FM_results,
                           OTHER_results,
                           UNKNOWN_results) %>%
   do.call(rbind.data.frame, .) %>%
+  select(-ends_with(as.character(35:200))) %>%
   group_split(dataset) 
 
 # write csv to file
