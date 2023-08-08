@@ -375,6 +375,7 @@ combinded_results <- list(FM_results,
                           OTHER_results,
                           UNKNOWN_results) %>%
   do.call(rbind.data.frame, .) %>%
+  select(-ends_with(as.character(35:200))) %>%
   group_split(dataset) 
 
 # write csv to file
