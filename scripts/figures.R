@@ -5,6 +5,15 @@ source('./scripts/dependencies.R')
 source('./scripts/global_theme.R')
 #set_null_device(cairo_pdf)
 
+############################################## Import Results ############################################## 
+
+resultsfiles <- list.files('./results/07Aug23/', full.names = T)
+
+results <- lapply(resultsfiles, read_csv)
+
+shcs_empirical_results <- results[[1]]
+
+shcs_predicted_results <- results[[2]]
 ############################################## Panel 1 ##############################################
 # From observe sig effect
 
@@ -57,71 +66,160 @@ ggsave(plot = plt_1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"),
 
 
 ############################################## Panel 2 ##############################################
-# Model overview, component models
+# Model overview, component models and SHCS data
 
-plt_2b <- ggplot(data, aes(x = SpVL, y=CD4.decline))+
-  geom_point(colour = '#ef654a', shape= 4, alpha = 0.3) +
-  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
-                     expand = c(0,0),
-                     limits = c(-2,2))+
-  scale_x_continuous(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                     expand = c(0,0))+
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#fdbb84', linewidth = 1.2, xlim = c(0,6.3)) +
-  geom_text(aes(x = 6.55, y = -0.35), label = "20 yrs", colour = "#fdbb84", size = 6) +
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*40) * x**2, colour = '#ef6548', linewidth = 1.2, xlim = c(0,6.3))+
-  geom_text(aes(x = 6.55, y = -0.5, label = "40 yrs"), colour = "#ef6548", size = 6) +
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*60) * x**2, colour = '#b30000', linewidth = 1.2, xlim = c(0,6.3)) +
-  geom_text(aes(x = 6.55, y = -0.62, label = "60 yrs"), colour = "#b30000", size = 6) + #Add 95% CIs to lines (geom_ribbon)
-  my_theme + theme(axis.title.y = element_text(family = 'sans')) + 
-  annotation_logticks(sides = 'b') 
+cd4_data <- read_table('./data/pbio.1001951.s006.tsv') %>%
+  rename(SpVL = spVL)
+
+# DAG
+require(ggdag)
+require(dagitty)
+
+ShortenDagArrows <- function(tidy_dag, proportion){
+  # Update underlying ggdag object
+  tidy_dag$data <- dplyr::mutate(tidy_dag$data, 
+                                 xend = (1-proportion/2)*(xend - x) + x, 
+                                 yend = (1-proportion/2)*(yend - y) + y,
+                                 xstart = (1-proportion/2)*(x - xend) + xend,
+                                 ystart = (1-proportion/2)*(y-yend) + yend)
+  return(tidy_dag)
+}
+
+coords <- list(
+  x = c(SpVLr = 10, SpVLt = 2.5, deltaCD4 = 10, PMV = 2.5),
+  y = c(SpVLr = 8, SpVLt = 8, deltaCD4 = 2, PMV = 2)) %>% 
+  coords2df() %>%
+  coords2list()
+
+test_dag <- dagify(
+  deltaCD4 ~ SpVLr,
+  SpVLr ~ SpVLt,
+  PMV ~ SpVLt ) 
+
+dagitty::coordinates(test_dag) <- coords
+
+model_cols <- c('Heritability' = '#fdbb84', 'Transmission' ='#d7301f', 'Tolerance' = '#7f0000')
+node_labels <- list( expression(P[MV]), expression(SpVL[R]), expression(SpVL['T']),
+                    expression(paste(Delta, ' CD4+')))
 
 
+plt_2a <- test_dag %>%
+  tidy_dagitty() %>%
+  ShortenDagArrows(proportion = .09) %>%
+  mutate(linetype = ifelse(name == "PMV", "dashed", "solid")) %>% 
+  arrange(name) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  
+  geom_rect(xmin = 1, xmax = 4, ymin = 1, ymax = 9.5, aes(colour = 'Transmission'), fill=NA, alpha = 0.05, size = 2) +
+  geom_rect(xmin = 8.5, xmax = 11.5, ymin = 1, ymax = 9.5, aes(colour = 'Tolerance'), fill=NA,  alpha = 0.05, size = 2) +
+  geom_rect(xmin = 1.5, xmax = 11, ymin = 6.75, ymax = 9.25, aes(colour = 'Heritability'), fill=NA, alpha = 0.05,  size = 2) +
+  
+  geom_dag_point(colour = '#ef654a', size = 30, shape = 'square') +
+  geom_dag_edges(aes(x = xstart, y = ystart, xend = xend, yend = yend, edge_linetype =  linetype),edge_width = 1.5) +
+  
+  geom_dag_text(parse = TRUE, label =node_labels  , colour = 'white', family = 'lmsans10', size = 4) +
+  
+  scale_x_continuous(limits = c(0,12), expand= c(0,0), name = NA )+ 
+  scale_y_continuous(limits = c(0,10), expand= c(0,0), name = NA )+ 
+  
+  scale_colour_manual(values = model_cols, 'Model')+ 
+  my_theme +
+  theme_dag() +
+  theme(legend.position = c(0.5,0.5))
+ 
+# Transmission Model 
+plt_2b_probabilities <- TransmissionModel2(sp_ViralLoad = 10**6, 
+                                  PerVirionProbability = 8.779E-07, 
+                                  PropExposuresInfective = 0.14337)  %>%
+  setNames(nm = c('variant_distribution','probTransmissionPerSexAct','transmitter')) %>%
+  .[['variant_distribution']] %>%
+  cbind.data.frame() %>% 
+  pivot_longer(cols = starts_with('V'),
+               names_to = 'variants',
+               values_to = 'p') %>%
+  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+           as.numeric()) %>%
+  filter(p > 0)
+
+plt_2b <- ggplot(plt_2b_probabilities, aes(y = variants, x = nparticles))+
+  geom_point(aes(size = p), colour = '#ef654a')+
+  scale_size(range = c(0,5), name = 'P(Variants \u2229 Virions)')+
+  scale_y_continuous(name = 'Variants', expand = c(0,0), limits = c(0.5,10.5), breaks = 1:10)+ 
+  scale_x_continuous(name = 'Virions', expand = c(0.01,0), limits = c(0.5,10.5), breaks = 1:10)+
+  my_theme+
+  theme(legend.position =  c(0.5,0.8),
+        legend.background = element_rect(fill = NA))
+
+
+# Heritability Model (Frequentist vis)
 freq_model <- lme4::lmer(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
-                         data = shcs_data_long)
+                         data = shcs_data_long_transmitterML)
 
-plt2_c <- mutate(shcs_data_long,
+plt_2c <- mutate(shcs_data_long_transmitterML,
                  .pred = predict(freq_model)) %>%
-  data.table() %>%
+  data.table::data.table() %>%
   mltools::one_hot(cols = c('age.inf_category', 'partner', 'sex', 'riskgroup')) %>%
   as_tibble() %>%
-  select(contains(c('partner_2', 'sex_F', 'riskgroup', 'log10_SpVL_couplemean', 'age.inf_category' , "ID_pair", '.pred'))) %>%
+  select(contains(c('partner_recipient', 'sex_F', 'riskgroup', 'log10_SpVL_couplemean', 'age.inf_category' , "ID_pair", '.pred'))) %>%
   select(-c('age.inf_category_15-24', 'riskgroup_HET')) %>%
-  mutate(partner_2 = case_when(partner_2 == 1 ~ -0.03912252,
-                               .default = 0)) %>%
-  mutate(sex_F = case_when(sex_F == 1 ~ -0.03394273,
+  mutate(partner_recipient = case_when(partner_recipient == 1 ~ -0.15643,
+                                       .default = 0)) %>%
+  mutate(sex_F = case_when(sex_F == 1 ~ -0.0351,
                            .default = 0)) %>%
-  mutate(`age.inf_category_25-29` = case_when(`age.inf_category_25-29` == 1 ~ 0.09351565,
+  mutate(`age.inf_category_25-29` = case_when(`age.inf_category_25-29` == 1 ~  0.08640,
                                               .default = 0)) %>%
-  mutate(`age.inf_category_30-39` = case_when(`age.inf_category_30-39` == 1 ~ 0.1278834,
+  mutate(`age.inf_category_30-39` = case_when(`age.inf_category_30-39` == 1 ~ 0.12095,
                                               .default = 0)) %>%
-  mutate(`age.inf_category_40-80` = case_when(`age.inf_category_40-80` == 1 ~ 0.1901484,
+  mutate(`age.inf_category_40-80` = case_when(`age.inf_category_40-80` == 1 ~  0.19728,
                                               .default = 0)) %>%
-  mutate(riskgroup_MSM = case_when(riskgroup_MSM == 1 ~ 0.02510452,
+  mutate(riskgroup_MSM = case_when(riskgroup_MSM == 1 ~ 0.01874,
                                    .default = 0)) %>%
-  mutate(riskgroup_PWID = case_when(riskgroup_PWID == 1 ~ 0.02278369,
+  mutate(riskgroup_PWID = case_when(riskgroup_PWID == 1 ~ 0.01923,
                                     .default = 0)) %>%
-  mutate(riskgroup_OTHER = case_when(riskgroup_OTHER == 1 ~ 0.03121261,
+  mutate(riskgroup_OTHER = case_when(riskgroup_OTHER == 1 ~ -0.03739,
                                      .default = 0)) %>%
-  mutate(riskgroup_UNKNOWN = case_when(riskgroup_UNKNOWN == 1 ~ -0.2791359,
+  mutate(riskgroup_UNKNOWN = case_when(riskgroup_UNKNOWN == 1 ~ -0.23424,
                                        .default = 0)) %>%
   mutate(slope = rowSums(select(., -c(ID_pair, log10_SpVL_couplemean, .pred)))) %>%
   arrange(log10_SpVL_couplemean) %>%
   mutate(intercept = rep(coef(freq_model)$log10_SpVL_couplemean[,1], each = 2)) %>%
   ggplot() +
-  geom_abline(aes(intercept =intercept, slope = slope), alpha = 0.1, colour = '#fdbb84') +
+  geom_abline(aes(intercept =intercept, slope = slope), alpha = 0.2, colour = '#fdbb84') +
   geom_point(aes(x = log10_SpVL_couplemean, y = log10_SpVL), 
-             data = shcs_data_long, 
-             colour = '#d7301f', shape = 4) + 
-  xlim(0, 7) +
-  ylim(0, 7) + 
+             data = shcs_data_long_transmitterML, 
+             colour = '#ef654a', shape = 4, alpha = 0.4, size = 1) + 
+  scale_x_continuous(name = expression(paste(SpVL[ij], ' (', Log[10], " copies ", ml**-1, ')')),
+                     limits = c(1, 7),
+                     expand = c(0.05,0)) + 
+  scale_y_continuous(name = expression(paste("Mean Pair SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                     limits = c(1, 7),
+                     expand = c(0.05,0))+ 
   my_theme
 
-############################################## Panel 3 ##############################################
-# Swiss HIV data, TM applied to SHCS data
-shcs_plt1a <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
+
+# Tolerance Model
+plt_2d <- ggplot(cd4_data , aes(x = SpVL, y=CD4.decline))+
+  geom_point(colour = '#ef654a', shape= 4, alpha = 0.4, size = 1) +
+  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
+                     expand = c(0,0),
+                     limits = c(-2,2))+
+  scale_x_continuous(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                     expand = c(0,0),
+                     limits = c(0,7.5),
+                     breaks = seq(0,6, by = 2))+
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#fdbb84', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.9, y = -0.35), label = "20 yrs", colour = "#fdbb84", size = 2) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*40) * x**2, colour = '#ef6548', linewidth = 1.2, xlim = c(0,6.3))+
+  geom_text(aes(x = 6.9, y = -0.5, label = "40 yrs"), colour = "#ef6548", size = 2) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*60) * x**2, colour = '#b30000', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.9, y = -0.62, label = "60 yrs"), colour = "#b30000", size = 2) + #Add 95% CIs to lines (geom_ribbon)
+  my_theme
+
+# SHCS
+plt_2e <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
   geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
     colour = '#ef654a',
-    shape = 4, size = 3) +
+    shape = 4, alpha = 0.4, size = 1) +
   scale_x_log10(limits = c(10**2, 10**7),
                 expand = c(0.05,0),
                 name = expression(paste("SpVL Partner 1", ' (', Log[10], " copies ", ml**-1, ')')),
@@ -132,436 +230,120 @@ shcs_plt1a <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
                 expand = c(0.05,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  annotation_logticks() +
   my_theme
 
 # Sex
-shcs_plt1b <- ggplot(data_model , aes(x = sex, fill = partner)) +
-  geom_bar() + 
-  scale_y_continuous(expand = c(0,0), name = 'Count') + 
-  scale_x_discrete(expand = c(0,0), name = 'Sex') +
-  scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
-  my_theme
+#plt_2f <- ggplot(shcs_data_long_transmitterML, aes(x = sex)) +
+#  geom_bar() + 
+#  scale_y_continuous(expand = c(0,0), name = 'Count') + 
+#  scale_x_discrete(expand = c(0,0), name = 'Sex') +
+ # scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
+#  my_theme
 
 
 #Risk Group
-shcs_plt1b <- ggplot(data_model , aes(x =  riskgroup)) +
+plt_2f <- ggplot(shcs_data_long_transmitterML , aes(x =  riskgroup)) +
   geom_bar( fill = '#ef654a') + 
   scale_y_continuous(expand = c(0,0), name = 'Count') + 
-  scale_x_discrete(expand = c(0,0), name = 'Risk Group') +
+  scale_x_discrete(expand = c(0,0), name = 'Risk Group', labels = c('HET', 'MSM', 'PWID', 'OTHER', 'NA')) +
   #scale_fill_brewer(palette = 'OrRd', name = 'Sex')+
   my_theme
 
 
 # Age
-shcs_plt1c <-   #scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
-  #scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
-  my_theme
-
-shcs_plt1c <- ggplot(data_model) + 
-  geom_histogram(aes(x = age.inf, fill = partner)) + 
+plt_2g <- ggplot(shcs_data_long_transmitterML) + 
+  geom_histogram(aes(x = age.inf), fill = '#ef654a') + 
   scale_y_continuous(expand = c(0.01,0.01), name = 'Count') + 
-  scale_x_continuous(expand = c(0.01,0.01), name = 'Age at Infection',
-                     breaks = seq(0,12, by = 1)) +
-  scale_fill_manual(values = c('#ef654a','#fdd49e'), name = 'Partner')+
+  scale_x_continuous('Age at Infection', limits = c(15,80), breaks = seq(16,80, by = 8), expand = c(0,0))+
+  
   my_theme
 
 
+panel_2_topright <- plot_grid(plt_2b, plt_2c, plt_2d, labels = c('B', 'C', 'D'), ncol = 1, align = 'hv', label_size = 9)
+panel_2_top  <- plot_grid(plt_2a, panel_2_topright, labels = c('A', ''), ncol = 2, rel_widths = c(1,0.6), label_size = 9)
+panel_2_bottom <- plot_grid(plt_2e, plt_2f, plt_2g, labels = c('E', 'F', 'G'), ncol = 3, align = 'hv', label_size = 9)
 
-############################################## Panel 4 ##############################################
-# Adjsuted for heritability model
+panel_2 <- plot_grid(plt_2b, plt_2c, plt_2d, plt_2e, plt_2f, plt_2g,  ncol = 3, align = 'hv', label_size = 9, labels = 'AUTO')
+  plot_grid(panel_2_top, panel_2_bottom , rel_heights = c(1,0.4), nrow =2, label_size = 9)
 
-############################################## Panel 5 ##############################################
-# Results from stratified cohorts
+ggsave(plot = panel_2 , filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), 
+       device = jpeg,  width = 170, height = 140,  units = 'mm')
 
-#3 model framework and individual model outputs (tolerance, herit, jp transmission)
-plt_1a <- ggdraw() +
-  draw_image("dag.svg")
-
-plt_1b <- ggplot(pop, aes(x = transmitter, recipient)) +
-  geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
-    colour = '#ef654a',
-    shape = 4, size = 3) +
-  scale_x_log10(limits = c(10**2, 10**7),
-                expand = c(0.05,0),
-                name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**2, 10**7),
-                expand = c(0.05,0),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  geom_smooth(method = 'lm', colour = '#ef654a' ) + 
-  #geom_function() + Incorporate lm with fixed effects (with #Add 95% CIs to lines (geom_ribbon))
-  annotation_logticks() +
-  my_theme + 
-  theme(legend.position = 'none')
-
-plt_1c <- ggplot(data, aes(x = SpVL, y=CD4.decline))+
-  geom_point(colour = '#ef654a', shape= 4, alpha = 0.3) +
-  scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),
-                     expand = c(0,0),
-                     limits = c(-2,2))+
-  scale_x_continuous(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                     expand = c(0,0))+
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#fdbb84', linewidth = 1.2, xlim = c(0,6.3)) +
-  geom_text(aes(x = 6.65, y = -0.35), label = "20 yrs", colour = "#fdbb84", size = 6) +
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*40) * x**2, colour = '#ef6548', linewidth = 1.2, xlim = c(0,6.3))+
-  geom_text(aes(x = 6.65, y = -0.5, label = "40 yrs"), colour = "#ef6548", size = 6) +
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*60) * x**2, colour = '#b30000', linewidth = 1.2, xlim = c(0,6.3)) +
-  geom_text(aes(x = 6.65, y = -0.62, label = "60 yrs"), colour = "#b30000", size = 6) + #Add 95% CIs to lines (geom_ribbon)
-  my_theme + theme(axis.title.y = element_text(family = 'sans')) + 
-  annotation_logticks(sides = 'b') 
-
-
-plt_1d <- ggplot(joint_probs, aes(y = variants, x = nparticles))+
-  geom_point(aes(size = p), colour = '#ef654a')+
-  scale_size(range = c(0,15), name = 'P(Variants \u2229 Particles)')+
-  scale_y_continuous(name = 'Variants', expand = c(0,0), limits = c(0.5,10.5), breaks = 1:10)+ 
-  scale_x_continuous(name = 'Particles', expand = c(0,0), limits = c(0.5,10.5), breaks = 1:10)+
-  my_theme+
-  theme(legend.position =  c(0.25,0.77),
-        legend.title = element_text(family = 'sans'))
-
-
-panel_1 <- plot_grid(plt_1a, plt_1b, plt_1c, plt_1d, ncol = 2, align = 'hv', labels = 'AUTO')
-cat('Panel 1 complete. \n')
-
-
-############################################## Panel 2 ##############################################
-# What do we expect to observe?
-
-combined_data_CD4_PMV_wide <- combined_data_CD4_PMV %>%
-  filter(w == 1) %>%
-  pivot_wider(names_from = partner, values_from = c(sex, age.inf, riskgroup, SpVL, log10_SpVL, age.inf_category, delta_CD4, starts_with('p_')), names_sep = '_') 
-
-combined_data_CD4_PMV_wide_long <- combined_data_CD4_PMV %>%
-  filter(w == 1) %>%
-  pivot_wider(names_from = partner, values_from = c(sex, age.inf, riskgroup, SpVL, log10_SpVL, age.inf_category, delta_CD4, starts_with('p_')), names_sep = '_') %>%
-  pivot_longer(cols = starts_with('p_'), names_to = 'x', values_to = 'probability') %>%
-  separate(x, sep = '_', c(NA, 'type', 'x', 'partner')) #Incorrect output - need partner status separated for transmitter/recipient roles
-
-
-
-plt_2a <- ggplot(combined_data_CD4_PMV_wide %>% filter(dataset == 'shcs_empirical'), 
-                 aes(x = 1 - p_variants_1_1, 
-                     y = SpVL_2 #,
-                     #colour = as.factor(w)
-                 ))+
-  geom_point(shape= 4, size = 4, colour = '#ef654a') +
-  #scale_colour_brewer(palette = 'OrRd') +
-  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**3, 10**6),
-                expand = c(0.02,0.02),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
-  annotation_logticks(sides = 'l',axis.title.y = element_text(family = 'sans')) +
-  #coord_flip() + 
-  my_theme + theme(legend.position = 'none')
-
-
-plt_2b <- ggplot(combined_data_CD4_PMV_wide %>% filter(dataset %in% c('shcs_empirical',  'shcs_predicted')), #c('stratified_HET',  'stratified_MSM', 'stratified_PWID')
-                 aes(x = 1 - p_variants_1_1, 
-                     y = delta_CD4_2
-                 ))+
-  geom_point(shape= 4, size = 4, colour = '#ef654a') +
-  #scale_colour_brewer(palette = 'OrRd') +
-  scale_y_continuous(limits = c(-0.5,0), 
-                     expand = c(0,0.01), 
-                     breaks = seq(-0.5, 0, by = 0.1),
-                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) + 
-  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
-  #coord_flip() + 
-  my_theme + theme(legend.position = 'none', axis.title.y = element_text(family = 'sans')) +
-  facet_wrap(.~dataset)
-  #stat_smooth(method = 'lm')
-
-
-plt_2c <- ggplot(linear_uw_virions %>% 
-                   filter(nparticles == 1) %>%
-                   filter(w == 1 ), 
-                 aes(x = 1 - p_virion, 
-                     y = recipient #,
-                     #colour = as.factor(w)
-                 ))+
-  geom_point(shape= 4, size = 4, colour = '#ef654a') +
-  #scale_colour_brewer(palette = 'OrRd') +
-  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**3, 10**6),
-                expand = c(0.02,0.02),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,1),
-                     breaks = seq(0, 1, by = 0.1)) +
-  annotation_logticks(sides = 'l') +
-  #coord_flip() + 
-  my_theme + theme(legend.position = 'none')
-
-
-plt_2d <- ggplot(linear_uw_virions %>% 
-                   filter(nparticles == 1) %>%
-                   filter(w == 1 ), 
-                 aes(x = 1 - p_virion, 
-                     y = cd4_decline #,
-                     #colour = as.factor(w)
-                 ))+
-  geom_point(shape= 4, size = 4, colour = '#ef654a') +
-  #scale_colour_brewer(palette = 'OrRd') +
-  scale_y_continuous(limits = c(-0.5,0), 
-                     expand = c(0,0.01), 
-                     breaks = seq(-0.5, 0, by = 0.1),
-                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
-  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,1),
-                     breaks = seq(0, 1, by = 0.1)) +
-  annotation_logticks(sides = 'l') +
-  #coord_flip() + 
-  my_theme + theme(legend.position = 'none', axis.title.y = element_text(family = 'sans'))
-
-
-plt_2e <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data =  linear_uw_variants ) + 
-  geom_tile()+
-  scale_fill_distiller(palette = 8, 
-                       direction = 1, 
-                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85),
-                       limits =c( 0.0005,0.88), 
-                       labels = c(0.001, 0.01, 0.1, 0.5, 0.8),
-                       na.value = "white",
-                       'P(X=X)') + 
-  scale_y_log10(limits = c(10**4, 10**5.5),
-                expand = c(0,0),
-                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) + 
-  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
-  my_theme + 
-  annotation_logticks(sides = 'l') +
-  theme(legend.position = 'none')
-
-
-plt_2f <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion), data = linear_uw_virions ) + 
-  geom_tile()+
-  scale_fill_distiller(palette = 8, 
-                       direction = 1, 
-                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85) , 
-                       labels = c(0.001, 0.01, 0.1, 0.5, 0.8),
-                       limits =c( 0.0005,0.88),
-                       na.value = "white",
-                       'P(X=X)') + 
-  scale_y_log10(limits = c(10**4, 10**5.5),
-                expand = c(0,0),
-                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) + 
-  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Particles') + 
-  my_theme + 
-  annotation_logticks(sides = 'l') +
-  theme(legend.position = 'none')
-
-
-panel2_tile_legend <-  get_legend(plt_2e+ theme(legend.position = 'bottom', legend.key.width=unit(2,"cm"))) 
-panel_2_upper <- plot_grid(plt_2a, plt_2b, plt_2c, plt_2d, plt_2e, plt_2f,  ncol = 2, align = 'hv', labels = 'AUTO')
-
-panel_2 <- plot_grid(panel_2_upper, panel2_tile_legend, rel_heights = c(1,0.1),nrow = 2)
-
-
-cat('Panel 2 complete. \n')
 ############################################## Panel 3 ##############################################
-#Non-Linear
-
-models = c(concave_uw ="e^{X}",
-           convex_uw = 'ln(X)',
-           linear_w = 'X+P(MV)')
-
-all_pops <- rbind(linear_w_pop, concave_uw_pop, convex_uw_pop) %>%
-  mutate(model = str_replace_all(model, models ))
 
 
-all_vars <- rbind(linear_w_variants , concave_uw_variants , convex_uw_variants) %>%
-  filter(w == 1) %>%
-  mutate(model = str_replace_all(model, models ))
+############################################## Panel 4 ##############################################
 
-all_virions <- rbind(linear_w_virions , concave_uw_virions, convex_uw_virions) %>%
-  filter(w == 1) %>%
-  mutate(model = str_replace_all(model, models ))
+sim_results <-  bind_rows(results[3:5]) %>% filter(transmitterallocation == 'ML')
+my_palette <- colorRampPalette(brewer.pal(9, "OrRd"))(11)
 
-plt_3a <- ggplot(all_pops, aes(x = transmitter, recipient)) +
-  geom_point(
-    shape = 4, size = 3, colour = '#ef654a') +
-  scale_x_log10(limits = c(10**2, 10**7),
-                expand = c(0,0),
-                name = expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**2, 10**7),
-                expand = c(0,0),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  facet_wrap(.~model, labeller = label_parsed) +
-  annotation_logticks() +
-  my_theme + 
-  theme(legend.position = 'none', 
-        panel.spacing = unit(2, "lines"), 
-        strip.background = element_blank()) 
-
-plt_3b <- ggplot(all_vars %>% 
-                   filter(variants == 1) , 
-                 aes(y = recipient, 
-                     x = 1 - p
-                 ))+
-  geom_point(shape= 4, size = 4, colour = '#ef654a' ) +
-  #scale_colour_brewer(palette = 'OrRd') +
-  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**2, 10**7),
-                expand = c(0.02,0.02),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
+plt_4a <- ggplot(sim_results,aes(y = SpVL_recipient, x = 1-p_variants_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**1, 10**7.5),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  facet_grid(cols= vars(riskgroup_recipient), switch = 'y')+
+  my_theme
 
-  annotation_logticks(sides = 'l') +
-  facet_wrap(.~model, labeller = label_parsed) +
 
-  my_theme + theme(legend.position = 'none', 
-                   panel.spacing = unit(2, "lines"), 
-                   strip.background = element_blank())
+plt_4b <- ggplot(sim_results,aes(y = SpVL_recipient, x = 1-p_particles_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
+  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+                limits = c(10**1, 10**7.5),
+                expand = c(0.05,0),
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", math_format(.x))) +
+  facet_grid(cols = vars(riskgroup_recipient), switch = 'y')+
+  my_theme
 
-plt_3c <-  ggplot(all_vars %>% 
-                    filter(variants == 1) , 
-                  aes(x = 1 - p, 
-                      y = cd4_decline
-                  )) + 
-  geom_point(colour = '#ef654a', shape= 4, size = 3) + 
-  scale_x_continuous(limits = c(0.1, 0.5),
-                     expand = c(0,0),
-                     name = 'P(Multiple Variant Recipient)')+
-  
+
+plt_4c <- ggplot(sim_results,aes(y = delta_CD4_recipient, x = 1-p_variants_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
+  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+                     expand = c(0.02,0.02),
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
   scale_y_continuous(limits = c(-0.5,0), 
                      expand = c(0,0.01), 
                      breaks = seq(-0.5, 0, by = 0.1),
                      name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
-  facet_wrap(.~model,labeller = label_parsed) + 
-  my_theme + 
-  theme(axis.title.y = element_text(family = 'sans'),panel.spacing = unit(3, "lines"))
-
-panel_3 <- cowplot::plot_grid(plt_3a, plt_3b , plt_3c,  nrow = 3, labels = 'AUTO', align = 'HV')
-cat('Panel 3 complete. \n')
+  facet_grid(cols = vars(riskgroup_recipient), switch = 'y')+
+  my_theme
 
 
-############################################## Panel 4 ##############################################
-# Timing
-my_palette <- brewer.pal(name="OrRd",n=9)[4:9]
-
-plt_4a <- ggplot(linear_uw_variants_timing %>% 
-                   filter(variants == 1) , 
-                 aes(x = 1 - p, 
-                     y = recipient,
-                     colour = as.factor(w)
-                 ))+
-  geom_point(size = 3, shape = 4 ) +
-  #scale_shape_manual(values = c(0,1,2,3)) + 
-  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
-  scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(1, 10**8),
-                expand = c(0.02,0.02),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+plt_4d <- ggplot(sim_results,aes(y = delta_CD4_recipient, x = 1-p_particles_1))+
+  geom_density_2d_filled()+
+  #scale_fill_brewer(palette = 'OrRd', direction = 1)+
+  scale_fill_manual(values = my_palette) +
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
                      expand = c(0.02,0.02),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
-  my_theme + theme(legend.position = 'none', 
-                   panel.spacing = unit(2, "lines"), 
-                   strip.background = element_blank())
-
-plt_4b <- ggplot(linear_uw_variants_timing %>% filter(variants == 1), 
-                 aes(y = cd4_decline, 
-                     x = 1 - p,
-                     colour =  as.factor(w)
-                 ))+
-  geom_point(size = 3, shape = 4  ) + #colour = '#ef654a'
-  #scale_shape_manual(values = c(0,1,2,3)) + 
-  scale_colour_manual(values = my_palette, 'Weight to Early Infection') +
+                     limits = c(0,0.4),
+                     breaks = seq(0, 0.4, by = 0.1))+
   scale_y_continuous(limits = c(-0.5,0), 
                      expand = c(0,0.01), 
                      breaks = seq(-0.5, 0, by = 0.1),
-                     name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)))  + 
-  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,0.5),
-                     breaks = seq(0, 0.5, by = 0.1)) +
-  my_theme + theme(legend.position = 'none',
-                   panel.spacing = unit(2, "lines"), 
-                   strip.background = element_blank(),
-                   axis.title.y = element_text(family = 'sans'))
+                     name =expression(paste(Delta, CD4,'+ ' , mu, l**-1, ' ', day**-1))) +
+  facet_grid(cols = vars(riskgroup_recipient), switch = 'y')+
+  my_theme
 
+panel_4 <- cowplot::plot_grid(plt_4a, plt_4b, plt_4c, plt_4d, align = 'hv', nrow = 4, labels = 'AUTO', label_size = 9)
 
-
-# Mean p calculated over all w - need to adjust to plot these
-plt_4c <-  ggplot(aes(y = recipient_rounded, x = variants, fill = mean_p), data =  linear_uw_variants_timing) + 
-  geom_tile()+
-  scale_fill_distiller(palette = 8, 
-                       direction = 1, 
-                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85, 0.9, 1) , 
-                       labels = c(0.001, 0.01, 0.1, 0.5, 0.99),
-                       limits =c( 0.0005,1),
-                       na.value = "white",
-                       'P(X=X)') + 
-  scale_y_log10(limits = c(10**4, 10**5.5),
-                expand = c(0,0),
-                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) + 
-  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Variants') + 
-  facet_wrap(~w, nrow = 1, scales = "fixed")+
-  my_theme + 
-  annotation_logticks(sides = 'l') +
-  theme(legend.position = 'none')
-
-
-plt_4d <- ggplot(aes(y = recipient_rounded, x = nparticles, fill = mean_p_virion), data = linear_uw_virions_timing ) + 
-  geom_tile()+
-  scale_fill_distiller(palette = 8, 
-                       direction = 1, 
-                       values = c(0.0005, 0.001, 0.01, 0.1, 0.5, 0.6, 0.7, 0.8,  0.85, 0.9, 1) , 
-                       labels = c(0.001, 0.01, 0.1, 0.5, 0.99),
-                       limits =c( 0.0005,1),
-                       na.value = "white",
-                       'P(X=X)')  + 
-  scale_y_log10(limits = c(10**4, 10**5.5),
-                expand = c(0,0),
-                name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) + 
-  scale_x_continuous(limits = c(0,10), breaks = 1:10, expand = c(0,0.1), name = 'Particles') + 
-  facet_wrap(~w, nrow = 1, scales = "fixed")+
-  my_theme + 
-  annotation_logticks(sides = 'l') +
-  theme(legend.position = 'none')
-
-panel4_bottom_legend <-  get_legend(plt_4d + theme(legend.position = 'bottom', legend.key.width=unit(2,"cm"))) 
-panel4_upper_legend <-  get_legend(plt_4a+ theme(legend.position = 'bottom')) 
-
-panel_4_upper <- plot_grid(plt_4a, plt_4b, align = 'hv', labels = "AUTO", ncol = 2)
-panel_4 <- plot_grid(panel_4_upper,panel4_upper_legend , plt_4c, plt_4d, panel4_bottom_legend,
-                     align = 'hv', labels = c(NA, NA, 'C', 'D', NA), nrow = 5,
-                     rel_heights = c(1,0.1,1,1,0.1))
-panel_4
-
-
-cat('Panel 4 complete. \n')
+ggsave(plot = panel_4 , filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), 
+       device = jpeg,  width = 170, height = 250,  units = 'mm')
 cat('All plots complete. \n')
