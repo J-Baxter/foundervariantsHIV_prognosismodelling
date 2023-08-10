@@ -291,7 +291,7 @@ ggsave(plot = plot_chains , filename = paste(figs_dir,sep = '/', "panel_s6.jpeg"
 my_palette <- RColorBrewer::brewer.pal(name="OrRd",n=9)[4:9]
 
 # For a given SpVL, plot the probabilities of transmission over time since infection (Thompson)
-spvl_dur <- read_csv('./data/spvl_duration.csv')
+spvl_dur <- read_csv('./data/spvl_duration.csv') %>% mutate(stage = forcats::fct_relevel(stage, 'primary', 'not_primary'))
 
 
 plt_s8a <- spvl_dur %>%
@@ -299,32 +299,62 @@ plt_s8a <- spvl_dur %>%
   geom_line(aes(x = time, y = vl, colour = as.factor(spvl)), size = 1.5) +
   scale_colour_brewer(palette = 'OrRd', name = 'SpVL')+
   my_theme+
-  scale_x_continuous(expand = c(0,0), limits = c(0,20), 'Time') +
-  scale_y_log10(limits = c(10**0, 10**8),
+  scale_y_log10('Viral Load',
+                limits = c(10**0, 10**8),
                 expand = c(0.05,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x)))+
-  facet_wrap(.~model, scales = 'free_y')+
-  theme(legend.position = c(0.92,0.88))
+  facet_grid(rows= vars(model), cols = vars(stage), scales = 'free_x', switch = 'y', 
+             labeller = as_labeller(c('new' = 'Updated', 'thompson' = 'Thompson et al.', 'primary' = 'Primary Infection', 'not_primary' = 'Chronic & Pre-AIDS'))) + 
+  scale_x_continuous(expand = c(0.05,0), 'Time', 
+                     limits = ~ c(min(.x), max(.x))) +
+  theme(strip.placement = 'outside')
 
-plt_s8b <- spvl_dur %>%
+
+#plt_s8b <- 
+  
+p_aq <- data.frame(route = c('FM', 'MF', 'MSM (IA)', 'MSM (RA)', 'PWID', 'MTC'),
+                   p_aq.ci.lower = c(1/10000, 6/10000, 4/10000, 102/10000, 41/10000, 1700/10000),
+                   p_aq = c(4/10000, 8/10000, 11/10000, 138/10000, 63/10000, 2260/10000),
+                   p_aq.ci.upper = c(14/10000, 11/10000, 28/10000, 186/10000, 92/10000, 2900/10000)) %>% 
+  pivot_longer(!route, names_to = 'type', values_to ='probability') %>%
+  mutate(route = factor(route, levels = c('FM', 'MF', 'MSM (IA)', 'PWID', 'MSM (RA)','MTC')))
+
+  
+  
+p_mv_sysreview <- data.frame('exposure' = factor(c('HSX:mf', 'HSX:fm', 'HSX:unknown', 'MSM', 'MTC:pre', 'MTC:intra', 'MTC:post', 'MTC:unknown', 'PWID'), 
+                                                 levels = c('HSX:mf', 'HSX:fm', 'HSX:unknown', 'MSM', 'MTC:pre', 'MTC:intra', 'MTC:post', 'MTC:unknown', 'PWID')),
+                             p_mv.ci.lower = c(0.14, 0.08, 0.12, 0.22, 0.08, 0.14, 0.03, 0.08, 0.24),
+                             p_mv = c(0.21, 0.13, 0.32, 0.30, 0.17, 0.27, 0.18, 0.18, 0.37),
+                             p_mv.ci.upper = c(0.31, 0.21, 0.61, 0.4, 0.33, 0.45, 0.57, 0.35, 0.53))
+
+
+plt_s8c <- p_aq %>%
+  pivot_wider(names_from = type, values_from = probability) %>%
+  mutate(exposure = c('HSX:fm', 'HSX:mf', 'MSM', 'MSM', 'PWID', 'MTC:unknown')) %>%
+  right_join(p_mv_sysreview, by = 'exposure') %>%
+  filter(!is.na(route)) %>%
   ggplot() +
-  geom_line(aes(x = time, y = vl, colour = as.factor(spvl)), size = 1.5) +
-  scale_colour_brewer(palette = 'OrRd', name = 'SpVL')+
-  my_theme+
-  scale_x_continuous(expand = c(0,0), limits = c(0,20), 'Time') +
-  scale_y_log10(limits = c(10**0, 10**8),
-                expand = c(0.05,0),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x)))+
-  facet_wrap(.~model, scales = 'free_y')+
-  coord_cartesian(xlim = c(0,1))
-
+  geom_point(aes(x = p_aq, y = p_mv, color = exposure))+
+  geom_linerange(aes(xmin = p_aq.ci.lower, xmax = p_aq.ci.upper, y = p_mv, color = exposure ))+
+  geom_linerange(aes(ymin = p_mv.ci.lower, ymax = p_mv.ci.upper, x = p_aq, color = exposure)) +
+  scale_x_log10(name = 'Probability of Acquisition', expand = c(0,0), limits = c(0.0001, 1), breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", label_math())) + 
+  scale_y_continuous(name = 'Probability of Multiple Founders', expand = c(0,0), limits = c(0,.6)) +
+  scale_colour_manual(values = c('#fdd49e','#fdbb84','#fc8d59','#e34a33','#b30000'), 'Exposure', 
+                      labels = as_labeller(c('HSX:fm' = 'HSX:FM',
+                                             'HSX:mf' = 'HSX:MF',
+                                             'MSM' = 'MSM',
+                                             'MTC:unknown' = 'MTC',
+                                             'PWID' = 'PWID'))) +
+  #annotation_logticks()+
+  my_theme +
+  theme(legend.position = 'right') + coord_flip()
 
 # Plot the proportion of the xth most common variants over time since infection
 var_t <- read_csv('./data/variant_distribution_time.csv') %>% 
   mutate(x_var = as.factor(x_var)) %>% 
-  rename(time = T)
+  rename(time = T)??gg
 
 plot_var <- ggplot(var_t, aes(x = time, y = P, fill = x_var)) + 
   geom_area() + 
