@@ -1,6 +1,6 @@
 # Sim Empirical Results presentation
 
-# a) Effect size (SpVL) 
+# a) Effect size (SpVL) Maybe do as statistical model accounting for repeat observations
 
 
 # b) Survival Analysis (CD4+)
