@@ -93,43 +93,6 @@ GetCD4Survival <- function(data, replicates = 100, quantiles = c(0.01, 0.5, 0.99
    return(replicates_aidsonset_summary)
 }
 
-test_results <-  bind_rows(results[3:5]) %>% 
-  filter(transmitterallocation == 'ML') %>% 
-  filter(riskgroup_recipient == 'MF') %>% 
-  mutate(p_mv = 1 -p_variants_1 ) %>%
-  rowwise() %>%
-  mutate(AIDS_onset = SimCD4_decline(rate =delta_CD4_recipient, initcd4 = 1000 )) %>%
-  as_tibble()
-
-# Generate founder variant multiplicity assignment for each bootstrap replicate
-s1 <- t(replicate(100, rbinom(length(test_results$p_mv), 1, test_results$p_mv))) # Each row is a boostrap sample, 1 = multiple founder
-
-test_bootstrap <- apply(s1, 1, function(x) test_results  %>% as_tibble() %>% bind_cols(guide = x) %>% mutate(guide = factor(guide)) %>% split(., .['guide'])) %>%
-   setNames(., 1:length(.)) %>%
-   lapply(., setNames, c('single', 'multiple')) %>%
-   list_flatten()
-   #lapply(., function(x) bind_rows(x, .id = 'multiplicity'))
- 
-
-# At time t, calcualte the proportion of individuals with <350 CD4
-test_aidsonset <- lapply(test_bootstrap, IsItAIDSoClockYet) %>%
-   do.call(rbind.data.frame,  .) %>%
-   as_tibble() %>%
-   mutate(replicate = names(test_bootstrap)) %>% 
-   rename_with( ~ tolower(gsub("V", "", .x, fixed = TRUE)))
- 
-
-# Summarise replicates (calculate quantiles)
-test_aidsonset_summary <- test_aidsonset %>%
-   separate_wider_delim(replicate, '_', names = c('replicate', 'multiplicity')) %>%
-   group_by(multiplicity) %>% 
-   reframe(across(1:150, quantile_df, .unpack = T)) %>%
-   mutate(quant = rep(c(0.01, 0.5, 0.99), nrow(.)/3)) %>%
-   pivot_longer(contains('val'), names_to = c('time', 'type'), names_sep = '_', values_to = 'p') %>%
-   select(-type) %>%
-   pivot_wider(names_from = quant, values_from = p) %>%
-   mutate(time = as.integer(time)*100) # return time to original scale
-
 
 test_function <-  bind_rows(results[3:5]) %>% 
   filter(transmitterallocation == 'ML') %>% 
