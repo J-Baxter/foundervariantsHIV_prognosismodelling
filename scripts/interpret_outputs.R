@@ -1,7 +1,7 @@
 # Sim Empirical Results presentation
 
 # a) Effect size (SpVL) Maybe do as statistical model accounting for repeat observations
-
+Get
 
 # b) Survival Analysis (CD4+)
 
@@ -36,7 +36,7 @@ IsItAIDSoClockYet <- function(dataframe, timesteps = seq(100, 15000, by = 100)){
 GetCD4Survival <- function(data, replicates = 100, quantiles = c(0.01, 0.5, 0.99)){
   
   data <- as_tibble(data)
-  stopifnot(length(unique(data$recipient_riskgroup)) == 1, 
+  stopifnot(length(unique(data$riskgroup_recipient)) == 1, 
             'More than one riskgroup present.')
   stopifnot(length(unique(data$transmitter_allocation)) == 1, 
             'More than one transmitter allocation method.')
