@@ -333,7 +333,7 @@ plt_s8b <- ggplot(feibig_vls , aes(x = as.factor(stage), fill =  as.factor(stage
                 expand = c(0.05,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x)))+
-  scale_x_discrete('Feibig Stage')+
+  scale_x_discrete('Fiebig Stage')+
   scale_fill_brewer(palette = 'OrRd')+
   my_theme
 
@@ -381,7 +381,8 @@ plt_s8d <- p_aq %>%
   geom_point(aes(x = p_aq, y = p_mv, color = exposure), key_glyph = draw_key_rect)+
   geom_linerange(aes(xmin = p_aq.ci.lower, xmax = p_aq.ci.upper, y = p_mv, color = exposure ), key_glyph = draw_key_rect)+
   geom_linerange(aes(ymin = p_mv.ci.lower, ymax = p_mv.ci.upper, x = p_aq, color = exposure), key_glyph = draw_key_rect) +
-  scale_x_log10(name = 'Probability of Acquisition', expand = c(0,0), limits = c(0.0001, 1), breaks = trans_breaks("log10", function(x) 10**x),
+  scale_x_log10(name = 'Probability of Acquisition', expand = c(0,0), limits = c(0.0001, 1), 
+                breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", label_math())) + 
   scale_y_continuous(name = 'Probability of Multiple Founders', expand = c(0,0), limits = c(0,0.8)) +
   scale_colour_manual(values = c('#fdd49e','#fdbb84','#fc8d59','#e34a33','#b30000'), 'Exposure', 
@@ -412,6 +413,77 @@ panel_s8_bottom <- cowplot::plot_grid(plt_s8b, plt_s8c, plt_s8d, plt_s8e, nrow =
 panel_s8 <- cowplot::plot_grid(plt_s8a, panel_s8_bottom, labels= c('A', ''), rel_heights = c(0.75, 1), nrow = 2, label_size = 8)
 
 ggsave(plot = panel_s8 , filename = paste(figs_dir,sep = '/', "panel_s8.jpeg"), device = jpeg,   width = 170, height = 250,  units = 'mm')
+
+
+# Panels S9 and S10 are imported from Julián's model fitting script and are not described here
+
+
+# Panel S11 - Comparing transmission model estimates of P(MV) (and across VLs)
+
+
+
+mf <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(1.765e-06, 0.013296))
+fm <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(8.779e-07, 0.14337))
+mm_ra <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(3.190e-06, 0.08923))
+mm_ia <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(3.114e-06, 0.008839))
+pwid <-  sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(5.566e-06, 0.02496))
+
+av_pmv <- rbind.data.frame(populationmodel_acrossVL_Env(theta=c(1.765e-06, 0.013296)),
+                           populationmodel_acrossVL_Env(theta=c(8.779e-07, 0.14337)),
+                           populationmodel_acrossVL_Env(theta=c(3.190e-06, 0.08923)),
+                           populationmodel_acrossVL_Env(theta=c(3.114e-06, 0.008839)),
+                           populationmodel_acrossVL_Env(theta=c(5.566e-06, 0.02496))
+)
+
+av_pmv$Riskgroup <- c('MF', 'FM', 'MM:RA', 'MM:IA', 'PWID')
+colnames(av_pmv)[1] <- c('average_pmv')
+
+df <- bind_rows(list('MF' = as_tibble(cbind(mf,  rownames(mf))),
+                     'FM' =  as_tibble(cbind(fm, rownames(mf))),
+                     'MM:RA' =  as_tibble(cbind(mm_ra, rownames(mf))),
+                     'MM:IA' =  as_tibble(cbind(mm_ia, rownames(mf))),
+                     'PWID' =  as_tibble(cbind(pwid,  rownames(mf)))), .id = 'Riskgroup') %>%
+  setNames(c('Riskgroup',raise_to_power(10, 2:7) %>% as.character(), 'time')) %>%
+  mutate(time = as.character(time)) %>%
+  
+  left_join(., pivot_longer(av_pmv, cols = contains('multiple'), values_to = 'average', names_to = 'time'), by = join_by(Riskgroup, time)) %>%
+  pivot_longer(cols = contains(c('1')), values_to = 'P_MV', names_to = 'SpVL') %>%
+  mutate(time = factor(time, levels = c('multiple_founder_proportion',
+                                        'multiple_founder_proportion_primary',
+                                        'multiple_founder_proportion_chronic',
+                                        'multiple_founder_proportion_preaids')))
+
+
+df$density_zambia <- dnorm(log10((as.character(df$SpVL) %>% as.numeric())),  zambia_mean,  sqrt(zambia_variance))
+
+df %>%
+  #filter(Riskgroup == 'MF') %>%
+  mutate(prod = P_MV * density_zambia) %>%
+  summarise(calculated_average = sum(prod), .by = c(Riskgroup, average_pmv))
+
+ggplot(df) +
+  geom_bar(aes(x = as.numeric(SpVL), y = as.numeric(P_MV)), stat = 'identity') +
+  geom_hline(aes(yintercept = average))+
+  my_theme + 
+  scale_x_log10(expand = c(0,0), expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),  
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", label_math())) +
+  scale_y_continuous(expand = c(0,0), 'P(Multiple Variants)')+ #, limits = c(0,1), breaks = seq(0,1 ,by = 0.2)
+  facet_grid(rows = vars(Riskgroup), cols = vars(time), switch = 'y', scales = 'free_y',
+             labeller = as_labeller( c('multiple_founder_proportion' = 'Average',
+                                       'multiple_founder_proportion_primary' = 'Primary',
+                                       'multiple_founder_proportion_chronic' = 'Chronic' ,
+                                       'multiple_founder_proportion_preaids' = 'Pre-AIDS',
+                                       'MF' = 'MF',
+                                       'PWID' = 'PWID',
+                                       'FM' = 'FM',
+                                       'MM:IA' = 'MM:IA',
+                                       'MM:RA' = 'MM:RA'))) + 
+  theme(strip.placement = 'outside')
+
+
+
+
 
 ## END ##
 
