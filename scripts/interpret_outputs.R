@@ -1,10 +1,53 @@
 # Sim Empirical Results presentation
 
 # a) Effect size (SpVL) Maybe do as statistical model accounting for repeat observations
-Get
+#
+GetSpVLDiff <- function(data, replicates = 100){
+  data <- as_tibble(data)
+  
+  stopifnot({
+    length(unique(data$riskgroup_recipient)) == 1
+    length(unique(data$transmitterallocation)) == 1
+  })
+  
+  if(!('p_mv' %in% colnames(data))){ 
+    data$p_mv <- 1 - data$p_variants_1
+  }
+  
+  # Generate founder variant multiplicity assignment for each bootstrap replicate
+  replicate_classes <- t(replicate(replicates, rbinom(length(data$p_mv), 1, data$p_mv)))
+  
+  # Combine with data and split by multiplicity
+  SpVL_replicates_diff <- apply(replicate_classes, 1, function(x) data %>%
+                                  as_tibble() %>% 
+                                  bind_cols(guide = x) %>%
+                                  mutate(guide = factor(guide)) %>% 
+                                  split(., .['guide'])) %>%
+    setNames(., 1:length(.)) %>%
+    lapply(., setNames, c('single', 'multiple')) %>%
+    list_flatten() %>%
+    lapply(., select, 'log10_SpVL_recipient') %>%
+    
+    # Formatted dataframe
+    bind_rows(., .id = 'replicate') %>%
+    separate_wider_delim(replicate, '_', names = c('replicate', 'multiplicity')) %>%
+    
+    # Grouped means
+    summarise(mean_log10_SpVL = mean(log10_SpVL_recipient), .by = c('replicate', 'multiplicity')) %>%
+    pivot_wider(., names_from = multiplicity, values_from = mean_log10_SpVL, names_prefix = 'log10_SpVL_') %>%
+    
+    # Calculate unadjusted difference
+    mutate(dif = log10_SpVL_multiple - log10_SpVL_single) %>% 
+    pivot_longer(cols = contains('SpVL'), names_to = 'multiplicity', values_to = 'log10_SpVL')
+  
+  
+  return(SpVL_replicates_diff)
+  
+}
 
+  
 # b) Survival Analysis (CD4+)
-
+# No point in stochastic analysis as only variation will be exponential time between state changes
 SimCD4_decline <- function(rate, initcd4){
   
   cd4_count <- initcd4
@@ -25,10 +68,9 @@ IsItAIDSoClockYet <- function(dataframe, timesteps = seq(100, 15000, by = 100)){
   out <- purrr::map(.x = AIDSONSET, function(x) as.numeric(x > timesteps)) %>% 
     unlist() %>% 
     matrix(nrow = length(timesteps)) %>% 
-    t() %>% 
-    apply(., 2, mean)
+    t() 
   
-  return( t(out))
+  return(out)
 }
 
 
@@ -36,10 +78,11 @@ IsItAIDSoClockYet <- function(dataframe, timesteps = seq(100, 15000, by = 100)){
 GetCD4Survival <- function(data, replicates = 100, quantiles = c(0.01, 0.5, 0.99)){
   
   data <- as_tibble(data)
-  stopifnot(length(unique(data$riskgroup_recipient)) == 1, 
-            'More than one riskgroup present.')
-  stopifnot(length(unique(data$transmitter_allocation)) == 1, 
-            'More than one transmitter allocation method.')
+
+  stopifnot({
+    length(unique(data$riskgroup_recipient)) == 1
+    length(unique(data$transmitterallocation)) == 1
+  })
   
   if(!('p_mv' %in% colnames(data))){
     data$p_mv <- 1 - data$p_variants_1
@@ -66,7 +109,9 @@ GetCD4Survival <- function(data, replicates = 100, quantiles = c(0.01, 0.5, 0.99
     list_flatten() 
   
   # At time t, calculate the proportion of individuals with <350 CD4
-  replicates_aidsonset <- lapply(data_replicates_split, IsItAIDSoClockYet) %>%
+  aidsonset_observations <- lapply(data_replicates_split, IsItAIDSoClockYet)
+  
+  replicates_aidsonset  <- lapply(aidsonset_observations, function(x) t(apply(x, 2, mean))) %>%
     do.call(rbind.data.frame,  .) %>%
     as_tibble() %>%
     mutate(replicate = names(data_replicates_split)) %>% 
@@ -83,12 +128,13 @@ GetCD4Survival <- function(data, replicates = 100, quantiles = c(0.01, 0.5, 0.99
   replicates_aidsonset_summary <- replicates_aidsonset %>%
     separate_wider_delim(replicate, '_', names = c('replicate', 'multiplicity')) %>%
     group_by(multiplicity) %>% 
-    reframe(across(1:150, quantile_df, .unpack = T)) %>%
-    mutate(quant = rep(quantiles, nrow(.)/length(quantiles))) %>%
-    pivot_longer(contains('val'), names_to = c('time', 'type'), names_sep = '_', values_to = 'p') %>%
-    select(-type) %>%
-    pivot_wider(names_from = quant, values_from = p) %>%
-    mutate(time = as.integer(time)*100) # return time to original scale
+      reframe(across(1:150, quantile_df, .unpack = TRUE)) %>%
+      mutate(quant = rep(quantiles, nrow(.)/length(quantiles))) %>%
+      pivot_longer(contains('val'), names_to = c('time', 'type'), names_sep = '_', values_to = 'p') %>%
+      select(-type) %>%
+      pivot_wider(names_from = quant, values_from = p) %>%
+      mutate(time = as.integer(time)*100) # return time to original scale
+  
   
    return(replicates_aidsonset_summary)
 }
@@ -98,40 +144,14 @@ test_function <-  bind_rows(results[3:5]) %>%
   filter(transmitterallocation == 'ML') %>% 
   filter(riskgroup_recipient == 'MF') %>% 
   GetCD4Survival(.)
-  
- 
- ggplot(test_function) +
-   geom_line(aes(x = time, y= `0.5`, colour = multiplicity)) +
-   geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.5)+
-   scale_x_continuous('Days Post Infection') + 
-   scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3') +
-   coord_cartesian(xlim = c(0,365*10))+
-   my_theme
- 
 
-## Pure death process (deprecated)
-#V <- list(birth=1,death=-1)
-#beta <- 00
-#mu <- 0.195
-#N0 <- 1000
-#nevent <- 101
-#T <- numeric(nevent)
-#N <- numeric(nevent) 
-#N[1] <- N0
-#k <- 1
-#while (T[k] < Inf && k <= nevent) {
-##  alpha <- c(beta,mu)*N[k] 
-#  Lambda <- sum(alpha)
-#  if (Lambda > 0) {
-#    tau <- rexp(n=1,rate=Lambda)
-#    event <- sample.int(n=length(V),size=1,prob=alpha/Lambda)
-#    N[k+1] <- N[k]+V[[event]]
-#  } else {
-#    tau <- Inf
-#  }
-#  T[k+1] <- T[k]+tau
-#  k <- k+1 }
-#T <- head(T,k-1)
-#N <- head(N,k-1)
+ggplot(test_function) +
+  geom_line(aes(x = time, y= `0.5`, colour = multiplicity)) +
+  geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.5)+
+  scale_x_continuous('Days Post Infection') + 
+  scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3') +
+  coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
+  my_theme
 
-#plot(T,N)
+# Log rank or CPH - 
+
