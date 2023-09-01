@@ -30,7 +30,8 @@ sim_data_int_list <- stratified_data %>%
 
 # Estimate cov-var matrices
 sim_data_covmats <- lapply(sim_data_int_list, cov)
-shcs_data_covmats <- lapply(shcs_data_int_list, cov)
+shcs_data_covmats <- shcs_data_int_list %>% 
+  lapply(., cov)
 
 
 # Calculate normalise

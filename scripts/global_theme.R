@@ -1,7 +1,7 @@
 # Set theme
 require(ggplot2)
-require(showtext)
-require(showtextdb)
+library(showtext)
+library(showtextdb)
 
 # Format fonts for output
 font_add("lmsans10", 'lmsans10-regular.otf')

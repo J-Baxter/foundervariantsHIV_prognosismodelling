@@ -41,10 +41,20 @@ SimCohorts <- function(dataframe,probs) {
   lb <- ifelse(grepl("age.inf", names(dataframe)), 1.20412 , -Inf)
   ub <- ifelse(grepl("age.inf", names(dataframe)), 1.90309 , Inf)
   
+  # Extract means
+  names_vec <- names(dataframe)
+  means <- sapply(names_vec, 
+                  function(x) ifelse(grepl('log10_SpVL_couplemean', x), 4.74, colMeans(dataframe[x]))) %>%
+    as.numeric()
+   
+  # Form cov-var matrix
+  covmat <- cov(dataframe)
+  covmat['log10_SpVL_couplemean', 'log10_SpVL_couplemean'] <- 0.6084 #Variance of Zambia Cohort 
+  
   # Simulate from truncated multivariate normal
   out <- tmvtnorm::rtmvnorm(n = 200, 
-                            mean = as.vector(colMeans(dataframe)), 
-                            sigma = cov(dataframe),
+                            mean = means, #as.vector(colMeans(dataframe)), 
+                            sigma = covmat,
                             lower = lb,
                             upper = ub,
                             algorithm = 'rejection' # Use rejection sampling instead of Gibbs
