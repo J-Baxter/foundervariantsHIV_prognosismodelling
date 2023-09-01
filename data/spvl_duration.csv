@@ -49,8 +49,8 @@ time,vl,model,spvl,stage
 0.24273973,1000,new,1000,primary
 0.24273973,1000,new,1000,not_primary
 15.8,1000,new,1000,not_primary
-15.8,1E+07,new,1000,not_primary
-16.55,1E+07,new,1000,not_primary
+15.8,124949,new,1000,not_primary
+16.55,124949,new,1000,not_primary
 16.55,1,new,1000,not_primary
 0.001,1,new,10000,primary
 0.001,2742,new,10000,primary
@@ -66,8 +66,8 @@ time,vl,model,spvl,stage
 0.24273973,10000,new,10000,primary
 0.24273973,10000,new,10000,not_primary
 9.9145,10000,new,10000,not_primary
-9.9145,1E+07,new,10000,not_primary
-10.6645,1E+07,new,10000,not_primary
+9.9145,124949,new,10000,not_primary
+10.6645,124949,new,10000,not_primary
 10.6645,1,new,10000,not_primary
 0.001,1,new,100000,primary
 0.001,2742,new,100000,primary
@@ -83,8 +83,8 @@ time,vl,model,spvl,stage
 0.24273973,100000,new,100000,primary
 0.24273973,100000,new,100000,not_primary
 5.1453,100000,new,100000,not_primary
-5.1453,1E+07,new,100000,not_primary
-5.8953,1E+07,new,100000,not_primary
+5.1453,124949,new,100000,not_primary
+5.8953,124949,new,100000,not_primary
 5.8953,1,new,100000,not_primary
 0.001,1,new,1000000,primary
 0.001,2742,new,1000000,primary
@@ -100,6 +100,6 @@ time,vl,model,spvl,stage
 0.24273973,1000000,new,1000000,primary
 0.24273973,1000000,new,1000000,not_primary
 2.403697,1000000,new,1000000,not_primary
-2.403697,1E+07,new,1000000,not_primary
-3.153697,1E+07,new,1000000,not_primary
+2.403697,124949,new,1000000,not_primary
+3.153697,124949,new,1000000,not_primary
 3.153697,1,new,1000000,not_primary
