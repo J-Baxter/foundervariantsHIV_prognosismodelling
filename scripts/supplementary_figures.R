@@ -122,7 +122,12 @@ plt_s3b <- ggplot(bias_covmats, aes(x = Var1, y = Var2, fill = abs(value))) +
 
 validate_df <- list(Simulated = stratified_data, Empirical = shcs_data_long) %>%
   bind_rows(.id = 'id') %>%
-  select(sex, riskgroup, age.inf,  id) %>% filter(riskgroup %in% c('HET', "MSM", 'PWID'))
+  select(sex, riskgroup, age.inf,  id, SpVL_couplemean) %>% filter(riskgroup %in% c('HET', "MSM", 'PWID'))
+
+#ggplot(validate_df)+
+  #geom_histogram(aes(x = SpVL_couplemean))+
+  #scale_x_log10()+
+  #facet_grid(id~riskgroup, switch = 'y')
 
 plt_s3c <- ggplot(validate_df ) +
   geom_histogram(aes(x= age.inf, y = after_stat(density)), binwidth = 2, fill = '#e34a33')+
@@ -436,7 +441,7 @@ av_pmv <- rbind.data.frame(populationmodel_acrossVL_Env(theta=c(1.765e-06, 0.013
 )
 
 av_pmv$Riskgroup <- c('MF', 'FM', 'MM:RA', 'MM:IA', 'PWID')
-colnames(av_pmv)[1] <- c('average_pmv')
+colnames(av_pmv)[1] <- c('multiple_founder_proportion')
 
 df <- bind_rows(list('MF' = as_tibble(cbind(mf,  rownames(mf))),
                      'FM' =  as_tibble(cbind(fm, rownames(mf))),
@@ -461,15 +466,16 @@ df %>%
   mutate(prod = P_MV * density_zambia) %>%
   summarise(calculated_average = sum(prod), .by = c(Riskgroup, average_pmv))
 
-ggplot(df) +
-  geom_bar(aes(x = as.numeric(SpVL), y = as.numeric(P_MV)), stat = 'identity') +
-  geom_hline(aes(yintercept = average))+
+panel_s11 <- ggplot(df) +
+  geom_bar(aes(x = as.numeric(SpVL), y = as.numeric(P_MV), fill = as.factor(SpVL)), stat = 'identity') +
+  geom_hline(aes(yintercept = average), linetype = 'dashed')+
   my_theme + 
   scale_x_log10(expand = c(0,0), expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),  
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", label_math())) +
-  scale_y_continuous(expand = c(0,0), 'P(Multiple Variants)')+ #, limits = c(0,1), breaks = seq(0,1 ,by = 0.2)
-  facet_grid(rows = vars(Riskgroup), cols = vars(time), switch = 'y', scales = 'free_y',
+  scale_y_continuous(expand = c(0,0), 'P(Multiple Variants)', limits = c(0,1), breaks = seq(0,1 ,by = 0.2))+
+  scale_fill_brewer(palette = 'OrRd')+
+  facet_grid(rows = vars(Riskgroup), cols = vars(time), switch = 'y',
              labeller = as_labeller( c('multiple_founder_proportion' = 'Average',
                                        'multiple_founder_proportion_primary' = 'Primary',
                                        'multiple_founder_proportion_chronic' = 'Chronic' ,
@@ -481,9 +487,18 @@ ggplot(df) +
                                        'MM:RA' = 'MM:RA'))) + 
   theme(strip.placement = 'outside')
 
+ggsave(plot = panel_s11, filename = paste(figs_dir,sep = '/', "panel_s11.jpeg"), device = jpeg,   width = 170, height = 200,  units = 'mm')
 
 
 
+# Temporary
+ggplot(bind_rows(results) %>% filter(transmitterallocation == 'ML') %>% filter(riskgroup_recipient != 'UNKNOWN')) + 
+  geom_histogram(aes(x = 1-p_variants_1, y = after_stat(count / max(count))), binwidth = 0.1) + 
+  geom_vline(aes(xintercept = multiple_founder_proportion), data = av_pmv %>% rename(riskgroup_recipient = Riskgroup), linetype = 'dashed')+
+  scale_x_continuous('P(MV)', limits = c(0,1), breaks = seq(0,1, by = 0.2), expand = c(0,0))+
+  scale_y_continuous('Frequency', limits = c(0,1), breaks = seq(0,1, by = 0.2), expand = c(0,0))+
+  my_theme + 
+  facet_grid(cols  = vars(riskgroup_recipient)) 
 
 ## END ##
 
