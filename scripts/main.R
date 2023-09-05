@@ -29,8 +29,8 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 
 # init distribtions for transmitter allocation
 # mc and vc are the mean and variance of the Amsterdam seroconverter study, respectively.
-mc <- 4.35
-vc <- 0.478**2
+mc <- 4.74
+vc <- 0.78**2
 
 t <- CalcTransmitter(mc,vc)
 r <- CalcRecipient(mc,vc)
@@ -302,11 +302,25 @@ MF_results <- RunParallel(TransmissionModel2,
   bind_rows()
 
 
-# MSM: currently using MSM:insertive params
-MM_results <- RunParallel(TransmissionModel2, 
+# MSMI: currently using MSM:insertive params
+MMI_results <- RunParallel(TransmissionModel2, 
                           combined_data_CD4$MM$SpVL_transmitter,
                           PerVirionProbability = 8.779E-07, 
-                          PropExposuresInfective = 0.14337) %>%
+                          PropExposuresInfective = 0.008839) %>%
+  lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
+  
+  mapply(PostProcess,
+         tmresult = ., 
+         metadata = combined_data_CD4$MM  %>%
+           group_split(index), 
+         SIMPLIFY = F)%>%
+  bind_rows()
+
+# MSMR: currently using MSM:insertive params
+MMR_results <- RunParallel(TransmissionModel2, 
+                          combined_data_CD4$MM$SpVL_transmitter,
+                          PerVirionProbability = 3.19E-06, 
+                          PropExposuresInfective = 0.08923) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -364,19 +378,19 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
 
 ################################### Write to file ################################### 
 # Sort into 'dataframes' (dataset:transmitterselection)
-datanames <- unique(c(FM_results$dataset, MF_results$dataset, MM_results$dataset,
-                      PWID_results$dataset, OTHER_results$dataset, 
-                      UNKNOWN_results$dataset))
+datanames <- c('FM', 'MF', 'MMI', 'MMR', 'PWID', 'OTHER', 'UNKNOWN')
 
 combinded_results <- list(FM_results, 
                           MF_results,
-                          MM_results,
+                          MMI_results,
+                          MMR_results,
                           PWID_results,
                           OTHER_results,
                           UNKNOWN_results) %>%
-  do.call(rbind.data.frame, .) %>%
+  setNames(., datanames) %>%
+  bind_rows(., .id = 'dataset_id') %>%
   select(-ends_with(as.character(35:200))) %>%
-  group_split(dataset) 
+  group_split(dataset_id) 
 
 # write csv to file
 filenames <- paste0(results_dir, '/', datanames, '_modelresults.csv')
