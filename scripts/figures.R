@@ -68,29 +68,54 @@ ggsave(plot = plt_1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"),
 
 ############################################## Panel 2 ##############################################
 # Model overview, component models and SHCS data
+source('./scripts/model_dag.R')
+
+plt_2a <- test_dag %>%
+  tidy_dagitty() %>%
+  ShortenDagArrows(proportion = .09) %>%
+  mutate(linetype = ifelse(name == "PMV", "dashed", "solid")) %>% 
+  arrange(name) %>%
+  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
+  
+  geom_rect(xmin = 1, xmax = 4, ymin = 1, ymax = 9.5, aes(colour = 'Transmission'), fill=NA, alpha = 0.05, size = 2) +
+  geom_rect(xmin = 8.5, xmax = 11.5, ymin = 1, ymax = 9.5, aes(colour = 'Tolerance'), fill=NA,  alpha = 0.05, size = 2) +
+  geom_rect(xmin = 1.5, xmax = 11, ymin = 6.75, ymax = 9.25, aes(colour = 'Heritability'), fill=NA, alpha = 0.05,  size = 2) +
+  
+  geom_dag_point(colour = '#ef654a', size = 30, shape = 'square') +
+  geom_dag_edges(aes(x = xstart, y = ystart, xend = xend, yend = yend, edge_linetype =  linetype),edge_width = 1.5) +
+  
+  geom_dag_text(parse = TRUE, label =node_labels  , colour = 'white', family = 'lmsans10', size = 4) +
+  
+  scale_x_continuous(limits = c(0,12), expand= c(0,0), name = NA )+ 
+  scale_y_continuous(limits = c(0,10), expand= c(0,0), name = NA )+ 
+  
+  scale_colour_manual(values = model_cols, 'Model')+ 
+  my_theme +
+  theme_dag() +
+  theme(legend.position = c(0.5,0.5))
 
 # Transmission Model 
-plt_2b_probabilities <- TransmissionModel2(sp_ViralLoad = 10**6, 
-                                  PerVirionProbability = 8.779E-07, 
-                                  PropExposuresInfective = 0.14337)  %>%
-  setNames(nm = c('variant_distribution','probTransmissionPerSexAct','transmitter')) %>%
-  .[['variant_distribution']] %>%
-  cbind.data.frame() %>% 
-  pivot_longer(cols = starts_with('V'),
-               names_to = 'variants',
-               values_to = 'p') %>%
-  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
-           as.numeric()) %>%
-  filter(p > 0)
+#plt_2b_probabilities <- TransmissionModel2(sp_ViralLoad = 10**6, 
+#                                  PerVirionProbability = 8.779E-07, 
+#                                  PropExposuresInfective = 0.14337)  %>%
+ # setNames(nm = c('variant_distribution','probTransmissionPerSexAct','transmitter')) %>%
+ # .[['variant_distribution']] %>%
+ # cbind.data.frame() %>% 
+ # pivot_longer(cols = starts_with('V'),
+ #              names_to = 'variants',
+ #              values_to = 'p') %>%
+#  mutate(variants = str_remove_all(variants,'[:alpha:]|[:punct:]') %>% 
+ #          as.numeric()) %>%
+ # filter(p > 0)
 
-plt_2b <- ggplot(plt_2b_probabilities, aes(y = variants, x = nparticles))+
-  geom_point(aes(size = p), colour = '#ef654a')+
-  scale_size(range = c(0,5), name = 'P(Variants \u2229 Virions)')+
-  scale_y_continuous(name = 'Variants', expand = c(0,0), limits = c(0.5,10.5), breaks = 1:10)+ 
-  scale_x_continuous(name = 'Virions', expand = c(0.01,0), limits = c(0.5,10.5), breaks = 1:10)+
-  my_theme+
-  theme(legend.position =  c(0.5,0.8),
-        legend.background = element_rect(fill = NA))
+#plt_2b <- ggplot(plt_2b_probabilities, aes(y = variants, x = nparticles))+
+#  geom_point(aes(size = p), colour = '#ef654a')+
+#  scale_size(range = c(0,5), name = 'P(Variants \u2229 Virions)')+
+ # scale_y_continuous(name = 'Variants', expand = c(0,0), limits = c(0.5,10.5), breaks = 1:10)+ 
+#  scale_x_continuous(name = 'Virions', expand = c(0.01,0), limits = c(0.5,10.5), breaks = 1:10)+
+#  my_theme+
+#  theme(legend.position =  c(0.5,0.8),
+#        legend.background = element_rect(fill = NA))
 
 
 # Heritability Model (Frequentist vis)
@@ -157,42 +182,79 @@ plt_2d <- ggplot(cd4_data , aes(x = SpVL, y=CD4.decline))+
   geom_text(aes(x = 6.9, y = -0.62, label = "60 yrs"), colour = "#b30000", size = 2) + #Add 95% CIs to lines (geom_ribbon)
   my_theme
 
-# SHCS
-plt_2e <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
-  geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
-    colour = '#ef654a',
-    shape = 4, alpha = 0.4, size = 1) +
-  scale_x_log10(limits = c(10**2, 10**7),
-                expand = c(0.05,0),
-                name = expression(paste("SpVL Partner 1", ' (', Log[10], " copies ", ml**-1, ')')),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  scale_y_log10(name = expression(paste("SpVL Partner 2", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**2, 10**7),
-                expand = c(0.05,0),
-                breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", math_format(.x))) +
-  my_theme
 
+# Transmission Model ~ Risk Group
+source('./scripts/deprecated/populationdata_models.R')
+mf <- sapply(raise_to_power(10, 2:7), TransmissionModel2, 
+             simp = TRUE, 
+             PerVirionProbability = 1.765e-06,
+             PropExposuresInfective = 0.013296)
 
-#Risk Group
-plt_2f <- ggplot(shcs_data_long_transmitterML , aes(x =  riskgroup)) +
-  geom_bar( fill = '#ef654a') + 
-  scale_y_continuous(expand = c(0,0), name = 'Count') + 
-  scale_x_discrete(expand = c(0,0), name = 'Risk Group', labels = c('HET', 'MSM', 'PWID', 'OTHER', 'NA')) +
-  #scale_fill_brewer(palette = 'OrRd', name = 'Sex')+
-  my_theme
+fm <- sapply(raise_to_power(10, 2:7), TransmissionModel2, 
+             simp = TRUE,
+             PerVirionProbability = 8.779e-07, 
+             PropExposuresInfective = 0.14337)
 
+mm_ra <- sapply(raise_to_power(10, 2:7), TransmissionModel2, 
+                simp = TRUE, 
+                PerVirionProbability = 3.190e-06,
+                PropExposuresInfective = 0.08923)
 
-# Age
-plt_2g <- ggplot(shcs_data_long_transmitterML) + 
-  geom_histogram(aes(x = age.inf), fill = '#ef654a') + 
-  scale_y_continuous(expand = c(0.01,0.01), name = 'Count') + 
-  scale_x_continuous('Age at Infection', limits = c(15,80), breaks = seq(16,80, by = 8), expand = c(0,0))+
+mm_ia <- sapply(raise_to_power(10, 2:7), TransmissionModel2,
+                simp = TRUE, 
+                PerVirionProbability = 3.114e-06, 
+                PropExposuresInfective = 0.008839)
+
+pwid <-  sapply(raise_to_power(10, 2:7), 
+                TransmissionModel2, simp = TRUE, 
+                PerVirionProbability = 5.566e-06, 
+                PropExposuresInfective = 0.02496)
+
+av_pmv <- rbind.data.frame(TransmissionModel2(PerVirionProbability = 1.765e-06, PropExposuresInfective = 0.013296, simp = TRUE), 
+                           TransmissionModel2(PerVirionProbability = 8.779e-07, PropExposuresInfective = 0.14337, simp = TRUE),
+                           TransmissionModel2(PerVirionProbability = 3.190e-06, PropExposuresInfective = 0.08923, simp = TRUE),
+                           TransmissionModel2(PerVirionProbability = 3.114e-06, PropExposuresInfective = 0.008839, simp = TRUE),
+                           TransmissionModel2(PerVirionProbability = 5.566e-06, PropExposuresInfective = 0.02496, simp = TRUE))
+
+av_pmv$Riskgroup <- c('MF', 'FM', 'MM:RA', 'MM:IA', 'PWID')
+colnames(av_pmv)[1] <- c('multiple_founder_proportion')
+
+df <- bind_rows(list('MF' = as_tibble(cbind(mf,  rownames(mf))),
+                     'FM' =  as_tibble(cbind(fm, rownames(mf))),
+                     'MM:RA' =  as_tibble(cbind(mm_ra, rownames(mf))),
+                     'MM:IA' =  as_tibble(cbind(mm_ia, rownames(mf))),
+                     'PWID' =  as_tibble(cbind(pwid,  rownames(mf)))), .id = 'Riskgroup') %>%
+  setNames(c('Riskgroup',raise_to_power(10, 2:7) %>% as.character(), 'time')) %>%
+  mutate(time = as.character(time)) %>%
   
-  my_theme
+  left_join(., pivot_longer(av_pmv, cols = contains('multiple'), values_to = 'average', names_to = 'time'), by = join_by(Riskgroup, time)) %>%
+  pivot_longer(cols = contains(c('1')), values_to = 'P_MV', names_to = 'SpVL') %>%
+  mutate(time = factor(time, levels = c('multiple_founder_proportion',
+                                        'multiple_founder_proportion_primary',
+                                        'multiple_founder_proportion_chronic',
+                                        'multiple_founder_proportion_preaids')))
 
-panel_2 <- plot_grid(plt_2b, plt_2c, plt_2d, plt_2e, plt_2f, plt_2g,  ncol = 3, align = 'hv', label_size = 9, labels = 'AUTO')
+plt_2e <- ggplot(df %>% filter(time == 'multiple_founder_proportion')) +
+  geom_bar(aes(x = as.numeric(SpVL), y = as.numeric(P_MV), fill = as.factor(SpVL)), stat = 'identity') +
+  geom_hline(aes(yintercept = average), linetype = 'dashed')+
+  my_theme + 
+  scale_x_log10(expand = c(0,0), expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),  
+                breaks = trans_breaks("log10", function(x) 10**x),
+                labels = trans_format("log10", label_math())) +
+  scale_y_continuous(expand = c(0,0), 'P(Multiple Variants)', limits = c(0,1), breaks = seq(0,1 ,by = 0.2))+
+  scale_fill_brewer(palette = 'OrRd')+
+  facet_grid(cols = vars(Riskgroup), switch = 'y',
+             labeller = as_labeller( c('MF' = 'MF',
+                                       'PWID' = 'PWID',
+                                       'FM' = 'FM',
+                                       'MM:IA' = 'MM:IA',
+                                       'MM:RA' = 'MM:RA'))) + 
+  theme(strip.placement = 'outside')
+
+
+panel_2top <- plot_grid(plt_2a, plt_2c, plt_2d, ncol = 3, align = 'hv', label_size = 9, labels = 'AUTO')
+
+panel_2 <- plot_grid(panel_2top, plt_2e,   nrow = 2, align = 'hv', label_size = 9, labels = c('', 'E'))
 
 ggsave(plot = panel_2 , filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), 
        device = jpeg,  width = 170, height = 140,  units = 'mm')
@@ -412,3 +474,14 @@ panel_4 <- cowplot::plot_grid(plt_4a, plt_4b, plt_4c, plt_4d, align = 'hv', nrow
 ggsave(plot = panel_4 , filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), 
        device = jpeg,  width = 170, height = 250,  units = 'mm')
 cat('All plots complete. \n')
+
+
+
+ggplot(test_function) +
+  geom_line(aes(x = time, y= `0.5`, colour = multiplicity)) +
+  geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.5)+
+  scale_x_continuous('Days Post Infection') + 
+  scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3') +
+  coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
+  my_theme +
+  theme(legend.position = 'right')
