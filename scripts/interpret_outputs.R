@@ -1,8 +1,8 @@
 # Sim Empirical Results presentation
 
-# a) Effect size (SpVL) Maybe do as statistical model accounting for repeat observations
-#
-GetSpVLDiff <- function(data, replicates = 100){
+###################################################################################################
+# Difference between SpVLs
+GetSpVLDiff <- function(data, replicates = 1000){
   data <- as_tibble(data)
   
   stopifnot({
@@ -45,9 +45,10 @@ GetSpVLDiff <- function(data, replicates = 100){
   
 }
 
-  
-# b) Survival Analysis (CD4+)
-# No point in stochastic analysis as only variation will be exponential time between state changes
+###################################################################################################
+# Resample CD4+ T Cell decline according to P(Multiple Variants)
+# Plot proportion of individuals with over 350 cells/mm from a fixed starting point
+
 SimCD4_decline <- function(rate, initcd4){
   
   cd4_count <- initcd4
@@ -75,7 +76,7 @@ IsItAIDSoClockYet <- function(dataframe, timesteps = seq(100, 15000, by = 100)){
 
 
 # Calculate proportion of individuals with a cd4 count greater than 350 over time
-GetCD4Survival <- function(data, replicates = 100, quantiles = c(0.01, 0.5, 0.99)){
+GetCD4Survival <- function(data, replicates = 1000, quantiles = c(0.01, 0.5, 0.99)){
   
   data <- as_tibble(data)
 
@@ -140,18 +141,4 @@ GetCD4Survival <- function(data, replicates = 100, quantiles = c(0.01, 0.5, 0.99
 }
 
 
-test_function <-  bind_rows(results[3:5]) %>% 
-  filter(transmitterallocation == 'ML') %>% 
-  filter(riskgroup_recipient == 'MF') %>% 
-  GetCD4Survival(.)
-
-ggplot(test_function) +
-  geom_line(aes(x = time, y= `0.5`, colour = multiplicity)) +
-  geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.5)+
-  scale_x_continuous('Days Post Infection') + 
-  scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3') +
-  coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
-  my_theme +
-  theme(legend.position = 'right')
-
-
+# END #
