@@ -387,15 +387,41 @@ combinded_results <- list(FM_results,
                           PWID_results,
                           OTHER_results,
                           UNKNOWN_results) %>%
-  setNames(., datanames) %>%
+  setNames(., datanames)%>%
   bind_rows(., .id = 'dataset_id') %>%
-  select(-ends_with(as.character(35:200))) %>%
-  group_split(dataset_id) 
+  select(-ends_with(as.character(35:200)))
+
+
+combinded_results_list <- combinded_results %>%
+  group_split(dataset_id) %>% 
+  setNames(., datanames)
 
 # write csv to file
-filenames <- paste0(results_dir, '/', datanames, '_modelresults.csv')
+filenames <- paste0(results_dir, '/', datanames, '_rawresults.csv')
+mapply(write_csv, combinded_results_list, file = filenames)
 
-mapply(write_csv, combinded_results, file = filenames)
+
+################################### Resample: Compare SpVL ################################### 
+combinded_results_simonly <- combinded_results  %>%
+  filter(grepl('stratified', dataset)) %>%
+  group_split(dataset_id, transmitterallocation)
+
+CD4_resample <- lapply(combinded_results_simonly, GetCD4Survival)
+
+# write csv to file
+datanames <- lapply(combinded_results_simonly, function(x) paste(unique(x$dataset_id),
+                                                                 unique(x$transmitterallocation), sep ='_')) %>% 
+  unlist()
+filenames <- paste0(results_dir, '/', datanames, '_CD4resample.csv')
+mapply(write_csv, CD4_resample, file = filenames)
+
+
+################################### Resample: Compare CD4+ ################################### 
+SpVL_resample <- lapply(combinded_results_simonly, GetSpVLDiff)
+
+# write csv to file
+filenames <- paste0(results_dir, '/', datanames, '_SpVLresample.csv')
+mapply(write_csv, SpVL_resample, file = filenames)
 
 
 #source('./scripts/figures.R')
