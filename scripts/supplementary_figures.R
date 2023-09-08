@@ -500,5 +500,39 @@ ggplot(bind_rows(results) %>% filter(transmitterallocation == 'ML') %>% filter(r
   my_theme + 
   facet_grid(cols  = vars(riskgroup_recipient)) 
 
+
+# SHCS
+#plt_2e <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
+# geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'
+# colour = '#ef654a',
+#  shape = 4, alpha = 0.4, size = 1) +
+#scale_x_log10(limits = c(10**2, 10**7),
+#              expand = c(0.05,0),
+#              name = expression(paste("SpVL Partner 1", ' (', Log[10], " copies ", ml**-1, ')')),
+#              breaks = trans_breaks("log10", function(x) 10**x),
+#              labels = trans_format("log10", math_format(.x))) +
+#scale_y_log10(name = expression(paste("SpVL Partner 2", ' (', Log[10], " copies ", ml**-1, ')')),
+#              limits = c(10**2, 10**7),
+#              expand = c(0.05,0),
+#               breaks = trans_breaks("log10", function(x) 10**x),
+#               labels = trans_format("log10", math_format(.x))) +
+#my_theme
+
+
+#Risk Group
+#plt_2f <- ggplot(shcs_data_long_transmitterML , aes(x =  riskgroup)) +
+#geom_bar( fill = '#ef654a') + 
+#scale_y_continuous(expand = c(0,0), name = 'Count') + 
+#scale_x_discrete(expand = c(0,0), name = 'Risk Group', labels = c('HET', 'MSM', 'PWID', 'OTHER', 'NA')) +
+#my_theme
+
+
+# Age
+#plt_2g <- ggplot(shcs_data_long_transmitterML) + 
+#geom_histogram(aes(x = age.inf), fill = '#ef654a') + 
+# scale_y_continuous(expand = c(0.01,0.01), name = 'Count') + 
+#scale_x_continuous('Age at Infection', limits = c(15,80), breaks = seq(16,80, by = 8), expand = c(0,0))+
+#my_theme
+
 ## END ##
 

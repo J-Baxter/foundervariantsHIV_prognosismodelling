@@ -77,14 +77,14 @@ plt_2a <- test_dag %>%
   arrange(name) %>%
   ggplot(aes(x = x, y = y, xend = xend, yend = yend)) + 
   
-  geom_rect(xmin = 1, xmax = 4, ymin = 1, ymax = 9.5, aes(colour = 'Transmission'), fill=NA, alpha = 0.05, size = 2) +
-  geom_rect(xmin = 8.5, xmax = 11.5, ymin = 1, ymax = 9.5, aes(colour = 'Tolerance'), fill=NA,  alpha = 0.05, size = 2) +
-  geom_rect(xmin = 1.5, xmax = 11, ymin = 6.75, ymax = 9.25, aes(colour = 'Heritability'), fill=NA, alpha = 0.05,  size = 2) +
+  geom_rect(xmin = 1, xmax = 4, ymin = 1, ymax = 9.5, aes(colour = 'Transmission'), fill=NA, alpha = 0.05, size = 1) +
+  geom_rect(xmin = 8.5, xmax = 11.5, ymin = 1, ymax = 9.5, aes(colour = 'Tolerance'), fill=NA,  alpha = 0.05, size = 1) +
+  geom_rect(xmin = 1.5, xmax = 11, ymin = 6.75, ymax = 9.25, aes(colour = 'Heritability'), fill=NA, alpha = 0.05,  size = 1) +
   
-  geom_dag_point(colour = '#ef654a', size = 30, shape = 'square') +
-  geom_dag_edges(aes(x = xstart, y = ystart, xend = xend, yend = yend, edge_linetype =  linetype),edge_width = 1.5) +
+  geom_dag_point(colour = '#ef654a', shape = 'square', size = 2) +
+  geom_dag_edges(aes(x = xstart, y = ystart, xend = xend, yend = yend, edge_linetype =  linetype),edge_width = 1) +
   
-  geom_dag_text(parse = TRUE, label =node_labels  , colour = 'white', family = 'lmsans10', size = 4) +
+  geom_dag_text(parse = TRUE, label = node_labels  , colour = 'white',  size = 1) +
   
   scale_x_continuous(limits = c(0,12), expand= c(0,0), name = NA )+ 
   scale_y_continuous(limits = c(0,10), expand= c(0,0), name = NA )+ 
