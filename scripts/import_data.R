@@ -16,7 +16,7 @@ shcs_data <-read_csv("data/shcs_data.csv",
                                       riskgroup.2 = readr::col_factor(levels = c("HET", "MSM", 
                                                                                  "IDU", "OTHER", 
                                                                                  "UNKNOWN"))))%>%
-  select(-contains('ID')) %>%
+  dplyr::select(-contains('ID')) %>%
   rowid_to_column( "ID.pair") %>%
   mutate(across(contains('riskgroup'), 
                 .fns = ~ fct_recode(.x, PWID = "IDU"))) %>%
@@ -46,7 +46,7 @@ shcs_data_long_transmitterrandom <- shcs_data %>%
   mutate(age.inf_category = cut(age.inf, 
                                 breaks = c(15,24,29,39,80), 
                                 labels = c('15-24', '25-29', '30-39','40-80'))) %>% # cut by default is exclusive of the lower bound
-  select(-starts_with('transmitter')) %>%
+  dplyr::select(-starts_with('transmitter')) %>%
   relocate(ID_pair) %>%
   relocate(age.inf, .after = sex) %>%
   relocate(ends_with('SpVL'), .after = riskgroup) %>%
@@ -65,7 +65,7 @@ shcs_data_long_transmitterML<- shcs_data %>%
   mutate(age.inf_category = cut(age.inf, 
                                 breaks = c(15,24,29,39,80), 
                                 labels = c('15-24', '25-29', '30-39','40-80'))) %>% # cut by default is exclusive of the lower bound
-  select(-starts_with('transmitter')) %>%
+  dplyr::select(-starts_with('transmitter')) %>%
   mutate(ID_pair = ID_pair + 196) %>% #So that ID pair numbers are contiguous
   relocate(ID_pair) %>%
   relocate(age.inf, .after = sex) %>%
