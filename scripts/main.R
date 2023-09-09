@@ -378,18 +378,16 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
 
 ################################### Write to file ################################### 
 # Sort into 'dataframes' (dataset:transmitterselection)
-datanames <- c('FM', 'MF', 'MMI', 'MMR', 'PWID', 'OTHER', 'UNKNOWN')
+datanames <- c('FM', 'MF', 'MMI', 'MMR',  'PWID')
 
 combinded_results <- list(FM_results, 
                           MF_results,
                           MMI_results,
                           MMR_results,
-                          PWID_results,
-                          OTHER_results,
-                          UNKNOWN_results) %>%
+                          PWID_results) %>%
   setNames(., datanames)%>%
   bind_rows(., .id = 'dataset_id') %>%
-  select(-ends_with(as.character(35:200)))
+  dplyr::select(-ends_with(as.character(35:200)))
 
 
 combinded_results_list <- combinded_results %>%
@@ -424,6 +422,10 @@ filenames <- paste0(results_dir, '/', datanames, '_SpVLresample.csv')
 mapply(write_csv, SpVL_resample, file = filenames)
 
 
-#source('./scripts/figures.R')
+source('./scripts/figures.R')
 #source ('./scripts/supplementary_figures.R)
+
+
+###################################################################################################
+############################################## END ################################################ 
 ###################################################################################################
