@@ -284,12 +284,12 @@ ggsave(plot = panel_3 , filename = paste(figs_dir,sep = '/', "panel_3.jpeg"),
 
 ############################################## Panel 4 ##############################################
 
-plt_4a <- ggplot(SpVLresults) + 
+plt_4a <- ggplot(SpVLresults) +
   geom_boxplot(aes(x = multiplicity, y = log10_SpVL, fill = multiplicity))+
-  scale_x_discrete('Multiplicity', labels = c('Multiple', 'Single') ) + 
+  scale_x_discrete('Multiplicity', labels = c('Multiple', 'Single') ) +
   scale_y_continuous('Log10 SpVL') +
-  scale_fill_brewer(palette = 'OrRd') + 
-  #scale_colour_brewer(palette = 'OrRd') + 
+  scale_fill_brewer(palette = 'OrRd') +
+  #scale_colour_brewer(palette = 'OrRd') +
   #coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
   facet_grid(cols = vars(riskgroup), switch = 'y')+
   my_theme
