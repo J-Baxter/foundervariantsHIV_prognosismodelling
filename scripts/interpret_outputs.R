@@ -26,7 +26,7 @@ GetSpVLDiff <- function(data, replicates = 1000){
     setNames(., 1:length(.)) %>%
     lapply(., setNames, c('single', 'multiple')) %>%
     list_flatten() %>%
-    lapply(., select, 'log10_SpVL_recipient') %>%
+    lapply(., dplyr::select, 'log10_SpVL_recipient') %>%
     
     # Formatted dataframe
     bind_rows(., .id = 'replicate') %>%
@@ -132,7 +132,7 @@ GetCD4Survival <- function(data, replicates = 1000, quantiles = c(0.01, 0.5, 0.9
       reframe(across(1:150, quantile_df, .unpack = TRUE)) %>%
       mutate(quant = rep(quantiles, nrow(.)/length(quantiles))) %>%
       pivot_longer(contains('val'), names_to = c('time', 'type'), names_sep = '_', values_to = 'p') %>%
-      select(-type) %>%
+      dplyr::select(-type) %>%
       pivot_wider(names_from = quant, values_from = p) %>%
       mutate(time = as.integer(time)*100) # return time to original scale
   
