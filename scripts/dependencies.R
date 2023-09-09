@@ -8,7 +8,7 @@
 pkgs <- c('tidyverse', 'parallel', 'ggpmisc', 'ggpubr', 'ggprism', 'cowplot', 'scales',
           'sysfonts', 'showtext', 'showtextdb', 'ggExtra', 'ggdag', 'brms', 'magrittr',
           'RColorBrewer', 'tmvtnorm', 'stringi', 'matrixcalc', 'tidybayes', 'ggmcmc', 'epitools', 
-          'performance', 'bayesplot') 
+          'performance', 'bayesplot', 'pdftools') 
 
 # NB: package tmvtnorm will require gfortranand gcc to be installed and present in your system path
 # /usr/local/lib/
