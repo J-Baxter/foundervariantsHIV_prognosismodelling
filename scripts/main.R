@@ -302,7 +302,7 @@ MF_results <- RunParallel(TransmissionModel2,
   bind_rows()
 
 
-# MSMI: currently using MSM:insertive params
+# MSMI
 MMI_results <- RunParallel(TransmissionModel2, 
                           combined_data_CD4$MM$SpVL_transmitter,
                           PerVirionProbability = 8.779E-07, 
@@ -316,7 +316,7 @@ MMI_results <- RunParallel(TransmissionModel2,
          SIMPLIFY = F)%>%
   bind_rows()
 
-# MSMR: currently using MSM:insertive params
+# MSMR
 MMR_results <- RunParallel(TransmissionModel2, 
                           combined_data_CD4$MM$SpVL_transmitter,
                           PerVirionProbability = 3.19E-06, 
@@ -331,7 +331,7 @@ MMR_results <- RunParallel(TransmissionModel2,
   bind_rows()
 
 
-# PWID: Currently using MSM:receptive params
+# PWID
 PWID_results <- RunParallel(TransmissionModel2, 
                             combined_data_CD4$PWID$SpVL_transmitter,
                             PerVirionProbability = 3.19E-06, 
