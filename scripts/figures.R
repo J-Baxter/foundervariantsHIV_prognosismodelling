@@ -264,13 +264,14 @@ plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML') ,aes(y =
 
 plt_3b <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = delta_CD4_recipient, x = 1-p_variants_1))+
   stat_density_2d(aes(fill = (..density..)**(1/3)), geom = "raster", contour = FALSE) +
-  scale_fill_distiller(palette = 'OrRd',direction = 1,  breaks=1e-6*seq(0,10,by=2)) +
+  #geom_density_2d_filled(bins = 20)+
+  scale_fill_distiller(palette = 'OrRd',direction = 1, breaks=1e-6*seq(0,10,by=2)) +
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
-                     expand = c(0.02,0.02),
-                     limits = c(0,1),
+                     expand = c(0,0),
+                     #limits = c(0,1),
                      breaks = seq(0, 1, by = 0.25))+
-  scale_y_continuous(limits = c(-0.5,0), 
-                     expand = c(0,0.01), 
+  scale_y_continuous(#limits = c(-1,0), 
+                     expand = c(0,0), 
                      breaks = seq(-0.5, 0, by = 0.1),
                      name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
   facet_grid(cols = vars(dataset_id), switch = 'y')+
@@ -287,7 +288,7 @@ ggsave(plot = panel_3 , filename = paste(figs_dir,sep = '/', "panel_3.jpeg"),
 plt_4a <- ggplot(SpVLresults) +
   geom_boxplot(aes(x = multiplicity, y = log10_SpVL, fill = multiplicity))+
   scale_x_discrete('Multiplicity', labels = c('Multiple', 'Single') ) +
-  scale_y_continuous('Log10 SpVL') +
+  scale_y_continuous('Mean Log10 SpVL') +
   scale_fill_brewer(palette = 'OrRd') +
   #scale_colour_brewer(palette = 'OrRd') +
   #coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
@@ -299,11 +300,11 @@ plt_4b <- ggplot(cd4results) +
   geom_line(aes(x = time, y= `0.5`, colour = multiplicity)) +
   geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.5)+
   scale_x_continuous('Days Post Infection') + 
-  scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3') +
+  scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3', expand = c(0,0)) +
   scale_fill_brewer(palette = 'OrRd') + 
   scale_colour_brewer(palette = 'OrRd') + 
-  coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
-  facet_grid(cols = vars(riskgroup), switch = 'y')+
+  coord_cartesian(xlim = c(0,365*10), ylim = c(0.25, 1.05))+ #cut at 10 years
+  facet_wrap(. ~ riskgroup, switch = 'y')+
   my_theme+ theme(legend.position = 'bottom')
 
 panel_4 <- cowplot::plot_grid(plt_4a, plt_4b, 
