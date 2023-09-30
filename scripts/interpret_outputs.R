@@ -95,8 +95,15 @@ GetCD4Survival <- function(data, replicates = 1000, quantiles = c(0.01, 0.5, 0.9
   # Infer temporal change in CD4 count per-patient
   data_cd4 <- data %>%
     rowwise() %>%
-    mutate(AIDS_onset = SimCD4_decline(rate =delta_CD4_recipient, initcd4 = 1000)) %>%
+    #mutate(AIDS_onset = case_when(recipient_sex == 'F'~ SimCD4_decline(rate = delta_CD4_recipient, initcd4 = rlnorm(1, meanlog = 6.633318, sd = 0.2847)),
+                                 # recipient_sex == 'M'~ SimCD4_decline(rate = delta_CD4_recipient, initcd4 = rlnorm(1, meanlog = 6.476972, sd = 0.3389))))
+    #rlnorm(1, meanlog = 6.709304, sd = 0.3)
+    mutate(AIDS_onset = SimCD4_decline(rate = delta_CD4_recipient, initcd4 = 1000)) %>%
     as_tibble()
+  
+  #geometric mean ± 2sd (men = 650, 330-1280\\ women = 760, 430-1350) 
+  # rlnorm(1000, meanlog = 6.476972, sd = 0.3389) M
+  # rlnorm(1000, meanlog = 6.633318, sd = 0.2847) W
     
     # Combine with data and split by multiplicity
   data_replicates_split <- apply(replicate_classes, 1, function(x) data_cd4  %>%
