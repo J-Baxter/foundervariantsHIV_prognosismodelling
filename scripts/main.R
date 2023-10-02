@@ -105,7 +105,7 @@ stratified_data <- mapply(SimCohorts,
 # Random allocation of transmitter/recipient
 shcs_h2preds_transmitterrandom <- predicted_draws(heritability_model_transmitterrandom,
                                 newdata = shcs_data_long_transmitterrandom,
-                                ndraws = 50,
+                                ndraws = 30,
                                 allow_new_levels = FALSE, # allow new random effects levels
                                 #sample_new_levels = "old_levels", #
                          ##re_formula = ~ (1|log10_SpVL_couplemean),
@@ -123,7 +123,7 @@ stratified_pred_transmitterrandom  <- predicted_draws(heritability_model_transmi
                               allow_new_levels = TRUE, # allow new random effects levels
                               sample_new_levels = "old_levels", #
                               re_formula = ~ (1|log10_SpVL_couplemean),
-                              ndraws = 50,
+                              ndraws = 30,
                               value = 'predicted_log10_SpVL') %>% 
   #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
@@ -136,7 +136,7 @@ stratified_pred_transmitterrandom  <- predicted_draws(heritability_model_transmi
 # Transmitter = Max(SpVLij) of couple j
 shcs_h2preds_transmitterML <- predicted_draws(heritability_model_transmitterML,
                                                newdata = shcs_data_long_transmitterML,
-                                               ndraws = 50,
+                                               ndraws =30,
                                                allow_new_levels = FALSE, # allow new random effects levels
                                                #sample_new_levels = "old_levels", #
                                                ##re_formula = ~ (1|log10_SpVL_couplemean),
@@ -154,7 +154,7 @@ stratified_pred_transmitterML <- predicted_draws(heritability_model_transmitterM
                                                   allow_new_levels = TRUE, # allow new random effects levels
                                                   sample_new_levels = "old_levels", #
                                                   re_formula = ~ (1|log10_SpVL_couplemean),
-                                                  ndraws = 50,
+                                                  ndraws = 30,
                                                   value = 'predicted_log10_SpVL') %>% 
   #select(-c(.chain, .iteration, .draw)) %>%
   group_by(ID_pair, partner) %>%
@@ -380,7 +380,7 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
 # Sort into 'dataframes' (dataset:transmitterselection)
 datanames <- c('FM', 'MF', 'MMI', 'MMR',  'PWID')
 
-combinded_results <- list(FM_results, 
+combined_results <- list(FM_results, 
                           MF_results,
                           MMI_results,
                           MMR_results,
@@ -390,24 +390,25 @@ combinded_results <- list(FM_results,
   dplyr::select(-ends_with(as.character(35:200)))
 
 
-combinded_results_list <- combinded_results %>%
+combined_results_list <- combined_results %>%
   group_split(dataset_id) %>% 
   setNames(., datanames)
 
 # write csv to file
 filenames <- paste0(results_dir, '/', datanames, '_rawresults.csv')
-mapply(write_csv, combinded_results_list, file = filenames)
+mapply(write_csv, combined_results_list, file = filenames)
 
 
 ################################### Resample: Compare SpVL ################################### 
-combinded_results_simonly <- combinded_results  %>%
+combined_results_simonly <- combined_results  %>%
   filter(grepl('stratified', dataset)) %>%
   group_split(dataset_id, transmitterallocation)
 
-CD4_resample <- lapply(combinded_results_simonly, GetCD4Survival)
+CD4_resample <- lapply(combined_results_simonly, GetCD4Survival, replicates = 1000)
+
 
 # write csv to file
-datanames <- lapply(combinded_results_simonly, function(x) paste(unique(x$dataset_id),
+datanames <- lapply(combined_results_simonly, function(x) paste(unique(x$dataset_id),
                                                                  unique(x$transmitterallocation), sep ='_')) %>% 
   unlist()
 filenames <- paste0(results_dir, '/', datanames, '_CD4resample.csv')
@@ -415,7 +416,7 @@ mapply(write_csv, CD4_resample, file = filenames)
 
 
 ################################### Resample: Compare CD4+ ################################### 
-SpVL_resample <- lapply(combinded_results_simonly, GetSpVLDiff)
+SpVL_resample <- lapply(combined_results_simonly, GetSpVLDiff)
 
 # write csv to file
 filenames <- paste0(results_dir, '/', datanames, '_SpVLresample.csv')

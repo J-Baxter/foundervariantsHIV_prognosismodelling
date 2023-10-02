@@ -28,7 +28,7 @@ my_theme <- theme_classic(base_family = "lmsans10")+
 cd4_data <- read_table('./data/pbio.1001951.s006.tsv') %>%
   rename(SpVL = spVL)
 
-resultsfiles <- list.files('./results/01Sep23/', full.names = T)
+resultsfiles <- list.files('./results/28Sep23/', full.names = T)
 
 modelresults <- lapply(resultsfiles[which(grepl('rawresults',resultsfiles) & !grepl('UNKNOWN|OTHER',resultsfiles))], read_csv) %>%
   do.call(rbind.data.frame,.)
@@ -301,10 +301,10 @@ plt_4b <- ggplot(cd4results) +
   geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.5)+
   scale_x_continuous('Days Post Infection') + 
   scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3', expand = c(0,0)) +
-  scale_fill_brewer(palette = 'OrRd') + 
-  scale_colour_brewer(palette = 'OrRd') + 
-  coord_cartesian(xlim = c(0,365*10), ylim = c(0.25, 1.05))+ #cut at 10 years
-  facet_wrap(. ~ riskgroup, switch = 'y')+
+  scale_fill_brewer(palette = 'BuGn') + 
+  scale_colour_brewer(palette = 'BuGn') + 
+  coord_cartesian(xlim = c(365*2,365*10), ylim = c(0.5, 1.05))+ #cut at 10 years
+  facet_wrap(. ~ riskgroup, switch = 'y', nrow = 1)+
   my_theme+ theme(legend.position = 'bottom')
 
 panel_4 <- cowplot::plot_grid(plt_4a, plt_4b, 
