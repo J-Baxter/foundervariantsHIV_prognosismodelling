@@ -27,20 +27,36 @@ s1_data <- tibble(Carrier = rnorm(100000, MC, sqrt(VC)),
   mutate(stage = forcats::fct_relevel(stage, c('Carrier', 'Transmitter', 'Recipient')))
   
 plt_s1 <- ggplot(s1_data) + 
-  geom_density(aes(x = vl ,fill = stage), alpha = 0.5, colour = 'white')+
-  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0), limits = c(0,7))+
-  scale_y_continuous('Density', expand= c(0,0))+
+  geom_density(aes(x = vl,
+                   fill = stage),
+               alpha = 0.5,
+               colour = 'white')+
+  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), 
+                     expand= c(0,0), 
+                     limits = c(0,7))+
+  scale_y_continuous('Density', 
+                     expand= c(0,0))+
   scale_fill_brewer(palette = 'GnBu')+
-  geom_vline(xintercept = t[['mean']],  linetype = 2, colour = '#7bccc4')+
-  geom_vline(xintercept = MC ,  linetype = 2, colour = '#e0f3db')+
-  geom_vline(xintercept = r[['mean']], linetype = 2, colour = '#084081')+
+  geom_vline(xintercept = t[['mean']],
+             linetype = 2, 
+             colour = '#7bccc4')+
+  geom_vline(xintercept = MC , 
+             linetype = 2, 
+             colour = '#e0f3db')+
+  geom_vline(xintercept = r[['mean']],
+             linetype = 2, 
+             colour = '#084081')+
   facet_wrap(.~stage, ncol = 3)+
   my_theme
 
 # A4: 210 x 297 mm, 
 # 170 x 100
-ggsave(plot = plt_s1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"), 
-       device = jpeg, width = 170, height = 60, units = 'mm')
+ggsave(plot = plt_s1,
+       filename = paste(figs_dir,sep = '/', "panel_s1.jpeg"), 
+       device = jpeg, 
+       width = 170, 
+       height = 60,
+       units = 'mm')
 
 
 ################################### Fig S2 #################################
@@ -65,18 +81,31 @@ vlpairs <- shcs_data %>%
                                 .default = allocation))
 
 panel_s2 <- ggplot(vlpairs)+
-  geom_histogram(aes(x = log10SpVL, fill = role), binwidth = 0.25) +
-  scale_fill_brewer(palette = 'GnBu', 'Role Allocated',labels = c('Recipient', 'Transmitter'))+
-  scale_y_continuous('Count', expand = c(0,0), limits = c(0,70), breaks = seq(0,70,by=10))+
-  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand =  c(0,0), limits = c(1,7))+
+  geom_histogram(aes(x = log10SpVL,
+                     fill = role),
+                 binwidth = 0.25) +
+  scale_fill_brewer(palette = 'GnBu', 
+                    'Role Allocated',
+                    labels = c('Recipient', 'Transmitter'))+
+  scale_y_continuous('Count',
+                     expand = c(0,0),
+                     limits = c(0,70), 
+                     breaks = seq(0,70,by=10))+
+  scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), 
+                     expand =  c(0,0),
+                     limits = c(1,7))+
   facet_wrap(.~allocation)+
   my_theme + 
   theme(legend.position = 'right')
 
 
 
-ggsave(plot = panel_s2  , filename = paste(figs_dir,sep = '/', "panel_s2_new.jpeg"), 
-       device = jpeg,  width = 170, height = 140,  units = 'mm')
+ggsave(plot = panel_s2, 
+       filename = paste(figs_dir,sep = '/', "panel_s2_new.jpeg"), 
+       device = jpeg, 
+       width = 170, 
+       height = 140, 
+       units = 'mm')
 
 
 ################################### Fig S3 #################################
@@ -130,7 +159,8 @@ validate_df <- list(Simulated = stratified_data, Empirical = shcs_data_long_tran
          riskgroup, 
          age.inf, 
          id,
-         SpVL_couplemean) %>% filter(riskgroup %in% c('HET', "MSM", 'PWID'))
+         SpVL_couplemean) %>% 
+  filter(riskgroup %in% c('HET', "MSM", 'PWID'))
 
 #ggplot(validate_df)+
   #geom_histogram(aes(x = SpVL_couplemean))+
@@ -581,7 +611,7 @@ df <- as_tibble(cbind(mf,  rownames(mf))) %>%
                                         'multiple_founder_proportion_preaids')))
   
 
-panel_s11 <- ggplot(df) +
+panel_s10 <- ggplot(df) +
   geom_bar(aes(x = as.numeric(SpVL), y = as.numeric(P_MV), fill = as.factor(SpVL)), stat = 'identity') +
   geom_hline(aes(yintercept = average), linetype = 'dashed')+
   my_theme + 
@@ -597,8 +627,8 @@ panel_s11 <- ggplot(df) +
                                        'multiple_founder_proportion_preaids' = 'Pre-AIDS'))) + 
   theme(strip.placement = 'outside')
 
-ggsave(plot = panel_s11,
-       filename = paste(figs_dir,sep = '/', "panel_s11.jpeg"),
+ggsave(plot = panel_s10,
+       filename = paste(figs_dir,sep = '/', "panel_s10.jpeg"),
        device = jpeg,  
        width = 170, 
        height = 60,  units = 'mm')
