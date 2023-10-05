@@ -98,7 +98,7 @@ stratified_data <- mapply(SimCohorts,
 
 
 ################################### Validate composition of simulated cohorts ###################################
-#source('./scripts/validate_simcohorts.R')
+source('./scripts/validate_simcohorts.R')
 
 
 ################################### Predict SpVLs ###################################

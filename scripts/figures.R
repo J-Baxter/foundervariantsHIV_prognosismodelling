@@ -28,7 +28,7 @@ my_theme <- theme_classic(base_family = "lmsans10")+
 cd4_data <- read_table('./data/pbio.1001951.s006.tsv') %>%
   rename(SpVL = spVL)
 
-resultsfiles <- list.files('./results/28Sep23/', full.names = T)
+resultsfiles <- list.files('./results/29Sep23/', full.names = T)
 
 modelresults <- lapply(resultsfiles[which(grepl('rawresults',resultsfiles) & !grepl('UNKNOWN|OTHER',resultsfiles))], read_csv) %>%
   do.call(rbind.data.frame,.)
@@ -52,10 +52,10 @@ plt1a <- ggplot(vls) +
   geom_density(aes(x = vl ,fill = stage), alpha = 0.5, colour = 'white')+
   scale_x_continuous(expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')), expand= c(0,0))+
   scale_y_continuous('Density', expand= c(0,0))+
-  scale_fill_brewer(palette = 'OrRd')+
-  geom_vline(xintercept = decomp_vl$mv['mean'],  linetype = 2, colour = '#fdbb84')+
-  geom_vline(xintercept = 4.74 ,  linetype = 2, colour = '#fee8c8')+
-  geom_vline(xintercept = decomp_vl$sv['mean'], linetype = 2, colour = '#e34a33')+
+  scale_fill_brewer(palette = 'GnBu')+
+  geom_vline(xintercept = decomp_vl$mv['mean'],  linetype = 2, colour = '#ccebc5')+
+  geom_vline(xintercept = 4.74 ,  linetype = 2, colour = '#7bccc4')+
+  geom_vline(xintercept = decomp_vl$sv['mean'], linetype = 2, colour = '#0868ac')+
   facet_wrap(.~stage, nrow = 3,labeller = labeller(stage = facet.labs))+
   my_theme
 
@@ -64,32 +64,32 @@ plt1a <- ggplot(vls) +
 # conditions of effect size, sample size and p(mv)
 plt1b <- ggplot(simsignificances) +
   geom_raster(aes(x = p_mv, y = effect_size, fill = value))+    
-  geom_point(x = 0.32, y = 0.293, shape = 2, colour = 'white') + 
+  geom_point(x = 0.32, y = 0.293, shape = 2, size = 1.5,colour = 'white') + 
   
-  geom_point(x = 0.25, y = 0.372, shape = 5, colour = 'white') + 
+  geom_point(x = 0.25, y = 0.372, shape = 5, size = 1.5,colour = 'white') + 
   
   geom_vline(xintercept = 0.21, colour = "white", linetype = 2) + 
   annotate("text", label = "MF",
-           x = 0.23, y = 0.95, size = 4, colour = "white")+
+           x = 0.24, y = 0.95, size = 2, colour = "white")+
   
   geom_vline(xintercept = 0.13, colour = "white", linetype = 2)+
   annotate("text", label = "FM",
-           x = 0.15, y = 0.95, size = 4, colour = "white")+
+           x = 0.16, y = 0.95, size = 2, colour = "white")+
   
   geom_vline(xintercept = 0.3, colour = "white", linetype = 2) + 
   annotate("text", label = "MM",
-           x = 0.32, y = 0.95, size = 4, colour = "white")+
+           x = 0.34, y = 0.95, size = 2, colour = "white")+
   
   facet_wrap(.~sample_size, scales = "free_x") + 
   scale_y_continuous('Increase in SpVL due to Multiple Variants', expand= c(0,0)) +
   scale_x_continuous('Cohort P(Multiple Variants)', expand= c(0,0))+
-  scale_fill_distiller(palette = 'OrRd', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
+  scale_fill_distiller(palette = 'GnBu', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
   my_theme 
 
 plt_1 <- cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO', rel_widths = c(0.4,0.6))
 
-ggsave(plot = plt_1, filename = paste(figs_dir,sep = '/', "plt_s1.jpeg"), 
-       device = jpeg, width = 170, height = 170, units = 'mm')
+ggsave(plot = plt_1, filename = paste(figs_dir,sep = '/', "plt_1.jpeg"), 
+       device = jpeg, width = 180, height = 140, units = 'mm')
 
 
 ############################################## Panel 2 ##############################################
@@ -133,10 +133,10 @@ plt_2c <- mutate(shcs_data_long_transmitterML,
   arrange(log10_SpVL_couplemean) %>%
   mutate(intercept = rep(coef(freq_model)$log10_SpVL_couplemean[,1], each = 2)) %>%
   ggplot() +
-  geom_abline(aes(intercept =intercept, slope = slope), alpha = 0.2, colour = '#fdbb84') +
+  geom_abline(aes(intercept =intercept, slope = slope), alpha = 0.2, colour = '#7bccc4') +
   geom_point(aes(x = log10_SpVL_couplemean, y = log10_SpVL), 
              data = shcs_data_long_transmitterML, 
-             colour = '#ef654a', shape = 4, alpha = 0.4, size = 1) + 
+             colour = '#084081', shape = 4, alpha = 0.4, size = 1) + 
   scale_x_continuous(name = expression(paste(SpVL[ij], ' (', Log[10], " copies ", ml**-1, ')')),
                      limits = c(1, 7),
                      expand = c(0.05,0)) + 
@@ -148,7 +148,7 @@ plt_2c <- mutate(shcs_data_long_transmitterML,
 
 # Tolerance Model
 plt_2d <- ggplot(cd4_data , aes(x = SpVL, y=CD4.decline))+
-  geom_point(colour = '#ef654a', shape= 4, alpha = 0.4, size = 1) +
+  geom_point(colour = '#084081', shape= 4, alpha = 0.4, size = 1) +
   scale_y_continuous(name = expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1)),  #
                      expand = c(0,0),
                      limits = c(-2,2))+
@@ -156,47 +156,47 @@ plt_2d <- ggplot(cd4_data , aes(x = SpVL, y=CD4.decline))+
                      expand = c(0,0),
                      limits = c(0,7.5),
                      breaks = seq(0,6, by = 2))+
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#fdbb84', linewidth = 1.2, xlim = c(0,6.3)) +
-  geom_text(aes(x = 6.9, y = -0.35), label = "20 yrs", colour = "#fdbb84", size = 2) +
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*40) * x**2, colour = '#ef6548', linewidth = 1.2, xlim = c(0,6.3))+
-  geom_text(aes(x = 6.9, y = -0.5, label = "40 yrs"), colour = "#ef6548", size = 2) +
-  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*60) * x**2, colour = '#b30000', linewidth = 1.2, xlim = c(0,6.3)) +
-  geom_text(aes(x = 6.9, y = -0.62, label = "60 yrs"), colour = "#b30000", size = 2) + #Add 95% CIs to lines (geom_ribbon)
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*20) * x**2, colour = '#ccebc5', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.9, y = -0.35), label = "20 yrs", colour = "#ccebc5", size = 2) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*40) * x**2, colour = '#7bccc4', linewidth = 1.2, xlim = c(0,6.3))+
+  geom_text(aes(x = 6.9, y = -0.5, label = "40 yrs"), colour = "#7bccc4", size = 2) +
+  geom_function(fun = function(x) ((-5.6e-3) + (-1.6e-4)*60) * x**2, colour = '#2b8cbe', linewidth = 1.2, xlim = c(0,6.3)) +
+  geom_text(aes(x = 6.9, y = -0.62, label = "60 yrs"), colour = "#2b8cbe", size = 2) + #Add 95% CIs to lines (geom_ribbon)
   my_theme
 
 
 # Transmission Model ~ Risk Group
 source('./scripts/deprecated/populationdata_models.R')
-mf <- sapply(raise_to_power(10, 2:7), TransmissionModel2, 
-             simp = TRUE, 
+mf <- sapply(raise_to_power(10, 2:7),
+             populationmodel_acrossVL_Env, 
              PerVirionProbability = 1.765e-06,
              PropExposuresInfective = 0.013296)
 
-fm <- sapply(raise_to_power(10, 2:7), TransmissionModel2, 
-             simp = TRUE,
+fm <- sapply(raise_to_power(10, 2:7), 
+             populationmodel_acrossVL_Env, 
              PerVirionProbability = 8.779e-07, 
              PropExposuresInfective = 0.14337)
 
-mm_ra <- sapply(raise_to_power(10, 2:7), TransmissionModel2, 
-                simp = TRUE, 
+mm_ra <- sapply(raise_to_power(10, 2:7),
+                populationmodel_acrossVL_Env, 
                 PerVirionProbability = 3.190e-06,
                 PropExposuresInfective = 0.08923)
 
-mm_ia <- sapply(raise_to_power(10, 2:7), TransmissionModel2,
-                simp = TRUE, 
+mm_ia <- sapply(raise_to_power(10, 2:7),
+                populationmodel_acrossVL_Env,
                 PerVirionProbability = 3.114e-06, 
                 PropExposuresInfective = 0.008839)
 
 pwid <-  sapply(raise_to_power(10, 2:7), 
-                TransmissionModel2, simp = TRUE, 
+                populationmodel_acrossVL_Env,
                 PerVirionProbability = 5.566e-06, 
                 PropExposuresInfective = 0.02496)
 
-av_pmv <- rbind.data.frame(TransmissionModel2(PerVirionProbability = 1.765e-06, PropExposuresInfective = 0.013296, simp = TRUE), 
-                           TransmissionModel2(PerVirionProbability = 8.779e-07, PropExposuresInfective = 0.14337, simp = TRUE),
-                           TransmissionModel2(PerVirionProbability = 3.190e-06, PropExposuresInfective = 0.08923, simp = TRUE),
-                           TransmissionModel2(PerVirionProbability = 3.114e-06, PropExposuresInfective = 0.008839, simp = TRUE),
-                           TransmissionModel2(PerVirionProbability = 5.566e-06, PropExposuresInfective = 0.02496, simp = TRUE))
+av_pmv <- rbind.data.frame(populationmodel_acrossVL_Env(PerVirionProbability = 1.765e-06, PropExposuresInfective = 0.013296), 
+                           populationmodel_acrossVL_Env(PerVirionProbability = 8.779e-07, PropExposuresInfective = 0.14337),
+                           populationmodel_acrossVL_Env(PerVirionProbability = 3.190e-06, PropExposuresInfective = 0.08923),
+                           populationmodel_acrossVL_Env(PerVirionProbability = 3.114e-06, PropExposuresInfective = 0.008839),
+                           populationmodel_acrossVL_Env(PerVirionProbability = 5.566e-06, PropExposuresInfective = 0.02496))
 
 av_pmv$Riskgroup <- c('MF', 'FM', 'MM:RA', 'MM:IA', 'PWID')
 colnames(av_pmv)[1] <- c('multiple_founder_proportion')
@@ -224,7 +224,7 @@ plt_2e <- ggplot(df %>% filter(time == 'multiple_founder_proportion')) +
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", label_math(.x))) +
   scale_y_continuous(expand = c(0,0), 'P(Multiple Variants)', limits = c(0,1), breaks = seq(0,1 ,by = 0.2))+
-  scale_fill_brewer(palette = 'OrRd')+
+  scale_fill_brewer(palette = 'GnBu')+
   facet_grid(cols = vars(Riskgroup), switch = 'y',
              labeller = as_labeller( c('MF' = 'MF',
                                        'PWID' = 'PWID',
@@ -244,11 +244,11 @@ ggsave(plot = panel_2 , filename = paste(figs_dir,sep = '/', "panel_2.jpeg"),
 
 ############################################## Panel 3 ##############################################
 
-my_palette <- colorRampPalette(brewer.pal(9, "OrRd"))(20)
+#my_palette <- colorRampPalette(brewer.pal(9, "OrRd"))(20)
 
 plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML') ,aes(y = SpVL_recipient, x = 1-p_variants_1))+
   stat_density_2d(aes(fill = (..density..)**(1/3)), geom = "raster", contour = FALSE) +
-  scale_fill_distiller(palette = 'OrRd',direction = 1,  breaks=1e-6*seq(0,10,by=2)) +
+  scale_fill_distiller(palette = 'BuGn',direction = 1,  breaks=1e-6*seq(0,10,by=2)) +
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,1),
@@ -265,12 +265,12 @@ plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML') ,aes(y =
 plt_3b <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = delta_CD4_recipient, x = 1-p_variants_1))+
   stat_density_2d(aes(fill = (..density..)**(1/3)), geom = "raster", contour = FALSE) +
   #geom_density_2d_filled(bins = 20)+
-  scale_fill_distiller(palette = 'OrRd',direction = 1, breaks=1e-6*seq(0,10,by=2)) +
+  scale_fill_distiller(palette = 'BuGn',direction = 1, breaks=1e-6*seq(0,10,by=2)) +
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0,0),
-                     #limits = c(0,1),
+                     limits = c(0,1),
                      breaks = seq(0, 1, by = 0.25))+
-  scale_y_continuous(#limits = c(-1,0), 
+  scale_y_continuous(limits = c(-0.5,0), 
                      expand = c(0,0), 
                      breaks = seq(-0.5, 0, by = 0.1),
                      name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
@@ -289,7 +289,7 @@ plt_4a <- ggplot(SpVLresults) +
   geom_boxplot(aes(x = multiplicity, y = log10_SpVL, fill = multiplicity))+
   scale_x_discrete('Multiplicity', labels = c('Multiple', 'Single') ) +
   scale_y_continuous('Mean Log10 SpVL') +
-  scale_fill_brewer(palette = 'OrRd') +
+  scale_fill_brewer(palette = 'BuGn') +
   #scale_colour_brewer(palette = 'OrRd') +
   #coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
   facet_grid(cols = vars(riskgroup), switch = 'y')+
@@ -297,14 +297,14 @@ plt_4a <- ggplot(SpVLresults) +
   
 
 plt_4b <- ggplot(cd4results) +
+  geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.7)+
   geom_line(aes(x = time, y= `0.5`, colour = multiplicity)) +
-  geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.5)+
-  scale_x_continuous('Days Post Infection') + 
+  scale_x_continuous('Days Post Infection', expand = c(0,0)) + 
   scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3', expand = c(0,0)) +
   scale_fill_brewer(palette = 'BuGn') + 
-  scale_colour_brewer(palette = 'BuGn') + 
+  scale_colour_manual(values = c('#084081', '#7bccc4')) + 
   coord_cartesian(xlim = c(365*2,365*10), ylim = c(0.5, 1.05))+ #cut at 10 years
-  facet_wrap(. ~ riskgroup, switch = 'y', nrow = 1)+
+  facet_wrap(. ~ riskgroup, switch = 'y', nrow = 1,strip.position = 'outside')+
   my_theme+ theme(legend.position = 'bottom')
 
 panel_4 <- cowplot::plot_grid(plt_4a, plt_4b, 
