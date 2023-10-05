@@ -367,8 +367,6 @@ ggsave(plot = plt_s6,
 # Transmission Model Plots
 # This script plots extracted estimates/data from the Thompson transmission model to produce 
 # plots describing the within-host processes encoded within the model
-
-
 my_palette <- RColorBrewer::brewer.pal(name="GnBu",n=9)[4:9]
 
 # For a given SpVL, plot the probabilities of transmission over time since infection (Thompson)
@@ -438,7 +436,7 @@ plt_s7c <- ggplot(preaids_vals)+
   geom_histogram(aes(x = vl, 
                      y =  after_stat(ndensity)), 
                  binwidth = 0.2, 
-                 fill = '#e34a33')+
+                 fill = '#7bccc4')+
   scale_x_log10(expression(paste("Viral Load", ' (', Log[10], " copies ", ml**-1, ')')),
                 limits = c(10**2, 10**8),
                 expand = c(0,0),
@@ -498,7 +496,7 @@ plt_s7d <- p_aq %>%
   scale_y_continuous(name = 'Probability of Multiple Founders', 
                      expand = c(0,0), 
                      limits = c(0,0.8)) +
-  scale_colour_manual(values = c('#fdd49e','#fdbb84','#fc8d59','#e34a33','#b30000'), 'Exposure', 
+  scale_colour_manual(values = c('#ccebc5','#a8ddb5','#7bccc4','#43a2ca','#0868ac'), 'Exposure', 
                       labels = as_labeller(c('HSX:fm' = 'HSX:FM',
                                              'HSX:mf' = 'HSX:MF',
                                              'MSM' = 'MSM',
@@ -522,17 +520,17 @@ plt_s7e <- ggplot(var_t, aes(x = time, y = P, fill = x_var)) +
   my_theme+
   theme(legend.position = 'none')
 
-panel_s7_bottom <- cowplot::plot_grid(plt_s8b, 
-                                      plt_s8c,
-                                      plt_s8d, 
-                                      plt_s8e,
+panel_s7_bottom <- cowplot::plot_grid(plt_s7b, 
+                                      plt_s7c,
+                                      plt_s7d, 
+                                      plt_s7e,
                                       nrow = 2, 
                                       align = 'hv', 
                                       labels = c('B', 'C', 'D', 'E'), 
                                       label_size = 8)
 
-panel_s7 <- cowplot::plot_grid(plt_s8a, 
-                               panel_s8_bottom, 
+panel_s7 <- cowplot::plot_grid(plt_s7a, 
+                               panel_s7_bottom, 
                                labels= c('A', ''), 
                                rel_heights = c(0.75, 1), 
                                nrow = 2,
@@ -555,47 +553,33 @@ ggsave(plot = panel_s7,
 
 ################################### Fig S10 #################################
 # Panel S10 - Comparing transmission model estimates of P(MV) (and across VLs)
+source('./scripts/populationdata_acrossVL_models_R.r')
+
+mf <- sapply(raise_to_power(10, 2:7), 
+             populationmodel_acrossVL_Env, 
+             PerVirionProbability = 1.765e-06, 
+             PropExposuresInfective = 0.013296)
+
+av_pmv <- populationmodel_acrossVL_Env(PerVirionProbability = 1.765e-06, 
+                                        PropExposuresInfective = 0.013296) %>%
+  cbind.data.frame() %>%
+  pivot_longer(cols = contains('multiple'), 
+               values_to = 'average',
+               names_to = 'time') %>%
+  mutate(Riskgroup = 'MF') 
 
 
-
-mf <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(1.765e-06, 0.013296))
-fm <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(8.779e-07, 0.14337))
-mm_ra <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(3.190e-06, 0.08923))
-mm_ia <- sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(3.114e-06, 0.008839))
-pwid <-  sapply(raise_to_power(10, 2:7), populationmodel_acrossVL_Env, theta=c(5.566e-06, 0.02496))
-
-av_pmv <- rbind.data.frame(populationmodel_acrossVL_Env(theta=c(1.765e-06, 0.013296)),
-                           populationmodel_acrossVL_Env(theta=c(8.779e-07, 0.14337)),
-                           populationmodel_acrossVL_Env(theta=c(3.190e-06, 0.08923)),
-                           populationmodel_acrossVL_Env(theta=c(3.114e-06, 0.008839)),
-                           populationmodel_acrossVL_Env(theta=c(5.566e-06, 0.02496))
-)
-
-av_pmv$Riskgroup <- c('MF', 'FM', 'MM:RA', 'MM:IA', 'PWID')
-colnames(av_pmv)[1] <- c('multiple_founder_proportion')
-
-df <- bind_rows(list('MF' = as_tibble(cbind(mf,  rownames(mf))),
-                     'FM' =  as_tibble(cbind(fm, rownames(mf))),
-                     'MM:RA' =  as_tibble(cbind(mm_ra, rownames(mf))),
-                     'MM:IA' =  as_tibble(cbind(mm_ia, rownames(mf))),
-                     'PWID' =  as_tibble(cbind(pwid,  rownames(mf)))), .id = 'Riskgroup') %>%
-  setNames(c('Riskgroup',raise_to_power(10, 2:7) %>% as.character(), 'time')) %>%
+df <- as_tibble(cbind(mf,  rownames(mf))) %>%
+  mutate(Riskgroup = 'MF') %>%
+  setNames(c(raise_to_power(10, 2:7) %>% as.character(), 'time', 'Riskgroup')) %>%
   mutate(time = as.character(time)) %>%
-  
-  left_join(., pivot_longer(av_pmv, cols = contains('multiple'), values_to = 'average', names_to = 'time'), by = join_by(Riskgroup, time)) %>%
+  left_join(., av_pmv, by = join_by(Riskgroup, time)) %>%
   pivot_longer(cols = contains(c('1')), values_to = 'P_MV', names_to = 'SpVL') %>%
   mutate(time = factor(time, levels = c('multiple_founder_proportion',
                                         'multiple_founder_proportion_primary',
                                         'multiple_founder_proportion_chronic',
                                         'multiple_founder_proportion_preaids')))
-
-
-df$density_zambia <- dnorm(log10((as.character(df$SpVL) %>% as.numeric())),  zambia_mean,  sqrt(zambia_variance))
-
-df %>%
-  #filter(Riskgroup == 'MF') %>%
-  mutate(prod = P_MV * density_zambia) %>%
-  summarise(calculated_average = sum(prod), .by = c(Riskgroup, average_pmv))
+  
 
 panel_s11 <- ggplot(df) +
   geom_bar(aes(x = as.numeric(SpVL), y = as.numeric(P_MV), fill = as.factor(SpVL)), stat = 'identity') +
@@ -603,33 +587,32 @@ panel_s11 <- ggplot(df) +
   my_theme + 
   scale_x_log10(expand = c(0,0), expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),  
                 breaks = trans_breaks("log10", function(x) 10**x),
-                labels = trans_format("log10", label_math())) +
-  scale_y_continuous(expand = c(0,0), 'P(Multiple Variants)', limits = c(0,1), breaks = seq(0,1 ,by = 0.2))+
+                labels = trans_format("log10", label_math(.x))) +
+  scale_y_continuous(expand = c(0.01,0), 'P(Multiple Variants)', limits = c(0,1), breaks = seq(0,1 ,by = 0.2))+
   scale_fill_brewer(palette = 'GnBu')+
-  facet_grid(rows = vars(Riskgroup), cols = vars(time), switch = 'y',
+  facet_grid(cols = vars(time), switch = 'y',
              labeller = as_labeller( c('multiple_founder_proportion' = 'Average',
                                        'multiple_founder_proportion_primary' = 'Primary',
                                        'multiple_founder_proportion_chronic' = 'Chronic' ,
-                                       'multiple_founder_proportion_preaids' = 'Pre-AIDS',
-                                       'MF' = 'MF',
-                                       'PWID' = 'PWID',
-                                       'FM' = 'FM',
-                                       'MM:IA' = 'MM:IA',
-                                       'MM:RA' = 'MM:RA'))) + 
+                                       'multiple_founder_proportion_preaids' = 'Pre-AIDS'))) + 
   theme(strip.placement = 'outside')
 
-ggsave(plot = panel_s11, filename = paste(figs_dir,sep = '/', "panel_s11.jpeg"), device = jpeg,   width = 170, height = 200,  units = 'mm')
+ggsave(plot = panel_s11,
+       filename = paste(figs_dir,sep = '/', "panel_s11.jpeg"),
+       device = jpeg,  
+       width = 170, 
+       height = 60,  units = 'mm')
 
 
 
 # Temporary
-ggplot(bind_rows(results) %>% filter(transmitterallocation == 'ML') %>% filter(riskgroup_recipient != 'UNKNOWN')) + 
-  geom_histogram(aes(x = 1-p_variants_1, y = after_stat(count / max(count))), binwidth = 0.1) + 
-  geom_vline(aes(xintercept = multiple_founder_proportion), data = av_pmv %>% rename(riskgroup_recipient = Riskgroup), linetype = 'dashed')+
-  scale_x_continuous('P(MV)', limits = c(0,1), breaks = seq(0,1, by = 0.2), expand = c(0,0))+
-  scale_y_continuous('Frequency', limits = c(0,1), breaks = seq(0,1, by = 0.2), expand = c(0,0))+
-  my_theme + 
-  facet_grid(cols  = vars(riskgroup_recipient)) 
+#ggplot(bind_rows(results) %>% filter(transmitterallocation == 'ML') %>% filter(riskgroup_recipient != 'UNKNOWN')) + 
+  #geom_histogram(aes(x = 1-p_variants_1, y = after_stat(count / max(count))), binwidth = 0.1) + 
+  #geom_vline(aes(xintercept = multiple_founder_proportion), data = av_pmv %>% rename(riskgroup_recipient = Riskgroup), linetype = 'dashed')+
+  #scale_x_continuous('P(MV)', limits = c(0,1), breaks = seq(0,1, by = 0.2), expand = c(0,0))+
+  #scale_y_continuous('Frequency', limits = c(0,1), breaks = seq(0,1, by = 0.2), expand = c(0,0))+
+  #my_theme + 
+  #facet_grid(cols  = vars(riskgroup_recipient)) 
 
 
 ################################### Fig S11 #################################
