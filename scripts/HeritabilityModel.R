@@ -82,7 +82,7 @@ model_priors <- c( set_prior(coef = 'age.inf_category25M29',
 
 ################################### Prior Predictive Checks ###################################
 
-priorpreditivesim <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
+priorpredictivesim <- brm(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
                         prior = model_priors,
                         data = shcs_data_long_transmitterrandom,
                         chains = 4,
