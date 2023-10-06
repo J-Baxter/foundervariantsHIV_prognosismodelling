@@ -49,7 +49,11 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effectsi
 
 # For a specified effect and sample size, calculate the expected proportion of times we would 
 # observe a significant difference between single and multiple founder variant infections
-SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
+SimEffectSizePMV <- function(n,
+                             e, 
+                             recipient_mean,
+                             recipient_var,
+                             specifyPMV = FALSE){
   
   if (all(is.logical(specifyPMV))){
     p_mv <- (2:(n-2))/n
@@ -66,17 +70,17 @@ SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
       spvls <- DecomposeRecipientSpVL(effectsize = e[i],
                                       p_mv = p[j],
                                       recipient_mean = 4.74,
-                                      recipient_var = 0.61)
+                                      recipient_var = 0.6084)
       sig.count <- 0
       
-      for (z in 1:100000){
+      for (z in 1:1000){
         sv <- rnorm(n*(1-p[j]), mean = spvls$sv['mean'], sd = sqrt(spvls$sv['var']))
         mv <- rnorm(n*p[j], mean = spvls$mv['mean'], sd = sqrt(spvls$mv['var']))
         
         if(t.test(sv, mv, var.equal = T)$p.value <= 0.05){
           sig.count = sig.count + 1
         }
-        m[i,j] <- sig.count/100000
+        m[i,j] <- sig.count/1000
       }
     }
   }
@@ -92,7 +96,7 @@ SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
 
 
 ################################### Calculate Recipient Dist ###################################
-zambia_variance <- 0.61**2 #0.61 is the standard deviation
+zambia_variance <- 0.78**2 #0.61 is the standard deviation
 zambia_mean <- 4.74 
 
 recipient_dist <- CalcRecipient(zambia_mean, 
@@ -103,12 +107,12 @@ recipient_dist <- CalcRecipient(zambia_mean,
 decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist[['mean']], 
                                     recipient_var = recipient_dist[['var']],
                                     p_mv =  0.3, 
-                                    effect_size = 0.3)
+                                    effectsize = 0.3)
 
 
-vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.61), 
-              recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
-              recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
+vls <- tibble(recipient_mean = rnorm(10000, zambia_mean, zambia_variance), 
+              recipient_mv = rnorm(10000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
+              recipient_sv = rnorm(10000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
   pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
 
 
