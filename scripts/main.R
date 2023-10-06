@@ -29,8 +29,8 @@ options(scipen = 100) #options(scipen = 100, digits = 4)
 
 # init distribtions for transmitter allocation
 # mc and vc are the mean and variance of the Amsterdam seroconverter study, respectively.
-mc <- 4.74
-vc <- 0.78**2
+mc <- 4.35
+vc <- 0.47**2
 
 t <- CalcTransmitter(mc,vc)
 r <- CalcRecipient(mc,vc)
@@ -98,7 +98,7 @@ stratified_data <- mapply(SimCohorts,
 
 
 ################################### Validate composition of simulated cohorts ###################################
-#source('./scripts/validate_simcohorts.R')
+source('./scripts/validate_simcohorts.R')
 
 
 ################################### Predict SpVLs ###################################

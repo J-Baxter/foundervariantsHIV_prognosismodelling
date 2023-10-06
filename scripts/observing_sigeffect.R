@@ -96,7 +96,9 @@ SimEffectSizePMV <- function(n,
 
 
 ################################### Calculate Recipient Dist ###################################
-zambia_variance <- 0.78**2 #0.61 is the standard deviation
+
+zambia_variance <- 0.78**2 #0.78 is the standard deviation
+
 zambia_mean <- 4.74 
 
 recipient_dist <- CalcRecipient(zambia_mean, 
@@ -106,13 +108,14 @@ recipient_dist <- CalcRecipient(zambia_mean,
 ################################### Decompose Recipient Distribution ###################################
 decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist[['mean']], 
                                     recipient_var = recipient_dist[['var']],
-                                    p_mv =  0.3, 
+                                    p_mv =  0.25, 
                                     effectsize = 0.3)
 
 
-vls <- tibble(recipient_mean = rnorm(10000, zambia_mean, zambia_variance), 
-              recipient_mv = rnorm(10000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
-              recipient_sv = rnorm(10000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
+vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.6084), 
+              recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
+              recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
+
   pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
 
 
