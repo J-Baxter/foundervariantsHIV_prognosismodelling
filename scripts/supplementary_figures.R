@@ -656,7 +656,7 @@ plt_s11a <-  modelresults %>%
   scale_fill_distiller(palette = 'BuGn',
                        direction = 1,
                        breaks=1e-6*seq(0,10,by=2)) +
-  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,1),
                      breaks = seq(0, 1, by = 0.25))+
@@ -666,7 +666,7 @@ plt_s11a <-  modelresults %>%
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   my_theme +
-  facet_grid(rows = vars(dataset_id), 
+  facet_grid(cols = vars(dataset_id), 
              switch = 'y')
 
 
@@ -680,7 +680,7 @@ plt_s11b <- modelresults %>%
   scale_fill_distiller(palette = 'BuGn',
                        direction = 1, 
                        breaks=1e-6*seq(0,10,by=2)) +
-  scale_x_continuous(name = 'P(Multiple Variant Recipient)',
+  scale_x_continuous(name = 'P(Multiple Particle Recipient)',
                      expand = c(0,0),
                      limits = c(0,1),
                      breaks = seq(0, 1, by = 0.25))+
@@ -692,8 +692,17 @@ plt_s11b <- modelresults %>%
   facet_grid(cols = vars(dataset_id), 
              switch = 'y') 
 
+panel_s11 <- plot_grid(plt_s11a,
+                       plt_s11b, 
+                       nrow= 2, labels= 'AUTO',
+                       label_size = 9)
 
-
+ggsave(plot = panel_s11 ,
+       filename = paste(figs_dir,sep = '/', "panel_s11.jpeg"), 
+       device = jpeg, 
+       width = 190, 
+       height = 120,  
+       units = 'mm')  
 
 ################################### Fig S12 #################################
 
@@ -714,8 +723,8 @@ plt_s12a <- ggplot(modelresults ,aes(y = SpVL_recipient, x = 1-p_variants_1))+
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
   my_theme +
-  facet_grid(rows = vars(dataset_id), 
-             cols = vars(transmitterallocation),
+  facet_grid(cols = vars(dataset_id), 
+             rows = vars(transmitterallocation),
              switch = 'y')
 
 
@@ -737,11 +746,21 @@ plt_s12b <- ggplot(modelresults,
                      breaks = seq(-0.5, 0, by = 0.1),
                      name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
   my_theme + 
-  facet_grid(rows = vars(dataset_id), 
-             cols = vars(transmitterallocation),
+  facet_grid(cols = vars(dataset_id), 
+             rows = vars(transmitterallocation),
              switch = 'y')
 
-  
+panel_s12 <- plot_grid(plt_s12a,
+                     plt_s12b, 
+                     nrow= 2, labels= 'AUTO',
+                     label_size = 9)
+
+ggsave(plot = panel_s12 ,
+       filename = paste(figs_dir,sep = '/', "panel_s12.jpeg"), 
+      device = jpeg, 
+      width = 190, 
+      height = 220,  
+      units = 'mm')  
 # SHCS
 #plt_2e <- ggplot(shcs_data , aes(x = SpVL_1, SpVL_2)) +
 # geom_point( #'#CB6015' #'#66c2a4','#2ca25f','#006d2c'

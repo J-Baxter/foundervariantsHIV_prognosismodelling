@@ -28,7 +28,7 @@ my_theme <- theme_classic(base_family = "lmsans10")+
 cd4_data <- read_table('./data/pbio.1001951.s006.tsv') %>%
   rename(SpVL = spVL)
 
-resultsfiles <- list.files('./results/29Sep23/', full.names = T)
+resultsfiles <- list.files('./results/06Oct23', full.names = T)
 
 modelresults <- lapply(resultsfiles[which(grepl('rawresults',resultsfiles) & !grepl('UNKNOWN|OTHER',resultsfiles))], read_csv) %>%
   do.call(rbind.data.frame,.)
@@ -286,29 +286,52 @@ ggsave(plot = panel_3 , filename = paste(figs_dir,sep = '/', "panel_3.jpeg"),
 ############################################## Panel 4 ##############################################
 
 plt_4a <- ggplot(SpVLresults) +
-  geom_boxplot(aes(x = multiplicity, y = log10_SpVL, fill = multiplicity))+
-  scale_x_discrete('Multiplicity', labels = c('Multiple', 'Single') ) +
+  geom_boxplot(aes(x = multiplicity, 
+                   y = log10_SpVL,
+                   fill = multiplicity),  
+               outlier.size = 0.5,
+               notchwidth = 0.5)+
+  scale_x_discrete('Multiplicity',
+                   labels = c('Multiple', 'Single') ) +
   scale_y_continuous('Mean Log10 SpVL') +
   scale_fill_brewer(palette = 'BuGn') +
   #scale_colour_brewer(palette = 'OrRd') +
   #coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
-  facet_grid(cols = vars(riskgroup), switch = 'y')+
+  facet_grid(cols = vars(riskgroup),
+             switch = 'y')+
   my_theme
   
 
 plt_4b <- ggplot(cd4results) +
-  geom_ribbon(aes(x = time, ymin = `0.01`, ymax = `0.99`, fill = multiplicity), alpha = 0.7)+
-  geom_line(aes(x = time, y= `0.5`, colour = multiplicity)) +
-  scale_x_continuous('Days Post Infection', expand = c(0,0)) + 
-  scale_y_continuous('Proportion of Cohort with < 350 CD4 mm3', expand = c(0,0)) +
-  scale_fill_brewer(palette = 'BuGn') + 
-  scale_colour_manual(values = c('#084081', '#7bccc4')) + 
-  coord_cartesian(xlim = c(365*2,365*10), ylim = c(0.5, 1.05))+ #cut at 10 years
-  facet_wrap(. ~ riskgroup, switch = 'y', nrow = 1,strip.position = 'outside')+
-  my_theme+ theme(legend.position = 'bottom')
+  geom_ribbon(aes(x = time,
+                  ymin = `0.01`,
+                  ymax = `0.99`,
+                  fill = multiplicity), 
+              alpha = 0.7)+
+  geom_line(aes(x = time, y= `0.5`, 
+                colour = multiplicity),
+            linetype= 'dashed', 
+            linewidth = 0.25) +
+  scale_x_continuous('Days Post Infection', 
+                     expand = c(0,0)) + 
+  scale_y_continuous(str_wrap('Proportion of Cohort with < 350 CD4 mm3', 25),
+                     expand = c(0,0)) +
+  #scale_fill_brewer(palette = 'BuGn') + 
+  scale_fill_manual(values = c('#7bccc4', '#ccebc5')) + 
+  scale_colour_manual(values = c('#084081', '#238b45')) + 
+  coord_cartesian(xlim = c(365*2,365*8),
+                  ylim = c(0.5, 1.05))+ #cut at 10 years
+  facet_grid(cols = vars(riskgroup),
+             switch = 'y')+
+  my_theme+ 
+  theme(legend.position = 'bottom')
 
 panel_4 <- cowplot::plot_grid(plt_4a, plt_4b, 
-                              align = 'hv', nrow = 2, labels = 'AUTO', label_size = 9)
+                              align = 'hv',
+                              nrow = 2, 
+                              rel_heights = c(0.8,1),
+                              labels = 'AUTO',
+                              label_size = 9)
 
 ggsave(plot = panel_4 , filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), 
        device = jpeg,  width = 180, height = 140,  units = 'mm')
