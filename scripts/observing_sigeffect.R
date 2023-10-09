@@ -49,7 +49,11 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effectsi
 
 # For a specified effect and sample size, calculate the expected proportion of times we would 
 # observe a significant difference between single and multiple founder variant infections
-SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
+SimEffectSizePMV <- function(n,
+                             e, 
+                             recipient_mean,
+                             recipient_var,
+                             specifyPMV = FALSE){
   
   if (all(is.logical(specifyPMV))){
     p_mv <- (2:(n-2))/n
@@ -92,7 +96,9 @@ SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
 
 
 ################################### Calculate Recipient Dist ###################################
+
 zambia_variance <- 0.78**2 #0.78 is the standard deviation
+
 zambia_mean <- 4.74 
 
 recipient_dist <- CalcRecipient(zambia_mean, 
@@ -109,6 +115,7 @@ decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist[['mean']],
 vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.6084), 
               recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
               recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
+
   pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
 
 
