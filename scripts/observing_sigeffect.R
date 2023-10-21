@@ -84,6 +84,7 @@ SimEffectSizePMV <- function(n,
                     sd = sqrt(spvls$mv['var']))
         
         if(endpoint == 'SpVL'){
+          # test that mv is greater than sv
           test <-  t.test(mv,
                         sv,
                         var.equal = T,
@@ -91,9 +92,11 @@ SimEffectSizePMV <- function(n,
         }
        
         if(endpoint == 'CD4'){
-          sv_cd4 <- 1000 + 365 * -0.0111 * sv^2
+          sv_cd4 <- 1000 + 365 * -0.0111 * sv^2 
           mv_cd4 <- 1000 + 365 * -0.0111 * sv^2
           
+          # test that sv is greater than mv (CD4 decline is negative)
+          # Note: data is *2 due to previous eqn -> nonparametric test
           test <- wilcox.test(sv_cd4,
                               mv_cd4,
                               alternative = 'greater')
@@ -177,11 +180,13 @@ study_effects <- tibble(cohort = c('sagar', 'rv144', 'step'),
 
 study_significance_spvl <- lapply(1:nrow(study_effects), function(x) SimEffectSizePMV(n = study_effects[['size']][x],
                                                                                       e = study_effects[['es_spvl']][x],
-                                                                                      specifyPMV = study_effects[['p_mv']][x]))
+                                                                                      specifyPMV = study_effects[['p_mv']][x])) %>%
+  do.call(rbind.data.frame,.) %>%
+  mutate(ci.upper = value + 1.96 * sqrt((value*(1-value)/1000)))%>%
+  mutate(ci.lower = value - 1.96 * sqrt((value*(1-value)/1000))) %>%
+  mutate(cohort = c('sagar', 'rv144', 'step'))
 
 
-apply(study_effects, 1, SimEffectSizePMV, n = size, e = es_spvl, specifyPMV = p_mv)
-SimEffectSizePMV(n, e, specifyPMV = )
 ################################### Compare Riskgroups ###################################
 
 p_mv <- c(0.21, 0.13, 0.30)
