@@ -40,8 +40,10 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effectsi
   # Assumption of equal variances justified by Janes et al.
   decomposed_var <- recipient_var + recipient_mean^2 - p_mv * mv_mean^2 - (1 - p_mv) * sv_mean^2
   
-  out <- list('sv' = c('mean' = sv_mean, 'var' = decomposed_var),
-              'mv' = c('mean' = mv_mean, 'var' = decomposed_var))
+  out <- list('sv' = c('mean' = sv_mean,
+                       'var' = decomposed_var),
+              'mv' = c('mean' = mv_mean, 
+                       'var' = decomposed_var))
   
   return(out)
 }
@@ -53,6 +55,7 @@ SimEffectSizePMV <- function(n,
                              e, 
                              recipient_mean,
                              recipient_var,
+                             endpoint = 'SpVL',
                              specifyPMV = FALSE){
   
   if (all(is.logical(specifyPMV))){
@@ -65,7 +68,6 @@ SimEffectSizePMV <- function(n,
   m <- matrix(data = NA, nrow = length(e), ncol = length(p))
   
   for (i in 1:length(e)){
-    
     for(j in 1:length(p)){
       spvls <- DecomposeRecipientSpVL(effectsize = e[i],
                                       p_mv = p[j],
@@ -74,11 +76,34 @@ SimEffectSizePMV <- function(n,
       sig.count <- 0
       
       for (z in 1:1000){
-        sv <- rnorm(n*(1-p[j]), mean = spvls$sv['mean'], sd = sqrt(spvls$sv['var']))
-        mv <- rnorm(n*p[j], mean = spvls$mv['mean'], sd = sqrt(spvls$mv['var']))
+        sv <- rnorm(n*(1-p[j]), 
+                    mean = spvls$sv['mean'], 
+                    sd = sqrt(spvls$sv['var']))
+        mv <- rnorm(n*p[j], 
+                    mean = spvls$mv['mean'],
+                    sd = sqrt(spvls$mv['var']))
         
-        if(t.test(sv, mv, var.equal = T)$p.value <= 0.05){
+        if(endpoint == 'SpVL'){
+          test <-  t.test(mv,
+                        sv,
+                        var.equal = T,
+                        alternative = 'greater')
+        }
+       
+        if(endpoint == 'CD4'){
+          sv_cd4 <- 1000 + 365 * -0.0111 * sv^2
+          mv_cd4 <- 1000 + 365 * -0.0111 * sv^2
+          
+          test <- wilcox.test(sv_cd4,
+                              mv_cd4,
+                              alternative = 'greater')
+          
+        }
+      
+        
+        if(test$p.value <= 0.05){
           sig.count = sig.count + 1
+          
         }
         m[i,j] <- sig.count/1000
       }
@@ -91,6 +116,7 @@ SimEffectSizePMV <- function(n,
     mutate(effect_size = rep(e,  length(p))) %>%
     select(-contains('Var')) %>%
     mutate(sample_size = n)
+  
   return(out)
 }
 
@@ -124,7 +150,7 @@ vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.6084),
 effect_size <- seq(0.01, 1, by = 0.01)
 sample_size <- c(25,50,100,200)
 
-simsignificances <- mclapply(sample_size,
+simsignificances_SpVL <- mclapply(sample_size,
                              SimEffectSizePMV, 
                              e = effect_size,
                              mc.cores = cl,
@@ -132,6 +158,30 @@ simsignificances <- mclapply(sample_size,
   bind_rows()
 
 
+simsignificances_CD4 <- mclapply(sample_size,
+                             SimEffectSizePMV, 
+                             e = effect_size,
+                             endpoint == 'CD4',
+                             mc.cores = cl,
+                             mc.set.seed = FALSE) %>%
+  bind_rows()
+
+
+################################### Study Comparisons ###################################
+
+study_effects <- tibble(cohort = c('sagar', 'rv144', 'step'),
+                        size = c( 156, 100, 63),
+                        p_mv = c(0.57, 0.32, 0.25),
+                        es_spvl = c(0.27, 0.239, 0.372),
+                        es_cd4 = c(NA, -2.112, -0.507))
+
+study_significance_spvl <- lapply(1:nrow(study_effects), function(x) SimEffectSizePMV(n = study_effects[['size']][x],
+                                                                                      e = study_effects[['es_spvl']][x],
+                                                                                      specifyPMV = study_effects[['p_mv']][x]))
+
+
+apply(study_effects, 1, SimEffectSizePMV, n = size, e = es_spvl, specifyPMV = p_mv)
+SimEffectSizePMV(n, e, specifyPMV = )
 ################################### Compare Riskgroups ###################################
 
 p_mv <- c(0.21, 0.13, 0.30)
