@@ -399,7 +399,7 @@ filenames <- paste0(results_dir, '/', datanames, '_rawresults.csv')
 mapply(write_csv, combined_results_list, file = filenames)
 
 
-################################### Resample: Compare SpVL ################################### 
+################################### Resample: Compare CD4+ ################################### 
 combined_results_simonly <- combined_results  %>%
   filter(grepl('stratified', dataset)) %>%
   group_split(dataset_id, transmitterallocation)
@@ -415,7 +415,7 @@ filenames <- paste0(results_dir, '/', datanames, '_CD4resample.csv')
 mapply(write_csv, CD4_resample, file = filenames)
 
 
-################################### Resample: Compare CD4+ ################################### 
+################################### Resample: Compare SpVL ################################### 
 SpVL_resample <- lapply(combined_results_simonly, GetSpVLDiff)
 
 # write csv to file
