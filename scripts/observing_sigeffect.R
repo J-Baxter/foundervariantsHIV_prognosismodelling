@@ -158,18 +158,20 @@ simsignificances_SpVL <- mclapply(sample_size,
                              e = effect_size,
                              mc.cores = cl,
                              mc.set.seed = FALSE) %>%
-  bind_rows()
+  bind_rows()%>%
+  mutate(endpoint = 'SpVL')
 
 
-simsignificances_CD4 <- mclapply(sample_size,
-                             SimEffectSizePMV, 
-                             e = effect_size,
-                             endpoint == 'CD4',
-                             mc.cores = cl,
-                             mc.set.seed = FALSE) %>%
-  bind_rows()
+#simsignificances_CD4 <- mclapply(sample_size,
+                         #   SimEffectSizePMV, 
+                          #   e = effect_size,
+                          #   endpoint = 'CD4',
+                          #   mc.cores = cl,
+                           #  mc.set.seed = FALSE) %>%
+  #bind_rows() %>%
+  #mutate(endpoint = 'CD4')
 
-
+simsignificances <- rbind.data.frame(simsignificances_SpVL)#, #simsignificances_CD4)
 ################################### Study Comparisons ###################################
 
 study_effects <- tibble(cohort = c('sagar', 'rv144', 'step'),
@@ -187,6 +189,20 @@ study_significance_spvl <- lapply(1:nrow(study_effects), function(x) SimEffectSi
   mutate(cohort = c('sagar', 'rv144', 'step'))
 
 
+rbind.data.frame(SimEffectSizePMV(n = 50 , e = 0.3, specifyPMV = 0.21),
+                 SimEffectSizePMV(n = 50 , e = 0.3, specifyPMV = 0.3)) %>%
+  mutate(ci.upper = value + 1.96 * sqrt((value*(1-value)/1000)))%>%
+  mutate(ci.lower = value - 1.96 * sqrt((value*(1-value)/1000))) %>%
+  mutate(riskgroup = c('MF', 'MM'))
+
+#study_significance_cd4 <- lapply(2:nrow(study_effects), function(x) SimEffectSizePMV(n = study_effects[['size']][2],
+#                                                                                      e = study_effects[['es_cd4']][2],
+#                                                                                      specifyPMV = study_effects[['p_mv']][2],
+#                                                                                     endpoint = 'CD4')) %>%
+ # do.call(rbind.data.frame,.) %>%
+ # mutate(ci.upper = value + 1.96 * sqrt((value*(1-value)/1000)))%>%
+ # mutate(ci.lower = value - 1.96 * sqrt((value*(1-value)/1000))) %>%
+ # mutate(cohort = c( 'rv144', 'step'))
 ################################### Compare Riskgroups ###################################
 
 p_mv <- c(0.21, 0.13, 0.30)

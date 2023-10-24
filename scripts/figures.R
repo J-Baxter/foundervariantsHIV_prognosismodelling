@@ -62,34 +62,67 @@ plt1a <- ggplot(vls) +
 
 # Plotting the proportion of tests where a significant result is returned under different 
 # conditions of effect size, sample size and p(mv)
-plt1b <- ggplot(simsignificances) +
-  geom_raster(aes(x = p_mv, y = effect_size, fill = value))+    
-  geom_point(x = 0.32, y = 0.293, shape = 2, size = 1.5,colour = 'white') + 
+studysizes <-paste0('n = ', c(25,50,100,200)) 
+names(studysizes) <- c('25','50','100','200') 
+
+plt1b <- ggplot(simsignificances %>% filter(endpoint =='SpVL')) +
+  geom_raster(aes(x = p_mv, 
+                  y = effect_size, 
+                  fill = value))+    
+  #geom_point(x = 0.32, y = 0.293, shape = 2, size = 1.5,colour = 'white') + 
   
-  geom_point(x = 0.25, y = 0.372, shape = 5, size = 1.5,colour = 'white') + 
+  #geom_point(x = 0.25, y = 0.372, shape = 5, size = 1.5,colour = 'white') + 
   
-  geom_vline(xintercept = 0.21, colour = "white", linetype = 2) + 
-  annotate("text", label = "MF",
-           x = 0.24, y = 0.95, size = 2, colour = "white")+
+  #geom_vline(xintercept = 0.21,
+         #    colour = "white",
+          #   linetype = 2) + 
+  #annotate("text", label = "MF",
+          # x = 0.24, 
+          # y = 0.95, 
+          # size = 2,
+           #colour = "white")+
   
-  geom_vline(xintercept = 0.13, colour = "white", linetype = 2)+
-  annotate("text", label = "FM",
-           x = 0.16, y = 0.95, size = 2, colour = "white")+
+  #geom_vline(xintercept = 0.13, 
+             #colour = "white", 
+             #linetype = 2)+
   
-  geom_vline(xintercept = 0.3, colour = "white", linetype = 2) + 
-  annotate("text", label = "MM",
-           x = 0.34, y = 0.95, size = 2, colour = "white")+
+  #annotate("text", label = "FM",
+           #x = 0.16, 
+          # y = 0.95, 
+          # size = 2, 
+           #colour = "white")+
   
-  facet_wrap(.~sample_size, scales = "free_x") + 
-  scale_y_continuous('Increase in SpVL due to Multiple Variants', expand= c(0,0)) +
-  scale_x_continuous('Cohort P(Multiple Variants)', expand= c(0,0))+
-  scale_fill_distiller(palette = 'GnBu', 'P(SpVL ~ P(MV) is Significant)', direction = 1) +
-  my_theme 
+  #geom_vline(xintercept = 0.3, 
+            # colour = "white", 
+            # linetype = 2) + 
+  
+ # annotate("text", label = "MM",
+          # x = 0.34,
+          # y = 0.95,
+           #size = 2, 
+           #colour = "white")+
+  
+  facet_grid(#rows = vars(endpoint),
+             cols = vars(sample_size), 
+             scales = "free_x",
+             labeller = labeller(sample_size = studysizes)) + 
+  
+  scale_y_continuous(expression(paste("Increase in ", Log[10], " SpVL due to Multiple Variants")), 
+                     expand= c(0,0)) +
+  
+  scale_x_continuous('Study P(Multiple Variants)', 
+                     expand= c(0,0))+
+  
+  scale_fill_distiller(palette = 'GnBu',
+                       'P(SpVL ~ P(MV) is Significant)',
+                       direction = 1) +
+  my_theme +
+  theme(legend.position = 'bottom')
 
 plt_1 <- cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO', rel_widths = c(0.4,0.6))
 
-ggsave(plot = plt_1, filename = paste(figs_dir,sep = '/', "plt_1.jpeg"), 
-       device = jpeg, width = 180, height = 140, units = 'mm')
+ggsave(plot = plt1b, filename = paste(figs_dir,sep = '/', "plt_1.jpeg"), 
+       device = jpeg, width = 180, height = 100, units = 'mm')
 
 
 ############################################## Panel 2 ##############################################
@@ -137,10 +170,10 @@ plt_2c <- mutate(shcs_data_long_transmitterML,
   geom_point(aes(x = log10_SpVL_couplemean, y = log10_SpVL), 
              data = shcs_data_long_transmitterML, 
              colour = '#084081', shape = 4, alpha = 0.4, size = 1) + 
-  scale_x_continuous(name = expression(paste(SpVL[ij], ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_y_continuous(name = expression(paste(SpVL[ij], ' (', Log[10], " copies ", ml**-1, ')')),
                      limits = c(1, 7),
                      expand = c(0.05,0)) + 
-  scale_y_continuous(name = expression(paste("Mean Pair SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
+  scale_x_continuous(name = expression(paste("Mean Pair SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
                      limits = c(1, 7),
                      expand = c(0.05,0))+ 
   my_theme
@@ -220,7 +253,7 @@ plt_2e <- ggplot(df %>% filter(time == 'multiple_founder_proportion')) +
   geom_bar(aes(x = as.numeric(SpVL), y = as.numeric(P_MV), fill = as.factor(SpVL)), stat = 'identity') +
   geom_hline(aes(yintercept = average), linetype = 'dashed')+
   my_theme + 
-  scale_x_log10(expand = c(0,0), expression(paste("SpVL", ' (', Log[10], " copies ", ml**-1, ')')),  
+  scale_x_log10(expand = c(0,0), expression(paste("Transmitter SpVL", ' (', Log[10], " copies ", ml**-1, ')')),  
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", label_math(.x))) +
   scale_y_continuous(expand = c(0,0), 'P(Multiple Variants)', limits = c(0,1), breaks = seq(0,1 ,by = 0.2))+
@@ -229,14 +262,14 @@ plt_2e <- ggplot(df %>% filter(time == 'multiple_founder_proportion')) +
              labeller = as_labeller( c('MF' = 'MF',
                                        'PWID' = 'PWID',
                                        'FM' = 'FM',
-                                       'MM:IA' = 'MM:IA',
-                                       'MM:RA' = 'MM:RA'))) + 
+                                       'MM:IA' = 'MMI',
+                                       'MM:RA' = 'MMR'))) + 
   theme(strip.placement = 'outside')
 
 
 panel_2top <- plot_grid(plt_2a, plt_2c, plt_2d, ncol = 3, align = 'hv', label_size = 9, labels = 'AUTO')
 
-panel_2 <- plot_grid(panel_2top, plt_2e,   nrow = 2, align = 'hv', label_size = 9, labels = c('', 'E'))
+panel_2 <- plot_grid(panel_2top, plt_2e,   nrow = 2, align = 'hv', label_size = 9, labels = c('', 'D'))
 
 ggsave(plot = panel_2 , filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), 
        device = jpeg,  width = 170, height = 140,  units = 'mm')
@@ -246,38 +279,52 @@ ggsave(plot = panel_2 , filename = paste(figs_dir,sep = '/', "panel_2.jpeg"),
 
 #my_palette <- colorRampPalette(brewer.pal(9, "OrRd"))(20)
 
-plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML') ,aes(y = SpVL_recipient, x = 1-p_variants_1))+
-  stat_density_2d(aes(fill = (..density..)**(1/3)), geom = "raster", contour = FALSE) +
-  scale_fill_distiller(palette = 'BuGn',direction = 1,  breaks=1e-6*seq(0,10,by=2)) +
+
+plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = SpVL_recipient, x = 1-p_variants_1),aes(y = y, x = 1-p_variants_1))+
+  #stat_density_2d(aes(fill = (..density..)**(1/3)), geom = "raster", contour = FALSE) +
+  geom_hex(aes(fill = (..density..)), binwidth = c(0.05, 0.2)) + 
+  scale_fill_distiller(palette = 'GnBu',
+                       trans = 'sqrt',
+                       direction = -1) +
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0.02,0.02),
                      limits = c(0,1),
                      breaks = seq(0, 1, by = 0.25))+
   scale_y_log10(name = expression(paste("Recipient SpVL", ' (', Log[10], " copies ", ml**-1, ')')),
-                limits = c(10**1, 10**7.5),
+                limits = c(10**1, 10**7),
                 expand = c(0.05,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  my_theme +
-  facet_grid(cols= vars(dataset_id), switch = 'y')
-  
+  facet_grid(cols= vars(dataset_id), switch = 'y')+
+  my_theme 
+
 
 plt_3b <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = delta_CD4_recipient, x = 1-p_variants_1))+
-  stat_density_2d(aes(fill = (..density..)**(1/3)), geom = "raster", contour = FALSE) +
+  geom_hex(aes(fill = (..density..))) + 
+  #stat_density_2d(aes(fill = (..density..)), geom = "raster", contour = FALSE) +
   #geom_density_2d_filled(bins = 20)+
-  scale_fill_distiller(palette = 'BuGn',direction = 1, breaks=1e-6*seq(0,10,by=2)) +
+  scale_fill_distiller(palette = 'GnBu',
+                       direction = -1,
+                       trans = 'sqrt',
+                       'Kernel Density Estimate') +
   scale_x_continuous(name = 'P(Multiple Variant Recipient)',
                      expand = c(0,0),
                      limits = c(0,1),
                      breaks = seq(0, 1, by = 0.25))+
-  scale_y_continuous(limits = c(-0.5,0), 
+  scale_y_continuous(limits = c(-0.65,0), 
                      expand = c(0,0), 
-                     breaks = seq(-0.5, 0, by = 0.1),
+                     breaks = seq(-0.6, 0, by = 0.1),
                      name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
   facet_grid(cols = vars(dataset_id), switch = 'y')+
-  my_theme
+  my_theme + 
+  theme(legend.position = 'bottom')
 
-panel_3 <- cowplot::plot_grid(plt_3a, plt_3b, align = 'hv', nrow = 2, labels = 'AUTO', label_size = 9)
+panel_3 <- cowplot::plot_grid(plt_3a,
+                              plt_3b + theme(legend.key.width=unit(1,"cm")), 
+                              align = 'hv',
+                              nrow = 2, 
+                              rel_heights = c(0.8, 1), 
+                              labels = c('A', 'B'), label_size = 9)
 
 ggsave(plot = panel_3 , filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), 
        device = jpeg,  width = 170, height = 140,  units = 'mm')
@@ -286,13 +333,13 @@ ggsave(plot = panel_3 , filename = paste(figs_dir,sep = '/', "panel_3.jpeg"),
 ############################################## Panel 4 ##############################################
 
 plt_4a <- ggplot(SpVLresults) +
-  geom_boxplot(aes(x = multiplicity, 
+  geom_boxplot(aes(x = factor(multiplicity, levels =c('log10_SpVL_single', 'log10_SpVL_multiple')), 
                    y = log10_SpVL,
                    fill = multiplicity),  
                outlier.size = 0.5,
                notchwidth = 0.5)+
   scale_x_discrete('Multiplicity',
-                   labels = c('Multiple', 'Single') ) +
+                   labels = c('log10_SpVL_multiple' = 'Multiple',  'log10_SpVL_single' = 'Single') ) +
   scale_y_continuous('Mean Log10 SpVL') +
   scale_fill_brewer(palette = 'BuGn') +
   #scale_colour_brewer(palette = 'OrRd') +
@@ -300,7 +347,15 @@ plt_4a <- ggplot(SpVLresults) +
   facet_grid(cols = vars(riskgroup),
              switch = 'y')+
   my_theme
-  
+
+splv_tb <- SpVLresults %>% summarise(value = median(log10_SpVL), n = n(), sd = sd(log10_SpVL), .by = c('riskgroup', 'multiplicity')) %>%
+  mutate(multiplicity = gsub('log10_SpVL_', '', multiplicity)) %>%
+  rename(log10_SpVL = value) %>%
+  pivot_wider(names_from = multiplicity, values_from = c('log10_SpVL','sd')) %>%
+  group_by(riskgroup) %>%
+  mutate(diff = log10_SpVL_multiple - log10_SpVL_single)
+
+t.test(splv_tb$sd_multiple, splv_tb$sd_single, alternative = 'g', paired = T)
 
 plt_4b <- ggplot(cd4results) +
   geom_ribbon(aes(x = time,
@@ -308,19 +363,19 @@ plt_4b <- ggplot(cd4results) +
                   ymax = `0.99`,
                   fill = multiplicity), 
               alpha = 0.7)+
-  geom_line(aes(x = time, y= `0.5`, 
-                colour = multiplicity),
-            linetype= 'dashed', 
-            linewidth = 0.25) +
+ # geom_line(aes(x = time, y= `0.5`, 
+          #      colour = multiplicity),
+         #   linetype= 'dashed', 
+          #  linewidth = 0.6) +
   scale_x_continuous('Days Post Infection', 
                      expand = c(0,0)) + 
   scale_y_continuous(str_wrap('Proportion of Cohort with < 350 CD4 mm3', 25),
                      expand = c(0,0)) +
   #scale_fill_brewer(palette = 'BuGn') + 
-  scale_fill_manual(values = c('#7bccc4', '#ccebc5')) + 
+  scale_fill_manual(values = c('#2b8cbe', '#ccebc5')) + 
   scale_colour_manual(values = c('#084081', '#238b45')) + 
-  coord_cartesian(xlim = c(365*2,365*8),
-                  ylim = c(0.5, 1.05))+ #cut at 10 years
+  coord_cartesian(xlim = c(365*2,365*7),
+                  ylim = c(0.7, 1.05))+ #cut at 10 years
   facet_grid(cols = vars(riskgroup),
              switch = 'y')+
   my_theme+ 
@@ -334,7 +389,7 @@ panel_4 <- cowplot::plot_grid(plt_4a, plt_4b,
                               label_size = 9)
 
 ggsave(plot = panel_4 , filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), 
-       device = jpeg,  width = 180, height = 140,  units = 'mm')
+       device = jpeg,  width = 180, height = 120,  units = 'mm')
 
 
 
