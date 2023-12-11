@@ -207,12 +207,12 @@ rbind.data.frame(SimEffectSizePMV(n = 50 , e = 0.3, specifyPMV = 0.21),
 
 p_mv <- c(0.21, 0.13, 0.30)
 
-comparesignificances <- SimEffectSizePMV(66, 0.3, specifyPMV = p_mv) %>%
+comparesignificances <- SimEffectSizePMV(66, 0.27, specifyPMV = p_mv) %>%
   rowwise() %>%
-  mutate(ci.lower = prop.test(value*100000, 100000, conf.level = .95, correct = F)$conf.int[1])%>%
-  mutate(ci.upper = prop.test(value*100000, 100000, conf.level = .95, correct = F)$conf.int[2])
+  mutate(ci.lower = prop.test(value*1000, 1000, conf.level = .95, correct = F)$conf.int[1])%>%
+  mutate(ci.upper = prop.test(value*1000, 1000, conf.level = .95, correct = F)$conf.int[2])
 
-or_matrix <- matrix(c(1-comparesignificances$p_mv,comparesignificances$p_mv), nrow = 3) *100000
+or_matrix <- matrix(c(1-comparesignificances$p_mv,comparesignificances$p_mv), nrow = 3) *1000
 
 outcome <- c('single', 'multiple')
 riskgroup <- c('MF', 'FM', 'MM')

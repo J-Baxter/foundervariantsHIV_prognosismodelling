@@ -1,13 +1,14 @@
 # Set theme
-require(ggplot2)
-library(showtext)
-library(showtextdb)
+library(tidyverse)
+library(scales)
+library(extrafont)
 
-# Format fonts for output
-font_add("lmsans10", 'lmsans10-regular.otf')
-showtext_auto()
 
-my_theme <- theme_classic(base_family = "lmsans10")+
+#https://www.fontsquirrel.com/fonts/latin-modern-sans
+font_import(pattern = "lmsans10*") 
+loadfonts()
+
+my_theme <- theme_classic(base_family = "LM Sans 10")+
   theme(
     #text = element_text(size=10),
     axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size = 8),
