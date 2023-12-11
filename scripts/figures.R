@@ -4,12 +4,16 @@
 source('./scripts/dependencies.R')
 #source('./scripts/global_theme.R')
 
-library(showtext)
-library(showtextdb)
-font_add("lmsans10", 'lmsans10-regular.otf')
-showtext_auto()
+library(tidyverse)
+library(scales)
+library(extrafont)
 
-my_theme <- theme_classic(base_family = "lmsans10")+
+
+#https://www.fontsquirrel.com/fonts/latin-modern-sans
+font_import(pattern = "lmsans10*") 
+loadfonts()
+
+my_theme <- theme_classic(base_family = "LM Sans 10")+
   theme(
     #text = element_text(size=10),
     axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size = 8),
@@ -22,6 +26,7 @@ my_theme <- theme_classic(base_family = "lmsans10")+
     panel.spacing = unit(2, "lines"), 
     strip.background = element_blank()
   )
+
 
 ############################################## Import Results ############################################## 
 
@@ -62,16 +67,20 @@ plt1a <- ggplot(vls) +
 
 # Plotting the proportion of tests where a significant result is returned under different 
 # conditions of effect size, sample size and p(mv)
-studysizes <-paste0('n = ', c(25,50,100,200)) 
-names(studysizes) <- c('25','50','100','200') 
+studysizes <-c('Sagar et al.', 'Janes et al. RV144', 'Janes et al. STEP') 
+names(studysizes) <- c( '156', '100', '63')
+studysizes <- sort(studysizes, decreasing = T)
+study_effects <- study_effects %>% rename(sample_size = size)
 
 plt1b <- ggplot(simsignificances %>% filter(endpoint =='SpVL')) +
   geom_raster(aes(x = p_mv, 
                   y = effect_size, 
                   fill = value))+    
-  #geom_point(x = 0.32, y = 0.293, shape = 2, size = 1.5,colour = 'white') + 
+  geom_point(aes(x = p_mv, y = es_spvl), size = 1.5,colour = 'white', data = study_effects) + 
   
-  #geom_point(x = 0.25, y = 0.372, shape = 5, size = 1.5,colour = 'white') + 
+  #geom_point(x = 0.25, y = 0.372, shape = 2, size = 1.5,colour = 'white') + 
+  
+  #geom_point(x = 0.57, y = 0.27, shape = 5, size = 1.5,colour = 'white') + 
   
   #geom_vline(xintercept = 0.21,
          #    colour = "white",
@@ -107,6 +116,14 @@ plt1b <- ggplot(simsignificances %>% filter(endpoint =='SpVL')) +
              scales = "free_x",
              labeller = labeller(sample_size = studysizes)) + 
   
+  #scale_shape(solid = FALSE, 
+              #name = 'Cohort',
+             # labels = c('Janes-RV144',
+                         #'Sagar-Mombasa',
+                        # 'Janes-STEP'),
+              #guide = guide_legend(override.aes = list(colour = 'darkgrey'),
+                                  # direction = "horizontal"))+ 
+  
   scale_y_continuous(expression(paste("Increase in ", Log[10], " SpVL due to Multiple Variants")), 
                      expand= c(0,0)) +
   
@@ -114,15 +131,19 @@ plt1b <- ggplot(simsignificances %>% filter(endpoint =='SpVL')) +
                      expand= c(0,0))+
   
   scale_fill_distiller(palette = 'GnBu',
-                       'P(SpVL ~ P(MV) is Significant)',
-                       direction = 1) +
+                       'Probability of Observing a True Effect',
+                       direction = 1,
+                       guide = guide_colourbar(
+                         direction = "horizontal"
+                       )) +
   my_theme +
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'bottom',
+        legend.box="vertical")
 
-plt_1 <- cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO', rel_widths = c(0.4,0.6))
+#plt_1 <- cowplot::plot_grid(plt1a, plt1b, align = 'hv', nrow = 1, labels = 'AUTO', rel_widths = c(0.4,0.6))
 
 ggsave(plot = plt1b, filename = paste(figs_dir,sep = '/', "plt_1.jpeg"), 
-       device = jpeg, width = 180, height = 100, units = 'mm')
+       device = jpeg, width = 180, height = 120, units = 'mm')
 
 
 ############################################## Panel 2 ##############################################
