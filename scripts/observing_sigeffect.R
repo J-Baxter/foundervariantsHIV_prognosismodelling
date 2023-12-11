@@ -151,7 +151,7 @@ vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.6084),
 ################################### Simulate proportion of significant observations ###################################
 # Vector of effect and sample sizes
 effect_size <- seq(0.01, 1, by = 0.01)
-sample_size <- c(25,50,100,200)
+sample_size <- c( 156, 100, 63)
 
 simsignificances_SpVL <- mclapply(sample_size,
                              SimEffectSizePMV, 
