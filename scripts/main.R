@@ -267,6 +267,33 @@ combined_data_CD4 <- combined_data  %>%
   setNames(c('FM', 'MF', 'MM', 'OTHER', 'PWID', 'UNKNOWN')) 
 
 
+
+################################### Allocate f and p from joint posterior ###################################
+load("~/Documents/PhD2/prognosis_modelling/data/posteriors_by_exposure.RData")
+fp <- list( mtf, ftm, msmi, msmr, pwid)
+
+combined_data_CD4$FM <- combined_data_CD4$FM  %>%
+  cbind.data.frame(ftm[sample(1:nrow(ftm), nrow(combined_data_CD4$FM), replace = T),])
+
+combined_data_CD4$MF <- combined_data_CD4$MF  %>%
+  cbind.data.frame(mtf[sample(1:nrow(mtf), nrow(combined_data_CD4$MF), replace = T),])
+
+combined_data_CD4$MMI<- combined_data_CD4$MMI  %>%
+  cbind.data.frame(msmi[sample(1:nrow(msmi), nrow(combined_data_CD4$MMI), replace = T),])
+
+combined_data_CD4$MMR<- combined_data_CD4$MMR %>%
+  cbind.data.frame(msmr[sample(1:nrow(msmr), nrow(combined_data_CD4$MMR), replace = T),])
+
+combined_data_CD4$PWID<- combined_data_CD4$PWID  %>%
+  cbind.data.frame(pwid[sample(1:nrow(pwid), nrow(combined_data_CD4$PWID), replace = T),])
+
+combined_data_CD4$OTHER <- combined_data_CD4$OTHER  %>%
+  cbind.data.frame(mtf[sample(1:nrow(mtf), nrow(combined_data_CD4$OTHER), replace = T),])
+
+combined_data_CD4$UNKNOWN <- combined_data_CD4$UNKNOWN  %>%
+  cbind.data.frame(mtf[sample(1:nrow(mtf), nrow(combined_data_CD4$UNKNOWN), replace = T),])
+
+
 ################################### Calculate Joint Probability Dist MV/MP ###################################
 # Implement transmission model (Thompson et al. and re-parameterised by Villabona-Arenas et al. (Unpublished))
 # NB: THIS IS COMPUTATIONALLY EXPENSIVE AND WILL RUN FOR ~ 25 HOURS USING 4 CORES
@@ -274,8 +301,8 @@ combined_data_CD4 <- combined_data  %>%
 # Female-to-Male
 FM_results <- RunParallel(TransmissionModel2,
                           combined_data_CD4$FM$SpVL_transmitter,
-                          PerVirionProbability = 8.779E-07, 
-                          PropExposuresInfective = 0.14337) %>%
+                          PerVirionProbability = combined_data_CD4$FM$ppp, 
+                          PropExposuresInfective = combined_data_CD4$FM$fEnv) %>%
   
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
@@ -290,8 +317,8 @@ FM_results <- RunParallel(TransmissionModel2,
 # Male-to-Female
 MF_results <- RunParallel(TransmissionModel2,
                           combined_data_CD4$MF$SpVL_transmitter,
-                          PerVirionProbability = 1.765E-06, 
-                          PropExposuresInfective = 0.13762) %>%
+                          PerVirionProbability = combined_data_CD4$MF$ppp, 
+                          PropExposuresInfective = combined_data_CD4$MF$fEnv) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -305,8 +332,8 @@ MF_results <- RunParallel(TransmissionModel2,
 # MSMI
 MMI_results <- RunParallel(TransmissionModel2, 
                           combined_data_CD4$MM$SpVL_transmitter,
-                          PerVirionProbability = 8.779E-07, 
-                          PropExposuresInfective = 0.008839) %>%
+                          PerVirionProbability = combined_data_CD4$MMI$ppp, 
+                          PropExposuresInfective = combined_data_CD4$MMI$fEnv) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -319,8 +346,8 @@ MMI_results <- RunParallel(TransmissionModel2,
 # MSMR
 MMR_results <- RunParallel(TransmissionModel2, 
                           combined_data_CD4$MM$SpVL_transmitter,
-                          PerVirionProbability = 3.19E-06, 
-                          PropExposuresInfective = 0.08923) %>%
+                          PerVirionProbability = combined_data_CD4$MMR$ppp, 
+                          PropExposuresInfective = combined_data_CD4$MMR$fEnv) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -334,8 +361,8 @@ MMR_results <- RunParallel(TransmissionModel2,
 # PWID
 PWID_results <- RunParallel(TransmissionModel2, 
                             combined_data_CD4$PWID$SpVL_transmitter,
-                            PerVirionProbability = 3.19E-06, 
-                            PropExposuresInfective = 0.08923) %>%
+                            PerVirionProbability = combined_data_CD4$PWID$ppp, 
+                            PropExposuresInfective = combined_data_CD4$PWID$fEnv) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -348,9 +375,9 @@ PWID_results <- RunParallel(TransmissionModel2,
 
 # OTHER: Currently using Male-to-Female
 OTHER_results <- RunParallel(TransmissionModel2, 
-                               combined_data_CD4$OTHER$SpVL_transmitter,
-                               PerVirionProbability = 8.779E-07, 
-                               PropExposuresInfective = 0.14337) %>%
+                             combined_data_CD4$OTHER$SpVL_transmitter,
+                             PerVirionProbability = combined_data_CD4$MF$ppp, 
+                             PropExposuresInfective = combined_data_CD4$MF$fEnv) %>%
 lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -364,8 +391,8 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
 # UNKNOWN: Currently using Male-to-Female
 UNKNOWN_results <- RunParallel(TransmissionModel2, 
                                combined_data_CD4$UNKNOWN$SpVL_transmitter,
-                               PerVirionProbability = 8.779E-07, 
-                               PropExposuresInfective = 0.14337) %>%
+                               PerVirionProbability = combined_data_CD4$MF$ppp, 
+                               PropExposuresInfective = combined_data_CD4$MF$fEnv) %>%
 lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
