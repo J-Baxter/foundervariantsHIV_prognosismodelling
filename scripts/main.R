@@ -264,7 +264,7 @@ combined_data_CD4 <- combined_data  %>%
   bind_rows() %>%
   rowid_to_column( "index") %>% 
   group_split(riskgroup_recipient) %>%
-  setNames(c('FM', 'MF', 'MM', 'OTHER', 'PWID', 'UNKNOWN')) 
+  setNames(c('FM', 'MF', 'MM', 'OTHER', 'PWID', 'UNKNOWN')) %>% as.list()
 
 
 
@@ -272,17 +272,17 @@ combined_data_CD4 <- combined_data  %>%
 load("~/Documents/PhD2/prognosis_modelling/data/posteriors_by_exposure.RData")
 fp <- list( mtf, ftm, msmi, msmr, pwid)
 
-combined_data_CD4$FM <- combined_data_CD4$FM  %>%
+combined_data_CD4$FM <- combined_data_CD4$FM %>%
   cbind.data.frame(ftm[sample(1:nrow(ftm), nrow(combined_data_CD4$FM), replace = T),])
 
 combined_data_CD4$MF <- combined_data_CD4$MF  %>%
   cbind.data.frame(mtf[sample(1:nrow(mtf), nrow(combined_data_CD4$MF), replace = T),])
 
-combined_data_CD4$MMI<- combined_data_CD4$MMI  %>%
-  cbind.data.frame(msmi[sample(1:nrow(msmi), nrow(combined_data_CD4$MMI), replace = T),])
+combined_data_CD4$MMI<- combined_data_CD4$MM  %>%
+  cbind.data.frame(msmi[sample(1:nrow(msmi), nrow(combined_data_CD4$MM), replace = T),])
 
-combined_data_CD4$MMR<- combined_data_CD4$MMR %>%
-  cbind.data.frame(msmr[sample(1:nrow(msmr), nrow(combined_data_CD4$MMR), replace = T),])
+combined_data_CD4$MMR<- combined_data_CD4$MM %>%
+  cbind.data.frame(msmr[sample(1:nrow(msmr), nrow(combined_data_CD4$MM), replace = T),])
 
 combined_data_CD4$PWID<- combined_data_CD4$PWID  %>%
   cbind.data.frame(pwid[sample(1:nrow(pwid), nrow(combined_data_CD4$PWID), replace = T),])
@@ -331,7 +331,7 @@ MF_results <- RunParallel(TransmissionModel2,
 
 # MSMI
 MMI_results <- RunParallel(TransmissionModel2, 
-                          combined_data_CD4$MM$SpVL_transmitter,
+                          combined_data_CD4$MMI$SpVL_transmitter,
                           PerVirionProbability = combined_data_CD4$MMI$ppp, 
                           PropExposuresInfective = combined_data_CD4$MMI$fEnv) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
@@ -345,7 +345,7 @@ MMI_results <- RunParallel(TransmissionModel2,
 
 # MSMR
 MMR_results <- RunParallel(TransmissionModel2, 
-                          combined_data_CD4$MM$SpVL_transmitter,
+                          combined_data_CD4$MMR$SpVL_transmitter,
                           PerVirionProbability = combined_data_CD4$MMR$ppp, 
                           PropExposuresInfective = combined_data_CD4$MMR$fEnv) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
