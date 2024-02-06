@@ -141,13 +141,13 @@ decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist[['mean']],
                                     effectsize = 0.3)
 
 
-vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.6084), 
-              recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
-              recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
+vls <- rbind.data.frame(
+  data.frame(vl = rnorm(250, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var']))), # mv
+  data.frame(vl = rnorm(750, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))))%>%
+    as_tibble()
+  
 
-  pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
-
-
+#ggpubr::ggqqplot(vls$vl)
 ################################### Simulate proportion of significant observations ###################################
 # Vector of effect and sample sizes
 effect_size <- seq(0.01, 1, by = 0.01)
