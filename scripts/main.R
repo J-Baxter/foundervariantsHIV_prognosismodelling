@@ -269,7 +269,7 @@ combined_data_CD4 <- combined_data  %>%
 
 
 ################################### Allocate f and p from joint posterior ###################################
-load("~/Documents/PhD2/prognosis_modelling/data/posteriors_by_exposure.RData")
+load("./data/posteriors_by_exposure.RData")
 fp <- list( mtf, ftm, msmi, msmr, pwid)
 
 combined_data_CD4$FM <- combined_data_CD4$FM %>%
@@ -296,14 +296,20 @@ combined_data_CD4$UNKNOWN <- combined_data_CD4$UNKNOWN  %>%
 
 ################################### Calculate Joint Probability Dist MV/MP ###################################
 # Implement transmission model (Thompson et al. and re-parameterised by Villabona-Arenas et al. (Unpublished))
-# NB: THIS IS COMPUTATIONALLY EXPENSIVE AND WILL RUN FOR ~ 25 HOURS USING 4 CORES
+# NB: THIS IS COMPUTATIONALLY EXPENSIVE 
+
+# Set up cluster (fork)
+cl <- detectCores() %>% `-` (2) 
 
 # Female-to-Male
-FM_results <- RunParallel(TransmissionModel2,
-                          combined_data_CD4$FM$SpVL_transmitter,
-                          PerVirionProbability = combined_data_CD4$FM$ppp, 
-                          PropExposuresInfective = combined_data_CD4$FM$fEnv) %>%
-  
+start <- Sys.time()
+print(start)
+FM_results <- mcmapply(TransmissionModel2,
+                       sp_ViralLoad = combined_data_CD4$FM$SpVL_transmitter,
+                       PerVirionProbability = combined_data_CD4$FM$ppp, 
+                       PropExposuresInfective = combined_data_CD4$FM$fEnv,
+                       mc.cores = cl,
+                       mc.set.seed = FALSE) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -313,12 +319,22 @@ FM_results <- RunParallel(TransmissionModel2,
          SIMPLIFY = F) %>%
   bind_rows()
 
+end <- Sys.time()
+elapsed <- end-start
+print(end)
+print(elapsed)
 
 # Male-to-Female
-MF_results <- RunParallel(TransmissionModel2,
-                          combined_data_CD4$MF$SpVL_transmitter,
-                          PerVirionProbability = combined_data_CD4$MF$ppp, 
-                          PropExposuresInfective = combined_data_CD4$MF$fEnv) %>%
+start <- Sys.time()
+print(start)
+
+MF_results <- mcmapply(TransmissionModel2,
+                       sp_ViralLoad = combined_data_CD4$MF$SpVL_transmitter,
+                       PerVirionProbability = combined_data_CD4$MF$ppp, 
+                       PropExposuresInfective = combined_data_CD4$MF$fEnv,
+                       SIMPLIFY = FALSE,
+                       mc.cores = cl,
+                       mc.set.seed = FALSE) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -328,12 +344,22 @@ MF_results <- RunParallel(TransmissionModel2,
          SIMPLIFY = F)%>%
   bind_rows()
 
+end <- Sys.time()
+elapsed <- end-start
+print(end)
+print(elapsed)
 
 # MSMI
-MMI_results <- RunParallel(TransmissionModel2, 
-                          combined_data_CD4$MMI$SpVL_transmitter,
-                          PerVirionProbability = combined_data_CD4$MMI$ppp, 
-                          PropExposuresInfective = combined_data_CD4$MMI$fEnv) %>%
+start <- Sys.time()
+print(start)
+
+MMI_results <- mcmapply(TransmissionModel2, 
+                        sp_ViralLoad = combined_data_CD4$MMI$SpVL_transmitter,
+                        PerVirionProbability = combined_data_CD4$MMI$ppp, 
+                        PropExposuresInfective = combined_data_CD4$MMI$fEnv,
+                        SIMPLIFY = FALSE,
+                        mc.cores = cl,
+                        mc.set.seed = FALSE) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -342,12 +368,23 @@ MMI_results <- RunParallel(TransmissionModel2,
            group_split(index), 
          SIMPLIFY = F)%>%
   bind_rows()
+
+end <- Sys.time()
+elapsed <- end-start
+print(end)
+print(elapsed)
 
 # MSMR
-MMR_results <- RunParallel(TransmissionModel2, 
-                          combined_data_CD4$MMR$SpVL_transmitter,
-                          PerVirionProbability = combined_data_CD4$MMR$ppp, 
-                          PropExposuresInfective = combined_data_CD4$MMR$fEnv) %>%
+start <- Sys.time()
+print(start)
+
+MMR_results <- mcmapply(TransmissionModel2, 
+                        sp_ViralLoad = combined_data_CD4$MMR$SpVL_transmitter,
+                        PerVirionProbability = combined_data_CD4$MMR$ppp, 
+                        PropExposuresInfective = combined_data_CD4$MMR$fEnv,
+                        SIMPLIFY = FALSE,
+                        mc.cores = cl,
+                        mc.set.seed = FALSE) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -357,12 +394,22 @@ MMR_results <- RunParallel(TransmissionModel2,
          SIMPLIFY = F)%>%
   bind_rows()
 
+end <- Sys.time()
+elapsed <- end-start
+print(end)
+print(elapsed)
 
 # PWID
-PWID_results <- RunParallel(TransmissionModel2, 
-                            combined_data_CD4$PWID$SpVL_transmitter,
-                            PerVirionProbability = combined_data_CD4$PWID$ppp, 
-                            PropExposuresInfective = combined_data_CD4$PWID$fEnv) %>%
+start <- Sys.time()
+print(start)
+
+PWID_results <- mcmapply(TransmissionModel2, 
+                         sp_ViralLoad = combined_data_CD4$PWID$SpVL_transmitter,
+                         PerVirionProbability = combined_data_CD4$PWID$ppp, 
+                         PropExposuresInfective = combined_data_CD4$PWID$fEnv,
+                         SIMPLIFY = FALSE,
+                         mc.cores = cl,
+                         mc.set.seed = FALSE) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -372,12 +419,22 @@ PWID_results <- RunParallel(TransmissionModel2,
          SIMPLIFY = F)%>%
   bind_rows()
 
+end <- Sys.time()
+elapsed <- end-start
+print(end)
+print(elapsed)
 
 # OTHER: Currently using Male-to-Female
-OTHER_results <- RunParallel(TransmissionModel2, 
-                             combined_data_CD4$OTHER$SpVL_transmitter,
-                             PerVirionProbability = combined_data_CD4$MF$ppp, 
-                             PropExposuresInfective = combined_data_CD4$MF$fEnv) %>%
+start <- Sys.time()
+print(start)
+
+OTHER_results <- mcmapply(TransmissionModel2, 
+                          sp_ViralLoad = combined_data_CD4$OTHER$SpVL_transmitter,
+                          PerVirionProbability = combined_data_CD4$MF$ppp, 
+                          PropExposuresInfective = combined_data_CD4$MF$fEnv,
+                          SIMPLIFY = FALSE,
+                          mc.cores = cl,
+                          mc.set.seed = FALSE) %>%
 lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -387,12 +444,23 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
          SIMPLIFY = F)%>%
   bind_rows()
 
+end <- Sys.time()
+elapsed <- end-start
+print(end)
+print(elapsed)
+
 
 # UNKNOWN: Currently using Male-to-Female
-UNKNOWN_results <- RunParallel(TransmissionModel2, 
-                               combined_data_CD4$UNKNOWN$SpVL_transmitter,
-                               PerVirionProbability = combined_data_CD4$MF$ppp, 
-                               PropExposuresInfective = combined_data_CD4$MF$fEnv) %>%
+start <- Sys.time()
+print(start)
+
+UNKNOWN_results <- mcmapply(TransmissionModel2, 
+                            sp_ViralLoad = combined_data_CD4$UNKNOWN$SpVL_transmitter,
+                            PerVirionProbability = combined_data_CD4$MF$ppp, 
+                            PropExposuresInfective = combined_data_CD4$MF$fEnv,
+                            SIMPLIFY = FALSE,
+                            mc.cores = cl,
+                            mc.set.seed = FALSE) %>%
 lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
   
   mapply(PostProcess,
@@ -401,6 +469,11 @@ lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','S
            group_split(index), 
          SIMPLIFY = F)%>%
   bind_rows()
+
+end <- Sys.time()
+elapsed <- end-start
+print(end)
+print(elapsed)
 
 
 ################################### Write to file ################################### 
