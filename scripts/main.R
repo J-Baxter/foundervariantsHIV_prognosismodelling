@@ -308,6 +308,7 @@ FM_results <- mcmapply(TransmissionModel2,
                        sp_ViralLoad = combined_data_CD4$FM$SpVL_transmitter,
                        PerVirionProbability = combined_data_CD4$FM$ppp, 
                        PropExposuresInfective = combined_data_CD4$FM$fEnv,
+                       SIMPLIFY = FALSE,
                        mc.cores = cl,
                        mc.set.seed = FALSE) %>%
   lapply(., setNames, nm = c('variant_distribution','probTransmissionPerSexAct','SpVL')) %>%
