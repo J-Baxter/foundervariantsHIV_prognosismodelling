@@ -14,6 +14,7 @@ source('./scripts/BonhoefferEqns.R')
 source('./scripts/AllocateTransmitter.R')
 source('./scripts/simulate_cohorts_funcs.R')
 source('./scripts/PostProcessing.R')
+source('./scripts/interpret_outputs.R')
 #source('./scripts/global_theme.R')
 
 
