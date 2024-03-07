@@ -7,6 +7,7 @@ source('./scripts/AllocateTransmitter.R')
 source('./scripts/simulate_cohorts_funcs.R')
 source('./scripts/PostProcessing.R')
 source('./scripts/interpret_outputs.R')
+source('./scripts/populationdata_acrossVL_models_R.r')
 #source('./scripts/global_theme.R')
 library(tidyverse)
 library(scales)
@@ -307,7 +308,6 @@ plt_2d <- ggplot(cd4_data , aes(x = SpVL, y=CD4.decline))+
 
 
 # Transmission Model ~ Risk Group
-source('./scripts/deprecated/populationdata_models.R')
 mf <- sapply(raise_to_power(10, 2:7),
              populationmodel_acrossVL_Env, 
              PerVirionProbability = 1.765e-06,
@@ -375,12 +375,14 @@ plt_2e <- ggplot(df %>% filter(time == 'multiple_founder_proportion')) +
   theme(strip.placement = 'outside')
 
 
-panel_2top <- plot_grid(plt_2a, plt_2c, plt_2d, ncol = 3, align = 'hv', label_size = 9, labels = 'AUTO')
+panel_2top <- plot_grid(plt_2c, plt_2d, align = 'hv', label_size = 9, labels = 'AUTO')
 
-panel_2 <- plot_grid(panel_2top, plt_2e,   nrow = 2, label_size = 9, labels = c('', 'D'))
+panel_2 <- plot_grid(panel_2top, plt_2e,   nrow = 2, label_size = 9, labels = c('', 'C'))
 
-ggsave(plot = panel_2 , filename = paste(figs_dir,sep = '/', "panel_2.jpeg"), 
-       device = jpeg,  width = 170, height = 140,  units = 'mm')
+ggsave('figure3.eps', device=cairo_ps,  height = 140, width = 160, units = 'mm')
+Sys.sleep(0.5)
+panel_2
+dev.off()
 
 
 ############################################## Panel 3 ##############################################
@@ -403,7 +405,12 @@ plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = 
                 expand = c(0.05,0),
                 breaks = trans_breaks("log10", function(x) 10**x),
                 labels = trans_format("log10", math_format(.x))) +
-  facet_grid(cols= vars(dataset_id), switch = 'y')+
+  facet_grid(cols= vars(dataset_id), switch = 'y',
+             labeller = as_labeller( c('MF' = 'Male to Female',
+                                       'PWID' = 'PWID',
+                                       'FM' = 'Female to Male',
+                                       'MMI' = 'MSM Insertive',
+                                       'MMR' = 'MSM Receptive')))+
   my_theme 
 
 
@@ -423,21 +430,32 @@ plt_3b <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = 
                      expand = c(0,0), 
                      breaks = seq(-0.6, 0, by = 0.1),
                      name =expression(paste(Delta, ' CD4+ ', mu, l**-1, ' ', day**-1))) +
-  facet_grid(cols = vars(dataset_id), switch = 'y')+
-  my_theme + 
-  theme(legend.position = 'bottom')
+  facet_grid(cols = vars(dataset_id), switch = 'y',
+             labeller = as_labeller( c('MF' = 'Male to Female',
+                                       'PWID' = 'PWID',
+                                       'FM' = 'Female to Male',
+                                       'MMI' = 'MSM Insertive',
+                                       'MMR' = 'MSM Receptive')))+
+  my_theme 
 
-panel_3 <- cowplot::plot_grid(plt_3a,
+legend <- get_legend(
+  # create some space to the left of the legend
+  plt_3b + theme(legend.position = 'right', legend.box.margin = margin(10, 0, 15, 10))
+)
+  
+panel_3_main <- cowplot::plot_grid(plt_3a,NA,
                               plt_3b + theme(legend.key.width=unit(1,"cm")), 
                               align = 'hv',
-                              nrow = 2, 
-                              rel_heights = c(0.8, 1), 
-                              labels = c('A', 'B'), label_size = 9)
+                              nrow = 3, 
+                              rel_heights = c(1,0.1, 1), 
+                              labels = c('A','', 'B'), label_size = 9)
 
-ggsave(plot = panel_3 , filename = paste(figs_dir,sep = '/', "panel_3.jpeg"), 
-       device = jpeg,  width = 170, height = 140,  units = 'mm')
+panel_3 <- cowplot::plot_grid(panel_3_main, legend,  rel_widths = c(0.85, .15))
 
-
+ggsave('figure4.eps', device=cairo_ps,   width = 260, height = 140,  units = 'mm')
+Sys.sleep(0.5)
+panel_3
+dev.off()
 ############################################## Panel 4 ##############################################
 
 plt_4a <- ggplot(SpVLresults) +
@@ -453,6 +471,12 @@ plt_4a <- ggplot(SpVLresults) +
   #scale_colour_brewer(palette = 'OrRd') +
   #coord_cartesian(xlim = c(0,365*10))+ #cut at 10 years
   facet_grid(cols = vars(riskgroup),
+             labeller = as_labeller( c('MF' = 'Male to Female',
+                                       'PWID' = 'PWID',
+                                       'FM' = 'Female to Male',
+                                       'MMI' = 'MSM Insertive',
+                                       'MMR' = 'MSM Receptive')),
+             
              switch = 'y')+
   my_theme
 
@@ -485,20 +509,32 @@ plt_4b <- ggplot(cd4results) +
   coord_cartesian(xlim = c(365*2,365*7),
                   ylim = c(0.7, 1.05))+ #cut at 10 years
   facet_grid(cols = vars(riskgroup),
-             switch = 'y')+
-  my_theme+ 
-  theme(legend.position = 'bottom')
+             switch = 'y',
+             labeller = as_labeller( c('MF' = 'Male to Female',
+                                       'PWID' = 'PWID',
+                                       'FM' = 'Female to Male',
+                                       'MMI' = 'MSM Insertive',
+                                       'MMR' = 'MSM Receptive')))+
+  my_theme
 
-panel_4 <- cowplot::plot_grid(plt_4a, plt_4b, 
+legend <- get_legend(
+  # create some space to the left of the legend
+  plt_4b + theme(legend.position = 'right', legend.box.margin = margin(10, 0, 15, 10))
+)
+
+
+panel_4_main <- cowplot::plot_grid(plt_4a, NA,plt_4b, 
                               align = 'hv',
-                              nrow = 2, 
-                              rel_heights = c(0.8,1),
-                              labels = 'AUTO',
+                              nrow = 3, 
+                              rel_heights = c(1, 0.1, 1),
+                              labels = c('A', '', 'B'),
                               label_size = 9)
 
-ggsave(plot = panel_4 , filename = paste(figs_dir,sep = '/', "panel_4.jpeg"), 
-       device = jpeg,  width = 180, height = 120,  units = 'mm')
+panel_4 <- cowplot::plot_grid(panel_4_main, legend,  rel_widths = c(0.85, .15))
 
-
+ggsave('figure5.eps', device=cairo_ps,   width = 260, height = 140, units = 'mm')
+Sys.sleep(0.5)
+panel_4
+dev.off()
 
 cat('All plots complete. \n')
