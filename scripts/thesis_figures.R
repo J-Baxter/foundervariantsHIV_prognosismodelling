@@ -1,12 +1,18 @@
 # Figures
 
-# Dependencies
+################################### Dependencies ###################################
 source('./scripts/dependencies.R')
+source('./scripts/BonhoefferEqns.R')
+source('./scripts/AllocateTransmitter.R')
+source('./scripts/simulate_cohorts_funcs.R')
+source('./scripts/PostProcessing.R')
+source('./scripts/interpret_outputs.R')
 #source('./scripts/global_theme.R')
-
 library(tidyverse)
 library(scales)
 library(extrafont)
+
+
 
 
 #https://www.fontsquirrel.com/fonts/latin-modern-sans
@@ -26,6 +32,22 @@ my_theme <- theme_classic(base_family = "LM Sans 10")+
     panel.spacing = unit(2, "lines"), 
     strip.background = element_blank()
   )
+
+################################### Import Data ###################################
+# Paired set point viral load (SpVL), age, riskgroup and sex data provided on request
+# by the Swiss HIV Cohort Study. These data were used in the analysis of Bertels et. al
+# 2018 https://academic.oup.com/mbe/article/35/1/27/4210012
+
+# init distribtions for transmitter allocation
+# mc and vc are the mean and variance of the Amsterdam seroconverter study, respectively.
+mc <- 4.35
+vc <- 0.47**2
+
+t <- CalcTransmitter(mc,vc)
+r <- CalcRecipient(mc,vc)
+
+# Import data and pre-process
+source('./scripts/import_data.R')
 
 
 ############################################## Import Results ############################################## 
@@ -75,7 +97,8 @@ study_effects <- study_effects %>% rename(sample_size = size)
 plt1b <- ggplot(simsignificances %>% filter(endpoint =='SpVL')) +
   geom_raster(aes(x = p_mv, 
                   y = effect_size, 
-                  fill = value))+    
+                  fill = value),
+              interpolate = T)+    
   geom_point(aes(x = p_mv, y = es_spvl), size = 1.5,colour = 'white', data = study_effects) + 
   
   #geom_point(x = 0.25, y = 0.372, shape = 2, size = 1.5,colour = 'white') + 
@@ -83,46 +106,46 @@ plt1b <- ggplot(simsignificances %>% filter(endpoint =='SpVL')) +
   #geom_point(x = 0.57, y = 0.27, shape = 5, size = 1.5,colour = 'white') + 
   
   #geom_vline(xintercept = 0.21,
-         #    colour = "white",
-          #   linetype = 2) + 
+  #    colour = "white",
+  #   linetype = 2) + 
   #annotate("text", label = "MF",
-          # x = 0.24, 
-          # y = 0.95, 
-          # size = 2,
-           #colour = "white")+
-  
-  #geom_vline(xintercept = 0.13, 
-             #colour = "white", 
-             #linetype = 2)+
-  
-  #annotate("text", label = "FM",
-           #x = 0.16, 
-          # y = 0.95, 
-          # size = 2, 
-           #colour = "white")+
-  
-  #geom_vline(xintercept = 0.3, 
-            # colour = "white", 
-            # linetype = 2) + 
-  
- # annotate("text", label = "MM",
-          # x = 0.34,
-          # y = 0.95,
-           #size = 2, 
-           #colour = "white")+
-  
-  facet_grid(#rows = vars(endpoint),
-             rows = vars(sample_size), 
-             scales = "free_x",
-             labeller = labeller(sample_size = studysizes)) + 
+  # x = 0.24, 
+  # y = 0.95, 
+# size = 2,
+#colour = "white")+
+
+#geom_vline(xintercept = 0.13, 
+#colour = "white", 
+#linetype = 2)+
+
+#annotate("text", label = "FM",
+#x = 0.16, 
+# y = 0.95, 
+# size = 2, 
+#colour = "white")+
+
+#geom_vline(xintercept = 0.3, 
+# colour = "white", 
+# linetype = 2) + 
+
+# annotate("text", label = "MM",
+# x = 0.34,
+# y = 0.95,
+#size = 2, 
+#colour = "white")+
+
+facet_grid(#rows = vars(endpoint),
+  rows = vars(sample_size), 
+  scales = "free_x",
+  labeller = labeller(sample_size = studysizes)) + 
   
   #scale_shape(solid = FALSE, 
-              #name = 'Cohort',
-             # labels = c('Janes-RV144',
-                         #'Sagar-Mombasa',
-                        # 'Janes-STEP'),
-              #guide = guide_legend(override.aes = list(colour = 'darkgrey'),
-                                  # direction = "horizontal"))+ 
+  #name = 'Cohort',
+  # labels = c('Janes-RV144',
+  #'Sagar-Mombasa',
+  # 'Janes-STEP'),
+  #guide = guide_legend(override.aes = list(colour = 'darkgrey'),
+  # direction = "horizontal"))+ 
   
   scale_y_continuous(expression(paste("Increase in ", Log[10], " SpVL due to Multiple Variants")), 
                      expand= c(0,0)) +
@@ -157,18 +180,9 @@ dev.off()
 require(ggdag)
 require(dagitty)
 
-ShortenDagArrows <- function(tidy_dag, proportion){
-  # Update underlying ggdag object
-  tidy_dag$data <- dplyr::mutate(tidy_dag$data, 
-                                 xend = (1-proportion/2)*(xend - x) + x, 
-                                 yend = (1-proportion/2)*(yend - y) + y,
-                                 xstart = (1-proportion/2)*(x - xend) + xend,
-                                 ystart = (1-proportion/2)*(y-yend) + yend)
-  return(tidy_dag)
-}
 
 coords <- list(
-  x = c(SpVLr = 10, SpVLt = 2.5, deltaCD4 = 10, PMV = 2.5),
+  x = c(SpVLr = 8, SpVLt = 3, deltaCD4 = 8, PMV = 3),
   y = c(SpVLr = 8, SpVLt = 8, deltaCD4 = 2, PMV = 2)) %>% 
   coords2df() %>%
   coords2list()
@@ -176,33 +190,26 @@ coords <- list(
 test_dag <- dagify(
   deltaCD4 ~ SpVLr,
   SpVLr ~ SpVLt,
-  PMV ~ SpVLt ) +
-  edge_label("deltaCD4", "SpVLr", label = "Edge Label 1") +
-  edge_label("SpVLr", "SpVLt", label = "Edge Label 2") +
-  edge_label("PMV", "SpVLt", label = "Edge Label 3")
-
+  PMV ~ SpVLt )
 
 dagitty::coordinates(test_dag) <- coords
-label(test_dag) <- c('deltaCD4' = expression(paste(Delta, ' CD4+ ')),
-                     'SpVLr' = expression(paste(SpVL[R])),
-                     'SpVLt' = expression(paste(SpVL['T'])),
-                     'PMV' = 'P(MV)')
-plt_2a <- test_dag %>%
-  ggplot(aes(x = x, y = y, xend = xend, yend = yend)) +
+
+
+plt_2a <- test_dag %>% 
+  ggplot(., aes(x = x, y = y, xend = xend, yend = yend)) +
   geom_dag_point(size = 14, col = "white", fill = "white") +
   geom_dag_edges() +
-  geom_dag_text(col = "black", parse = T, size = 3, 
-                label = c('P(MV)',
-                          
-                          expression(paste(SpVL[R])),
-                          expression(paste(SpVL[T])),
-                          expression(paste(Delta, ' CD4+ ')))) +
-  annotate("text", x = 6.2, y = 8.3, label = "Heritability", family ="LM Sans 10", size = 3) + 
-  annotate("text", x = 2, y = 5, label = "Transmission", angle = 90, family ="LM Sans 10", size = 3) + 
-  annotate("text", x = 10.4, y = 5, label = "Tolerance", angle = 270, family ="LM Sans 10", size = 3) + 
-  scale_x_continuous(limits = c(1.5,11), expand = c(0,0)) + 
-  scale_y_continuous(limits = c(1,9), expand = c(0,0)) + 
-  theme_dag(base_family = "LM Sans 10") +
+  geom_dag_text(col = "black",  size = 3, 
+                label = c('Probability of \n Multiple Variant Infection',
+                          'Recipient \nSpVL',
+                          'Transmitter \nSpVL',
+                          'CD4 T Cell\n decline')) +
+  annotate("text", x = 5.5, y = 8.3, label = "Heritability", family ="LM Sans 10", size = 3) + 
+  annotate("text", x = 2.5, y = 5, label = "Transmission", angle = 90, family ="LM Sans 10", size = 3) + 
+  annotate("text", x = 8.5, y = 5, label = "Tolerance", angle = 270, family ="LM Sans 10", size = 3) + 
+  scale_x_continuous(limits = c(1.5,9.5), expand = c(0.01,0.01)) + 
+  scale_y_continuous(limits = c(1,9), expand = c(0.01,0.01)) + 
+  theme_classic(base_family = "LM Sans 10") +
   theme(
     text = element_text(size=10),
     #axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0), size = 8),
@@ -211,11 +218,28 @@ plt_2a <- test_dag %>%
     strip.text  = element_text(size = 8),
     #legend.text = element_text(size = 7),
     legend.title = element_text(size = 8),
-    legend.position = 'none', 
     panel.spacing = unit(2, "lines"), 
-    strip.background = element_blank()
+    strip.background = element_blank(),
+    axis.line = element_blank(), 
+    axis.ticks = element_blank(), 
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    #axis.ticks.length = unit(0, "lines"), # Error 
+    axis.ticks.margin = unit(c(0,0,0,0), "lines"), 
+    legend.position = "none", 
+    #panel.background = element_rect(fill = "gray"), 
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    panel.margin = unit(c(0,0,0,0), "lines"), 
+    #plot.background = element_rect(fill = "blue"),
+    plot.margin = unit(c(0,0,0,0), "lines")
   )
 
+ggsave('figure2.eps', device=cairo_ps,  height = 110, width = 140, units = 'mm')
+Sys.sleep(0.5)
+plt_2a 
+dev.off()
 
 # Heritability Model (Frequentist vis)
 freq_model <- lme4::lmer(log10_SpVL ~  + partner + sex + age.inf_category + riskgroup + (1|log10_SpVL_couplemean), 
@@ -447,10 +471,10 @@ plt_4b <- ggplot(cd4results) +
                   ymax = `0.99`,
                   fill = multiplicity), 
               alpha = 0.7)+
- # geom_line(aes(x = time, y= `0.5`, 
-          #      colour = multiplicity),
-         #   linetype= 'dashed', 
-          #  linewidth = 0.6) +
+  # geom_line(aes(x = time, y= `0.5`, 
+  #      colour = multiplicity),
+  #   linetype= 'dashed', 
+  #  linewidth = 0.6) +
   scale_x_continuous('Days Post Infection', 
                      expand = c(0,0)) + 
   scale_y_continuous(str_wrap('Proportion of Cohort with < 350 CD4 mm3', 25),
