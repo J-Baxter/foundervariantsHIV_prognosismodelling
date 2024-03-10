@@ -390,7 +390,7 @@ dev.off()
 #my_palette <- colorRampPalette(brewer.pal(9, "OrRd"))(20)
 
 
-plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = SpVL_recipient, x = 1-p_variants_1),aes(y = y, x = 1-p_variants_1))+
+plt_3a <- ggplot(modelresults %>% filter(transmitterallocation == 'ML'),aes(y = SpVL_recipient, x = 1-p_variants_1))+
   #stat_density_2d(aes(fill = (..density..)**(1/3)), geom = "raster", contour = FALSE) +
   geom_hex(aes(fill = (..density..)), binwidth = c(0.05, 0.2)) + 
   scale_fill_distiller(palette = 'GnBu',
@@ -1137,3 +1137,7 @@ ggsave('figureS9.eps', device=cairo_ps, width = 250, height  = 110, units = 'mm'
 Sys.sleep(0.5)
 plt_s9
 dev.off()
+
+
+
+###########################################################################################
