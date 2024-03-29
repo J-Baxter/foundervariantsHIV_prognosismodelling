@@ -385,12 +385,9 @@ TransmissionModel2 <- function(sp_ViralLoad = 10^6, PerVirionProbability = 4.715
   
   # output the prob of transmission across all infectious period and the chance of multiple lineages
   
-  if(max(dim(variant_distribution))>32){
-    variant_distribution <-  variant_distribution[1:32,1:32]
-  }else{
-    variant_distribution <- variant_distribution
+  if(nrow(variant_distribution)>32){
+    variant_distribution <-  variant_distribution[1:32,1:33]
   }
-
   
   output <- list(variant_distribution,
                  probTransmissionPerSexAct,

@@ -15,7 +15,7 @@
 require(tidyverse)
 require(parallel)
 require(epitools)
-
+source('./scripts/BonhoefferEqns.R')
 
 # Set CPU cluster size
 cl <- detectCores() %>% `-` (3)
@@ -40,8 +40,10 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effectsi
   # Assumption of equal variances justified by Janes et al.
   decomposed_var <- recipient_var + recipient_mean^2 - p_mv * mv_mean^2 - (1 - p_mv) * sv_mean^2
   
-  out <- list('sv' = c('mean' = sv_mean, 'var' = decomposed_var),
-              'mv' = c('mean' = mv_mean, 'var' = decomposed_var))
+  out <- list('sv' = c('mean' = sv_mean,
+                       'var' = decomposed_var),
+              'mv' = c('mean' = mv_mean, 
+                       'var' = decomposed_var))
   
   return(out)
 }
@@ -49,7 +51,12 @@ DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effectsi
 
 # For a specified effect and sample size, calculate the expected proportion of times we would 
 # observe a significant difference between single and multiple founder variant infections
-SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
+SimEffectSizePMV <- function(n,
+                             e, 
+                             recipient_mean,
+                             recipient_var,
+                             endpoint = 'SpVL',
+                             specifyPMV = FALSE){
   
   if (all(is.logical(specifyPMV))){
     p_mv <- (2:(n-2))/n
@@ -61,22 +68,47 @@ SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
   m <- matrix(data = NA, nrow = length(e), ncol = length(p))
   
   for (i in 1:length(e)){
-    
     for(j in 1:length(p)){
       spvls <- DecomposeRecipientSpVL(effectsize = e[i],
                                       p_mv = p[j],
                                       recipient_mean = 4.74,
-                                      recipient_var = 0.61)
+                                      recipient_var = 0.6084)
       sig.count <- 0
       
-      for (z in 1:100000){
-        sv <- rnorm(n*(1-p[j]), mean = spvls$sv['mean'], sd = sqrt(spvls$sv['var']))
-        mv <- rnorm(n*p[j], mean = spvls$mv['mean'], sd = sqrt(spvls$mv['var']))
+      for (z in 1:1000){
+        sv <- rnorm(n*(1-p[j]), 
+                    mean = spvls$sv['mean'], 
+                    sd = sqrt(spvls$sv['var']))
+        mv <- rnorm(n*p[j], 
+                    mean = spvls$mv['mean'],
+                    sd = sqrt(spvls$mv['var']))
         
-        if(t.test(sv, mv, var.equal = T)$p.value <= 0.05){
-          sig.count = sig.count + 1
+        if(endpoint == 'SpVL'){
+          # test that mv is greater than sv
+          test <-  t.test(mv,
+                        sv,
+                        var.equal = T,
+                        alternative = 'greater')
         }
-        m[i,j] <- sig.count/100000
+       
+        if(endpoint == 'CD4'){
+          sv_cd4 <- 1000 + 365 * -0.0111 * sv^2 
+          mv_cd4 <- 1000 + 365 * -0.0111 * sv^2
+          
+          # test that sv is greater than mv (CD4 decline is negative)
+          # Note: data is *2 due to previous eqn -> nonparametric test
+          test <- wilcox.test(sv_cd4,
+                              mv_cd4,
+                              alternative = 'greater')
+          
+        }
+      
+        
+        if(test$p.value <= 0.05){
+          sig.count = sig.count + 1
+          
+        }
+        m[i,j] <- sig.count/1000
       }
     }
   }
@@ -87,12 +119,15 @@ SimEffectSizePMV <- function(n, e , specifyPMV = FALSE){
     mutate(effect_size = rep(e,  length(p))) %>%
     select(-contains('Var')) %>%
     mutate(sample_size = n)
+  
   return(out)
 }
 
 
 ################################### Calculate Recipient Dist ###################################
-zambia_variance <- 0.61**2 #0.61 is the standard deviation
+
+zambia_variance <- 0.78**2 #0.78 is the standard deviation
+
 zambia_mean <- 4.74 
 
 recipient_dist <- CalcRecipient(zambia_mean, 
@@ -102,39 +137,82 @@ recipient_dist <- CalcRecipient(zambia_mean,
 ################################### Decompose Recipient Distribution ###################################
 decomp_vl <- DecomposeRecipientSpVL(recipient_mean = recipient_dist[['mean']], 
                                     recipient_var = recipient_dist[['var']],
-                                    p_mv =  0.3, 
-                                    effect_size = 0.3)
+                                    p_mv =  0.25, 
+                                    effectsize = 0.3)
 
 
-vls <- tibble(recipient_mean = rnorm(100000, 4.74, 0.61), 
-              recipient_mv = rnorm(100000, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var'])),
-              recipient_sv = rnorm(100000, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))) %>%
-  pivot_longer(cols = everything(), names_to = 'stage', values_to = 'vl')
+vls <- rbind.data.frame(
+  data.frame(vl = rnorm(250, decomp_vl$mv['mean'], sqrt(decomp_vl$mv['var']))), # mv
+  data.frame(vl = rnorm(750, decomp_vl$sv['mean'], sqrt(decomp_vl$sv['var']))))%>%
+    as_tibble()
+  
 
-
+#ggpubr::ggqqplot(vls$vl)
 ################################### Simulate proportion of significant observations ###################################
 # Vector of effect and sample sizes
 effect_size <- seq(0.01, 1, by = 0.01)
-sample_size <- c(25,50,100,200)
+sample_size <- c( 156, 100, 63)
 
-simsignificances <- mclapply(sample_size,
+simsignificances_SpVL <- mclapply(sample_size,
                              SimEffectSizePMV, 
                              e = effect_size,
                              mc.cores = cl,
                              mc.set.seed = FALSE) %>%
-  bind_rows()
+  bind_rows()%>%
+  mutate(endpoint = 'SpVL')
 
 
+#simsignificances_CD4 <- mclapply(sample_size,
+                         #   SimEffectSizePMV, 
+                          #   e = effect_size,
+                          #   endpoint = 'CD4',
+                          #   mc.cores = cl,
+                           #  mc.set.seed = FALSE) %>%
+  #bind_rows() %>%
+  #mutate(endpoint = 'CD4')
+
+simsignificances <- rbind.data.frame(simsignificances_SpVL)#, #simsignificances_CD4)
+################################### Study Comparisons ###################################
+
+study_effects <- tibble(cohort = c('sagar', 'rv144', 'step'),
+                        size = c( 156, 100, 63),
+                        p_mv = c(0.57, 0.32, 0.25),
+                        es_spvl = c(0.27, 0.239, 0.372),
+                        es_cd4 = c(NA, -2.112, -0.507))
+
+study_significance_spvl <- lapply(1:nrow(study_effects), function(x) SimEffectSizePMV(n = study_effects[['size']][x],
+                                                                                      e = study_effects[['es_spvl']][x],
+                                                                                      specifyPMV = study_effects[['p_mv']][x])) %>%
+  do.call(rbind.data.frame,.) %>%
+  mutate(ci.upper = value + 1.96 * sqrt((value*(1-value)/1000)))%>%
+  mutate(ci.lower = value - 1.96 * sqrt((value*(1-value)/1000))) %>%
+  mutate(cohort = c('sagar', 'rv144', 'step'))
+
+
+rbind.data.frame(SimEffectSizePMV(n = 50 , e = 0.3, specifyPMV = 0.21),
+                 SimEffectSizePMV(n = 50 , e = 0.3, specifyPMV = 0.3)) %>%
+  mutate(ci.upper = value + 1.96 * sqrt((value*(1-value)/1000)))%>%
+  mutate(ci.lower = value - 1.96 * sqrt((value*(1-value)/1000))) %>%
+  mutate(riskgroup = c('MF', 'MM'))
+
+#study_significance_cd4 <- lapply(2:nrow(study_effects), function(x) SimEffectSizePMV(n = study_effects[['size']][2],
+#                                                                                      e = study_effects[['es_cd4']][2],
+#                                                                                      specifyPMV = study_effects[['p_mv']][2],
+#                                                                                     endpoint = 'CD4')) %>%
+ # do.call(rbind.data.frame,.) %>%
+ # mutate(ci.upper = value + 1.96 * sqrt((value*(1-value)/1000)))%>%
+ # mutate(ci.lower = value - 1.96 * sqrt((value*(1-value)/1000))) %>%
+ # mutate(cohort = c( 'rv144', 'step'))
 ################################### Compare Riskgroups ###################################
 
 p_mv <- c(0.21, 0.13, 0.30)
 
-comparesignificances <- SimEffectSizePMV(66, 0.3, specifyPMV = p_mv) %>%
+comparesignificances <- SimEffectSizePMV(66, 0.27, specifyPMV = p_mv) %>%
   rowwise() %>%
-  mutate(ci.lower = prop.test(value*100000, 100000, conf.level = .95, correct = F)$conf.int[1])%>%
-  mutate(ci.upper = prop.test(value*100000, 100000, conf.level = .95, correct = F)$conf.int[2])
+  mutate(ci.lower = prop.test(value*1000, 1000, conf.level = .95, correct = F)$conf.int[1])%>%
+  mutate(ci.upper = prop.test(value*1000, 1000, conf.level = .95, correct = F)$conf.int[2])
 
-or_matrix <- matrix(c(1-comparesignificances$p_mv,comparesignificances$p_mv), nrow = 3) *100000
+or_matrix <- matrix(c(1-comparesignificances$p_mv,comparesignificances$p_mv), nrow = 3) *1000
 
 outcome <- c('single', 'multiple')
 riskgroup <- c('MF', 'FM', 'MM')
