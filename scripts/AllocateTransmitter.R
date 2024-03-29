@@ -29,10 +29,10 @@ AllocateTransmitter <- function(VL1, VL2, transmitter, recipient, method){
   
   # Assign parameter names
   mu_t <- transmitter[['mean']]
-  sd_t <- transmitter[['var']]**2
+  sd_t <- sqrt(transmitter[['var']])
   
   mu_r <- recipient[['mean']]
-  sd_r <- recipient[['var']]**2
+  sd_r <- sqrt(recipient[['var']])
   
   VL_pair <- c(VL1, VL2)
   
