@@ -15,7 +15,7 @@
 require(tidyverse)
 require(parallel)
 require(epitools)
-source('./scripts/BonhoefferEqns.R')
+source('./scripts/functions/BonhoefferEqns.R')
 
 # Set CPU cluster size
 cl <- detectCores() %>% `-` (3)

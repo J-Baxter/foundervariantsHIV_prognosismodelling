@@ -1,6 +1,6 @@
 ################################### Dependencies ###################################
 require(tidyverse)
-source('./scripts/BonhoefferEqns.R')
+source('./scripts/functions/BonhoefferEqns.R')
 
 DecomposeRecipientSpVL <- function(recipient_mean, recipient_var, p_mv, effectsize){
   

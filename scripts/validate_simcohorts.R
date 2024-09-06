@@ -4,7 +4,7 @@
 # This script calculates normalised measures of bias and prepares tidy data frames to be plotted
 # as confusion matrices in the supplementary materials. 
 
-source('./scripts/simulate_cohorts_funcs.R')
+source('./scripts/functions/simulate_cohorts_funcs.R')
 # MUST HAVE RUN ./scripts/main.R UP TO LINE 85
 
 # Sanity Check

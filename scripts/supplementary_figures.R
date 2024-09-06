@@ -9,7 +9,7 @@ require(showtextdb)
 require(cowplot)
 require(RColorBrewer)
 
-source('./scripts/BonhoefferEqns.R')
+source('./scripts/functions/BonhoefferEqns.R')
 
 
 ################################### Fig S1 #################################

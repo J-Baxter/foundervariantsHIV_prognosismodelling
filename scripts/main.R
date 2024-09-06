@@ -10,10 +10,10 @@
 
 ################################### Dependencies ###################################
 source('./scripts/dependencies.R')
-source('./scripts/BonhoefferEqns.R')
-source('./scripts/AllocateTransmitter.R')
-source('./scripts/simulate_cohorts_funcs.R')
-source('./scripts/PostProcessing.R')
+source('./scripts/functions/BonhoefferEqns.R')
+source('./scripts/functions/AllocateTransmitter.R')
+source('./scripts/functions/simulate_cohorts_funcs.R')
+source('./scripts/functions/PostProcessing.R')
 source('./scripts/interpret_outputs.R')
 #source('./scripts/global_theme.R')
 
